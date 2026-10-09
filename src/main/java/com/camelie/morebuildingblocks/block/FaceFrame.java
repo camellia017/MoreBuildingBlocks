@@ -65,54 +65,34 @@ public record FaceFrame(int cornerX, int cornerY, int cornerZ, Direction.Axis uA
 	}
 
 	/**
-	 * The half the clicked quarter of this frame fills: whichever quarter of the face {@code (u, v)}
-	 * falls in, or the whole face when the click is in the middle quarter.
+	 * The half the clicked region of this frame fills: whichever region of the face {@code (u, v)}
+	 * falls in, or the half behind the face itself when the click is in the middle quarter.
 	 *
-	 * <p>The middle quarter takes the half behind the face itself, so its visible face is the one
-	 * that was clicked. Each other quarter sits against one edge and takes the half behind that
-	 * edge. The middle is named first, and the caller gives it priority, so it wins in the corners
-	 * where the bands overlap.
+	 * <p>The middle quarter takes the half behind the face, so its visible face is the one that was
+	 * clicked. Each other quarter sits against one edge and takes the half behind that edge - the
+	 * half a slab has to fill to lie against the edge the player pointed at. The middle is named
+	 * first, and the caller gives it priority, so it wins in the corners where the bands overlap.
 	 *
-	 * <p>{@code beyond} says the new block is not the one the click landed on, which happens when a
-	 * click on an upright slab's outer face is moved out into the next block along. Every band then
-	 * names a half of <em>that</em> block, one block further out: a band against the clicked face
-	 * reaches past the block that was clicked and fills the half of the new one nearest to it, which
-	 * is the opposite side of the new block from the face the click came through.
+	 * <p>The answer does not depend on which cell the placement lands in. It is the same rule for a
+	 * click on a plain block, where the new slab is built in the cell beyond the clicked face, and
+	 * for a click on an upright slab, where the click is moved into that cell before it gets here:
+	 * the region names a half of the block the click was read against, and a half of one block lines
+	 * up with the same half of the block next door.
 	 */
-	public VerticalSlab.Fill region(final Direction face, final boolean middle, final boolean beyond,
-			final double u, final double v) {
+	public VerticalSlab.Fill region(final Direction face, final boolean middle, final double u, final double v) {
 		if (middle) {
-			return beyond ? VerticalSlab.Fill.fillBeyond(face) : fill(face);
+			return fill(face);
 		}
 
 		if (v < MIDDLE_MIN) {
-			return band(face, beyond, floor(face));
+			return floor(face);
 		}
 
 		if (v > MIDDLE_MAX) {
-			return band(face, beyond, ceiling(face));
+			return ceiling(face);
 		}
 
-		return band(face, beyond, band(u < MIDDLE_MIN));
-	}
-
-	/**
-	 * The half a band fills, seen from the block the click landed on ({@code beyond} false) or from
-	 * the one it was moved out into ({@code beyond} true).
-	 *
-	 * <p>The two agree on every direction but one. A band against the clicked face itself reaches
-	 * past the block that was clicked, so the new block's half on that side is the one <em>opposite</em>
-	 * the side the band named; a band across the face reaches sideways, where the new block's two
-	 * halves line up with the clicked one's, so it names the same side either way.
-	 */
-	private VerticalSlab.Fill band(final Direction face, final boolean beyond, final VerticalSlab.Fill named) {
-		if (!beyond || named.axis() != face.getAxis()) {
-			return named;
-		}
-
-		return named.outward().getAxis() == face.getAxis() && named.outward() == face
-			? VerticalSlab.Fill.fillBeyond(face.getOpposite())
-			: named;
+		return band(u < MIDDLE_MIN);
 	}
 
 	/** The half filled by a band along the face's left ({@code true}) or right ({@code false}) edge. */
@@ -140,36 +120,34 @@ public record FaceFrame(int cornerX, int cornerY, int cornerZ, Direction.Axis uA
 		return VerticalSlab.Fill.opposite(side);
 	}
 
-	/** The corner this frame starts at, as a world position for the block at {@code pos}. */
-	public Vec3 corner(final BlockPos pos) {
-		return new Vec3(pos.getX() + this.cornerX, pos.getY() + this.cornerY, pos.getZ() + this.cornerZ);
-	}
-
 	/**
 	 * {@code u} of a click: how far along the face's first axis it landed, measured from the frame's
 	 * corner. It is the projection of the click onto that axis, taken with the sign the axis grows
 	 * in, so a click past the corner counts as more than one - callers only ever compare it against
 	 * the fractions of a block that divide the face.
+	 *
+	 * <p>{@code hit} is measured from the corner of the block the click was read against, the one
+	 * the frame's own corner is relative to - not from the corner of the world. The two are a whole
+	 * block apart for every block but the one at the origin, so a world position here reads every
+	 * click as though it had landed far off the face.
 	 */
-	public double u(final Vec3 hit, final BlockPos pos) {
-		Vec3 corner = corner(pos);
+	public double u(final Vec3 hit) {
 		double distance = switch (this.uAxis) {
-			case X -> hit.x - corner.x;
-			case Y -> hit.y - corner.y;
-			case Z -> hit.z - corner.z;
+			case X -> hit.x - this.cornerX;
+			case Y -> hit.y - this.cornerY;
+			case Z -> hit.z - this.cornerZ;
 		};
 
 		return this.uPositive ? distance : -distance;
 	}
 
 	/** {@code v} of a click, measured the same way but along the face's second axis. */
-	public double v(final Vec3 hit, final BlockPos pos, final Direction face) {
-		Vec3 corner = corner(pos);
+	public double v(final Vec3 hit, final Direction face) {
 		Direction vAxis = vDirection(face);
 
 		return vAxis.getStepY() != 0
-			? (hit.y - corner.y) * vAxis.getStepY()
-			: (hit.z - corner.z) * vAxis.getStepZ();
+			? (hit.y - this.cornerY) * vAxis.getStepY()
+			: (hit.z - this.cornerZ) * vAxis.getStepZ();
 	}
 
 	/**
