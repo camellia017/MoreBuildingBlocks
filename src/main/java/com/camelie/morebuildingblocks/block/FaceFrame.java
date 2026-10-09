@@ -186,8 +186,15 @@ public record FaceFrame(int cornerX, int cornerY, int cornerZ, Direction.Axis uA
 		// south, and the world's south to the right on the ones that face east and west: whichever
 		// way the block is turned, the edge the player points at is the half that gets filled. Its
 		// other axis runs down the world.
+		//
+		// u therefore has to grow the way the face is read rather than the way it is seen: u is 0
+		// at the west edge of both x-axed faces and at the north edge of both z-axed ones, and the
+		// two entries of a pair are written the same way for that reason. Giving one of them the
+		// opposite corner and uPositive=false reads it mirrored - u counts down from its east edge
+		// while the bands are named from its west one - and the face fills the half opposite the
+		// band the player clicked.
 		Direction.NORTH, new FaceFrame(0, 0, 1, Direction.Axis.X, true, Direction.WEST, Direction.EAST),
-		Direction.SOUTH, new FaceFrame(1, 0, 1, Direction.Axis.X, false, Direction.WEST, Direction.EAST),
+		Direction.SOUTH, new FaceFrame(0, 0, 1, Direction.Axis.X, true, Direction.WEST, Direction.EAST),
 		Direction.WEST, new FaceFrame(1, 0, 0, Direction.Axis.Z, true, Direction.NORTH, Direction.SOUTH),
 		Direction.EAST, new FaceFrame(1, 0, 0, Direction.Axis.Z, true, Direction.NORTH, Direction.SOUTH),
 		// The horizontal faces are read with east to the right, and their other axis runs north, so

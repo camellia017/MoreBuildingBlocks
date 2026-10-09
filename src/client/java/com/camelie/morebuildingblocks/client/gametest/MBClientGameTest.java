@@ -452,6 +452,83 @@ public class MBClientGameTest implements FabricClientGameTest {
 
 			verifyClickFrame(level, player, slabBlock);
 		});
+
+		verifyBandSides(server);
+	}
+
+	/** One band of one face: where on that face the click lands, and the half it has to fill. */
+	private record Band(Direction face, double x, double y, double z, Fill half, String what) {
+	}
+
+	/**
+	 * Clicks every band of every face at a block that is not the origin, with the click
+	 * positions written in the world's own coordinates rather than in the rule's.
+	 *
+	 * <p>This is the check the rest of the placement test cannot make. {@code verifyPlacement}
+	 * chooses its click positions from the same reading of a face that the rule uses, so a face
+	 * whose frame is mirrored labels its own bands backwards and both agree: the click it calls
+	 * the eastern band is the western one, and the half that comes back is the half that band
+	 * names, so every assertion passes while the rule fills the wrong side of the block for a
+	 * player. The bands below are named by where they are on the block - the eastern band is the
+	 * one at the larger x - so a mirrored frame fails here instead of agreeing with itself.
+	 *
+	 * <p>The block sits at {@code (3, ..., 7)} so that a rule reading the click as a world
+	 * position rather than as an offset from the block's corner disagrees by whole blocks here
+	 * too. The expected halves are named by their visible face, which is the half the band lies
+	 * against: the eastern half of the block is the one a slab shows to the east.
+	 */
+	private static void verifyBandSides(TestServerContext server) {
+		server.runOnServer(minecraftServer -> {
+			ServerLevel level = minecraftServer.overworld();
+			ServerPlayer player = minecraftServer.getPlayerList().getPlayers().get(0);
+			Block slabBlock = vanillaSlabs().get(0);
+			BlockPos pos = new BlockPos(3, FLOOR_Y + 30, 7);
+
+			level.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
+			level.setBlockAndUpdate(pos.below(), Blocks.STONE.defaultBlockState());
+
+			double y = pos.getY() + 0.5;
+
+			for (Band band : List.of(
+					// The four side faces: one band against each end of each axis they run along.
+					new Band(Direction.NORTH, pos.getX() + 0.1, y, pos.getZ(), Fill.negative(Direction.Axis.X),
+							"north face west band"),
+					new Band(Direction.NORTH, pos.getX() + 0.9, y, pos.getZ(), Fill.positive(Direction.Axis.X),
+							"north face east band"),
+					new Band(Direction.SOUTH, pos.getX() + 0.1, y, pos.getZ() + 1.0, Fill.negative(Direction.Axis.X),
+							"south face west band"),
+					new Band(Direction.SOUTH, pos.getX() + 0.9, y, pos.getZ() + 1.0, Fill.positive(Direction.Axis.X),
+							"south face east band"),
+					new Band(Direction.WEST, pos.getX(), y, pos.getZ() + 0.1, Fill.negative(Direction.Axis.Z),
+							"west face north band"),
+					new Band(Direction.WEST, pos.getX(), y, pos.getZ() + 0.9, Fill.positive(Direction.Axis.Z),
+							"west face south band"),
+					new Band(Direction.EAST, pos.getX() + 1.0, y, pos.getZ() + 0.1, Fill.negative(Direction.Axis.Z),
+							"east face north band"),
+					new Band(Direction.EAST, pos.getX() + 1.0, y, pos.getZ() + 0.9, Fill.positive(Direction.Axis.Z),
+							"east face south band"),
+					// The two horizontal faces: their second axis is the world's north, so the band
+					// nearest the player's north is the one at the smaller z.
+					new Band(Direction.UP, pos.getX() + 0.1, pos.getY() + 1.0, pos.getZ() + 0.5,
+							Fill.negative(Direction.Axis.X), "top face west band"),
+					new Band(Direction.UP, pos.getX() + 0.9, pos.getY() + 1.0, pos.getZ() + 0.5,
+							Fill.positive(Direction.Axis.X), "top face east band"),
+					new Band(Direction.UP, pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.1,
+							Fill.negative(Direction.Axis.Z), "top face south band"),
+					new Band(Direction.UP, pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.9,
+							Fill.positive(Direction.Axis.Z), "top face north band"),
+					new Band(Direction.DOWN, pos.getX() + 0.1, pos.getY(), pos.getZ() + 0.5,
+							Fill.negative(Direction.Axis.X), "bottom face west band"),
+					new Band(Direction.DOWN, pos.getX() + 0.9, pos.getY(), pos.getZ() + 0.5,
+							Fill.positive(Direction.Axis.X), "bottom face east band"),
+					new Band(Direction.DOWN, pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.1,
+							Fill.negative(Direction.Axis.Z), "bottom face south band"),
+					new Band(Direction.DOWN, pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.9,
+							Fill.positive(Direction.Axis.Z), "bottom face north band"))) {
+				checkPlacement(level, player, slabBlock, pos, new Vec3(band.x(), band.y(), band.z()), band.face(),
+						band.half(), band.what());
+			}
+		});
 	}
 
 	/**
