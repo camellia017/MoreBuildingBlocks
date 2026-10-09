@@ -1,0 +1,44 @@
+{
+	"schemaVersion": 1,
+	"id": "morebuildingblocks",
+	"version": "${version}",
+	"name": "MoreBuildingBlocks",
+	"description": "Adds stairs and slabs for terracotta and glazed terracotta, plus vertical slabs for every vanilla slab.",
+	"authors": [
+		"camellia"
+	],
+	"contact": {
+		"homepage": "https://github.com/camellia017/MoreBuildingBlocks",
+		"sources": "https://github.com/camellia017/MoreBuildingBlocks",
+		"issues": "https://github.com/camellia017/MoreBuildingBlocks/issues"
+	},
+	"license": "MIT",
+	"icon": "assets/morebuildingblocks/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"com.camelie.morebuildingblocks.MoreBuildingBlocks"
+		],
+		"client": [
+			"com.camelie.morebuildingblocks.client.MoreBuildingBlocksClient"
+		],
+		"fabric-datagen": [
+			"com.camelie.morebuildingblocks.datagen.MoreBuildingBlocksDataGenerator"
+		],
+		"morebuildingblocks-datagen": [
+			"com.camelie.morebuildingblocks.client.datagen.MBModelProviderFactory"
+		],
+		"fabric-client-gametest": [
+			"com.camelie.morebuildingblocks.client.gametest.MBClientGameTest"
+		]
+	},
+	"mixins": [
+		"morebuildingblocks.mixins.json"
+	],
+	"depends": {
+		"fabricloader": ">=0.19.5",
+		"minecraft": "~26.3",
+		"java": ">=25",
+		"fabric-api": "*"
+	}
+}

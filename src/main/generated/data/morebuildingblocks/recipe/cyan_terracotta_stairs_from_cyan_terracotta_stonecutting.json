@@ -1,0 +1,7 @@
+{
+  "type": "minecraft:stonecutting",
+  "ingredient": "morebuildingblocks:cyan_terracotta",
+  "result": {
+    "id": "morebuildingblocks:cyan_terracotta_stairs"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "type": "minecraft:stonecutting",
+  "ingredient": "morebuildingblocks:green_glazed_terracotta",
+  "result": {
+    "id": "morebuildingblocks:green_glazed_terracotta_stairs"
+  }
+}

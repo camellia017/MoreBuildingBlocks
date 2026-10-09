@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:stonecutting",
+  "ingredient": "morebuildingblocks:pink_terracotta",
+  "result": {
+    "count": 2,
+    "id": "morebuildingblocks:pink_terracotta_slab"
+  }
+}

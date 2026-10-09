@@ -1,0 +1,64 @@
+{
+  "variants": {
+    "axis=x,type=bottom,vertical=false": {
+      "model": "morebuildingblocks:block/brown_terracotta_slab"
+    },
+    "axis=x,type=bottom,vertical=true": {
+      "model": "morebuildingblocks:vertical_slab/brown_terracotta_slab",
+      "y": 90
+    },
+    "axis=x,type=double,vertical=false": {
+      "model": "minecraft:block/brown_terracotta"
+    },
+    "axis=x,type=double,vertical=true": {
+      "model": "morebuildingblocks:vertical_slab/brown_terracotta_slab",
+      "y": 90
+    },
+    "axis=x,type=top,vertical=false": {
+      "model": "morebuildingblocks:block/brown_terracotta_slab_top"
+    },
+    "axis=x,type=top,vertical=true": {
+      "model": "morebuildingblocks:vertical_slab/brown_terracotta_slab",
+      "y": 90
+    },
+    "axis=y,type=bottom,vertical=false": {
+      "model": "morebuildingblocks:block/brown_terracotta_slab"
+    },
+    "axis=y,type=bottom,vertical=true": {
+      "model": "morebuildingblocks:block/brown_terracotta_slab"
+    },
+    "axis=y,type=double,vertical=false": {
+      "model": "minecraft:block/brown_terracotta"
+    },
+    "axis=y,type=double,vertical=true": {
+      "model": "minecraft:block/brown_terracotta"
+    },
+    "axis=y,type=top,vertical=false": {
+      "model": "morebuildingblocks:block/brown_terracotta_slab_top"
+    },
+    "axis=y,type=top,vertical=true": {
+      "model": "morebuildingblocks:block/brown_terracotta_slab_top"
+    },
+    "axis=z,type=bottom,vertical=false": {
+      "model": "morebuildingblocks:block/brown_terracotta_slab"
+    },
+    "axis=z,type=bottom,vertical=true": {
+      "model": "morebuildingblocks:vertical_slab/brown_terracotta_slab",
+      "y": 270
+    },
+    "axis=z,type=double,vertical=false": {
+      "model": "minecraft:block/brown_terracotta"
+    },
+    "axis=z,type=double,vertical=true": {
+      "model": "morebuildingblocks:vertical_slab/brown_terracotta_slab",
+      "y": 270
+    },
+    "axis=z,type=top,vertical=false": {
+      "model": "morebuildingblocks:block/brown_terracotta_slab_top"
+    },
+    "axis=z,type=top,vertical=true": {
+      "model": "morebuildingblocks:vertical_slab/brown_terracotta_slab",
+      "y": 270
+    }
+  }
+}

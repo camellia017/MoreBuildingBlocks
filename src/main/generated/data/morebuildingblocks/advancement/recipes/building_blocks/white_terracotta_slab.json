@@ -1,0 +1,32 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_the_recipe": {
+      "conditions": {
+        "recipes": "morebuildingblocks:white_terracotta_slab"
+      },
+      "trigger": "minecraft:recipe_unlocked"
+    },
+    "has_white_terracotta": {
+      "conditions": {
+        "items": [
+          {
+            "items": "morebuildingblocks:white_terracotta"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    }
+  },
+  "requirements": [
+    [
+      "has_the_recipe",
+      "has_white_terracotta"
+    ]
+  ],
+  "rewards": {
+    "recipes": [
+      "morebuildingblocks:white_terracotta_slab"
+    ]
+  }
+}

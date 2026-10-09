@@ -1,0 +1,15 @@
+{
+	"required": true,
+	"package": "com.camelie.morebuildingblocks.mixin",
+	"compatibilityLevel": "JAVA_25",
+	"mixins": [
+		"BlockBehaviourMixin",
+		"SlabBlockMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	},
+	"overwrites": {
+		"requireAnnotations": true
+	}
+}
