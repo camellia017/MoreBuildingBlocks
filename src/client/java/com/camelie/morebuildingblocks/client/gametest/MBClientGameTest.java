@@ -1,11 +1,15 @@
 package com.camelie.morebuildingblocks.client.gametest;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
+import net.fabricmc.fabric.api.client.gametest.v1.context.TestDedicatedServerConnection;
+import net.fabricmc.fabric.api.client.gametest.v1.context.TestDedicatedServerContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestServerConnection;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestServerContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext;
@@ -13,13 +17,16 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
+import net.minecraft.server.Bootstrap;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.SlabBlock;
@@ -38,6 +45,8 @@ import com.camelie.morebuildingblocks.MoreBuildingBlocks;
 import com.camelie.morebuildingblocks.block.MBBlockStateProperties;
 import com.camelie.morebuildingblocks.block.VerticalSlab;
 import com.camelie.morebuildingblocks.registry.MBBlockFamilies;
+import com.camelie.morebuildingblocks.registry.MBBlocks;
+import com.camelie.morebuildingblocks.registry.MBItems;
 
 /**
  * Renders this mod's blocks in a real client and writes screenshots, so the
@@ -181,6 +190,133 @@ public class MBClientGameTest implements FabricClientGameTest {
 			verifyShapes(server);
 			verifyPlacement(server, family);
 			verifyDrops(context, server, family);
+			verifyCreativeTab(server);
+		}
+
+		// The singleplayer world has to be closed first: the client can only be in one
+		// world at a time, and this join is the multiplayer half of the acceptance run.
+		verifyDedicatedServer(context);
+	}
+
+	/**
+	 * Checks that the mod's creative tab exists and holds every block the mod adds, in
+	 * the order the tab is built from.
+	 *
+	 * <p>Registering the tab a second time is safe: {@code MBItems.register()} is guarded,
+	 * so this also proves the guard works from a second call site.
+	 */
+	private static void verifyCreativeTab(TestServerContext server) {
+		server.runOnServer(minecraftServer -> {
+			CreativeModeTab tab = MBItems.register();
+
+			require(tab != null, "MBItems.register() returned no creative tab");
+			require(BuiltInRegistries.CREATIVE_MODE_TAB.getValue(MBItems.MAIN_TAB_KEY) == tab,
+					"the creative tab is not the one registered under " + MBItems.MAIN_TAB_KEY.identifier());
+
+			List<Block> displayOrder = MBItems.displayOrder();
+			List<Block> expected = new ArrayList<>();
+			expected.add(MBBlocks.TERRACOTTA);
+			MBBlocks.DYED_TERRACOTTA.forEach(expected::add);
+			MBBlocks.GLAZED_TERRACOTTA.forEach(expected::add);
+
+			for (MBBlockFamilies.Family family : MBBlockFamilies.families()) {
+				expected.add(family.stairs());
+				expected.add(family.slab());
+			}
+
+			require(displayOrder.size() == expected.size(),
+					"the tab lists " + displayOrder.size() + " blocks, expected " + expected.size());
+			require(displayOrder.containsAll(expected),
+					"the tab is missing " + expected.stream().filter(b -> !displayOrder.contains(b)).toList());
+
+			Identifier tabId = BuiltInRegistries.CREATIVE_MODE_TAB.getKey(tab);
+			require(MoreBuildingBlocks.MOD_ID.equals(tabId.getNamespace()),
+					"the tab is registered in namespace " + tabId.getNamespace());
+
+			// Every listed block must have an item, or the tab would show a gap.
+			for (Block block : displayOrder) {
+				Identifier id = BuiltInRegistries.BLOCK.getKey(block);
+				require(MoreBuildingBlocks.MOD_ID.equals(id.getNamespace()),
+						"the tab lists a foreign block: " + id + " (families: " + expected.size()
+								+ ", listed: " + displayOrder.size() + ", tab: " + tabId + ")");
+				require(Item.BY_BLOCK.get(block) != null, "no item for " + id);
+			}
+		});
+	}
+
+	/**
+	 * Joins a dedicated server and checks that the mod's blocks exist on both ends and
+	 * that a block change made on the server arrives at the client.
+	 *
+	 * <p>This is the multiplayer half of the acceptance criteria. The test owns the
+	 * server process, so it does not depend on the developer client having a session
+	 * with the Mojang session server.
+	 */
+	private static void verifyDedicatedServer(ClientGameTestContext context) {
+		try (TestDedicatedServerContext dedicatedServer = context.worldBuilder().createServer();
+				TestDedicatedServerConnection connection = dedicatedServer.connect()) {
+			connection.waitForChunksRender();
+
+			BlockPos pos = new BlockPos(1, -60, 1);
+
+			dedicatedServer.runOnServer(minecraftServer -> {
+				Bootstrap.validate();
+				ServerLevel level = minecraftServer.overworld();
+
+				int serverBlocks = 0;
+				Map<Identifier, Block> serverById = new HashMap<>();
+
+				for (Block block : MBItems.displayOrder()) {
+					if (block instanceof StairBlock || block instanceof SlabBlock) {
+						serverById.put(BuiltInRegistries.BLOCK.getKey(block), block);
+						serverBlocks++;
+					}
+				}
+
+				// 33 base blocks and 66 stair/slab blocks, so 66 of the 99 listed
+				// entries are stairs or slabs.
+				require(serverBlocks == 66, "the dedicated server registered " + serverBlocks
+						+ " stair/slab blocks, expected 66");
+				require(serverById.containsKey(Identifier.fromNamespaceAndPath(MoreBuildingBlocks.MOD_ID, "terracotta_slab")),
+						"the dedicated server is missing morebuildingblocks:terracotta_slab");
+				require(BuiltInRegistries.BLOCK.getValue(Identifier.fromNamespaceAndPath(MoreBuildingBlocks.MOD_ID, "terracotta")) != null,
+						"the dedicated server is missing morebuildingblocks:terracotta");
+
+				level.setBlockAndUpdate(pos, serverById
+						.get(Identifier.fromNamespaceAndPath(MoreBuildingBlocks.MOD_ID, "terracotta_slab"))
+						.defaultBlockState());
+			});
+
+			// The change has to survive the round trip, which also exercises the mod's
+			// block state ids on the wire.
+			int waited = connection.waitForChunksDownload();
+			require(waited >= 0, "the client never finished downloading chunks from the dedicated server");
+
+			context.waitTicks(20);
+
+			context.runOnClient(minecraft -> {
+				if (minecraft.level == null) {
+					throw new AssertionError("the client has no level after joining the dedicated server");
+				}
+
+				Map<Identifier, Block> clientById = new HashMap<>();
+
+				for (Item item : BuiltInRegistries.ITEM) {
+					if (item instanceof BlockItem blockItem
+							&& MoreBuildingBlocks.MOD_ID.equals(item.builtInRegistryHolder().key().identifier().getNamespace())) {
+						clientById.put(BuiltInRegistries.ITEM.getKey(item), blockItem.getBlock());
+					}
+				}
+
+				require(clientById.size() == 99,
+						"the client knows " + clientById.size() + " mod items, expected 99");
+				require(clientById.containsKey(Identifier.fromNamespaceAndPath(MoreBuildingBlocks.MOD_ID, "terracotta_slab")),
+						"the client is missing morebuildingblocks:terracotta_slab");
+
+				BlockState received = minecraft.level.getBlockState(pos);
+				require(received.is(clientById.get(Identifier.fromNamespaceAndPath(MoreBuildingBlocks.MOD_ID, "terracotta_slab"))),
+						"the block the server placed did not arrive at the client: " + received);
+			});
 		}
 	}
 

@@ -59,9 +59,22 @@
   因此楼梯与台阶的几何由模组按原版 `template_glazed_terracotta` 的
   **逐面旋转表**（`down 0, up 0, north 90, south 270, west 0, east 180`）自行生成，
   保证花纹方向与整方块一致。
-- 竖半砖：模组自带父模型 `morebuildingblocks:block/vertical_slab`
-  （厚度 8/16、朝北的薄板，含自己的 `display` 变换），
-  按 `axis` 绕 Y 轴旋转 90°/270° 得到两个朝向。
+- 竖半砖：**每一个半砖都有自己的独立模型**，由 datagen 生成在
+  `assets/morebuildingblocks/models/vertical_slab/<方块名>.json`（101 个原版半砖 + 33 个模组半砖）。
+  模型是朝北、厚度 8/16 的薄板，按 `axis` 绕 Y 轴旋转 90°/270° 得到两个朝向。
+  纹理不是从基础方块猜测的，而是照抄原版 `models/block/<半砖>.json` 的 `bottom` / `top` / `side`
+  三槽（例：`smooth_stone_slab` 的侧面是 `smooth_stone_slab_side`，
+  `sandstone_slab` 的上下分别是 `sandstone_bottom` / `sandstone_top`），
+  因为**从原版半砖的方块状态走到的模型不会继承任何子模型的纹理映射**，
+  `#bottom` / `#top` / `#side` 必须自己写死。
+
+### 26.3 上的 API 差异（与常见 Fabric 教程不同，实现时已按实际情况调整）
+
+| 预期写法 | 26.3 的实际情况 | 本模组的做法 |
+|---|---|---|
+| Fabric datagen 的 `VERTICAL_SLAB` ModelTemplate | **不存在**，Fabric API 0.162.0+26.3 里没有 `ModelTemplate` / `BlockStateModelGenerator` 这两个类 | 自己生成模型 JSON（`ModelInstance` 即 `Supplier<JsonElement>`） |
+| `BlockStateModelGenerator` 生成方块状态 | 26.3 改为原版 `net.minecraft.client.data.models.BlockModelGenerators` + `MultiVariantGenerator` / `PropertyDispatch` | 直接用原版 API，模型 id 与槽位命名与原版模板一致 |
+| 用方块状态 JSON 给原版半砖加竖直形态 | 会覆盖原版命名空间下的 101 个文件 | 改为 `fabric-model-loading-api-v1` 的 `BlockStateResolver`，在运行时提供额外状态 |
 
 ## 目录结构
 
@@ -85,15 +98,35 @@ src/client/java/com/camelie/morebuildingblocks/client/
 ## 构建与运行
 
 ```bash
-./gradlew build            # 编译并打包
-./gradlew runClient        # 启动客户端
-./gradlew runServer        # 启动专用服务端
-./gradlew runDatagen       # 重新生成 src/main/generated 下的全部 JSON
-./gradlew runClientGameTest # 自动渲染全部方块并截图到 run/gametest-screenshots
+./gradlew build             # 编译并打包
+./gradlew runClient         # 启动客户端
+./gradlew runServer         # 启动专用服务端
+./gradlew runDatagen        # 重新生成 src/main/generated 下的全部 JSON
+./gradlew runClientGameTest # 自动化验收：截图 + 断言
 ```
 
 生成物写在 `src/main/generated/`，**需要一并提交**：执行 `runDatagen` 后
-工作区应当没有 diff，这正是「datagen 可复现」的验收方式。
+工作区应当没有 diff，这正是「datagen 可复现」的验收方式
+（内容未变时输出为 `removed stale: 0, written: 0`）。
+
+## 自动化验收（`runClientGameTest`）
+
+基于 Fabric 的 `fabric-client-gametest-api-v1`，一次运行覆盖下列检查，
+截图写到 `run/screenshots/`：
+
+| 检查 | 内容 |
+|---|---|
+| `verifyShapes` | 101 个原版半砖在 `axis=x` / `axis=z` 下碰撞箱厚度均为 0.5、高度为 1；水平半砖仍是 0～0.5；66 个陶瓦楼梯 `maxY=1.0`、台阶 `maxY=0.5` |
+| `verifyPlacement` | 用真实 `BlockPlaceContext` 放置：点东半边 → 朝东的竖半砖（`axis=x` + `type=top`）；点北半边 → 朝北（`axis=z` + `type=bottom`）；点侧面同样成立；点正中心仍是水平半砖 |
+| `verifyDrops` | 破坏楼梯与台阶后各自掉落自身 |
+| `verifyCreativeTab` | 标签页注册在 `morebuildingblocks:main`，且按顺序收录全部 99 个方块，每个都有对应物品 |
+| `verifyDedicatedServer` | 由测试自己拉起专用服务端并连接：服务端注册 66 个楼梯/台阶 + 33 个基础方块，客户端也认得这 99 个物品；服务端放置的方块能同步到客户端 |
+| 截图 | 陶瓦家族全景、带釉陶瓦近景、带釉陶瓦楼梯近景、三段竖半砖长墙（共 6 张） |
+
+> 手工验证多人时请注意：开发环境的客户端没有有效的 Mojang 会话，
+> 直连专用服务端会在登录阶段卡在 `sessionserver.mojang.com/session/minecraft/join` 后断开。
+> 因此多人验收由上面的 `verifyDedicatedServer` 承担。
+
 
 ## 已知限制（v0.0.1）
 
