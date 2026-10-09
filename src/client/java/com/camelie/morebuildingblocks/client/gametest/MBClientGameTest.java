@@ -380,7 +380,7 @@ public class MBClientGameTest implements FabricClientGameTest {
 	 * <p>This is the one part of the feature a screenshot cannot prove: a slab whose axis
 	 * is wrong still renders as a plausible thin wall, and the rule reads the click
 	 * position on the clicked face rather than the camera. The clicked face is divided
-	 * into a middle quarter and four bands around it: the middle takes the half behind
+	 * into a middle third and four bands around it: the middle takes the half behind
 	 * that face, and each band takes the half of the block on the same side as the band -
 	 * a click at a face's own eastern edge fills the eastern half, and a click at the
 	 * northern edge of a top face the northern half.
@@ -462,7 +462,7 @@ public class MBClientGameTest implements FabricClientGameTest {
 	 * this test clicks a block at the origin, where the two are the same vector and a rule that
 	 * forgot to subtract the block's own corner would still read every click correctly. The block
 	 * here is far enough from the origin that the two disagree by whole blocks, so a click at the
-	 * centre of one of its faces comes back as the middle quarter of that face - and not as some
+	 * centre of one of its faces comes back as the middle third of that face - and not as some
 	 * point blocks away, which is what reading the world position as a local one produces.
 	 */
 	private static void verifyClickFrame(ServerLevel level, ServerPlayer player, Block slabBlock) {

@@ -9,7 +9,7 @@ import net.minecraft.world.phys.Vec3;
 /**
  * The frame of one clicked face of a block, as the slab placement rule reads it.
  *
- * <p>Every face is divided into a middle quarter with one band along each of its four edges. Two
+ * <p>Every face is divided into a middle third with one band along each of its four edges. Two
  * axes describe a point on it: {@code u} runs from the face's left edge towards its right one, and
  * {@code v} from its bottom edge towards its top one, both in blocks, so a whole face is the unit
  * square.
@@ -43,37 +43,39 @@ import net.minecraft.world.phys.Vec3;
 public record FaceFrame(int cornerX, int cornerY, int cornerZ, Direction.Axis uAxis, boolean uPositive,
 		Direction leftEdge, Direction rightEdge) {
 	/**
-	 * Bounds of the middle quarter of a face, a hundredth of a block in from the quarter lines, so
-	 * that a click landing exactly on one - the centre of a face being the common case - stays in the
-	 * middle rather than falling through to a band.
+	 * Bounds of the middle third of a face: a click inside them takes the half behind the face
+	 * itself, and one outside them the band it landed in. They sit at a third rather than a quarter
+	 * of the way across, which leaves each band the outer third of the face: a click landing in the
+	 * middle of a face is the common case, and the wider it is read the fewer clicks meant for the
+	 * half behind the face come back as a band instead.
 	 */
-	private static final double MIDDLE_MIN = 0.24;
-	private static final double MIDDLE_MAX = 0.76;
+	private static final double MIDDLE_MIN = 0.33;
+	private static final double MIDDLE_MAX = 0.67;
 
 	/** The frame of {@code face}, or {@code null} for a direction that is not a face. */
 	public static FaceFrame of(final Direction face) {
 		return FRAMES.get(face);
 	}
 
-	/** The first coordinate of the middle quarter of this face, pulled in from the quarter line. */
+	/** The first coordinate of the middle third of this face, the line a band ends at. */
 	public static double middleMin() {
 		return MIDDLE_MIN;
 	}
 
-	/** The last coordinate of the middle quarter of this face, pulled in from the quarter line. */
+	/** The last coordinate of the middle third of this face, the line the far band starts at. */
 	public static double middleMax() {
 		return MIDDLE_MAX;
 	}
 
 	/**
 	 * The half the clicked region of this frame fills: whichever region of the face {@code (u, v)}
-	 * falls in, or the half behind the face itself when the click is in the middle quarter.
+	 * falls in, or the half behind the face itself when the click is in the middle third.
 	 *
-	 * <p>The middle quarter takes the half behind the face, so its visible face is the one that was
-	 * clicked. Each other quarter sits against one edge and takes the half behind that edge - the
-	 * half a slab has to fill to lie against the edge the player pointed at, which is the half of the
-	 * block on that same side since the two axes run along the world. The middle is named first, and
-	 * the caller gives it priority, so it wins in the corners where the bands overlap.
+	 * <p>The middle third takes the half behind the face, so its visible face is the one that was
+	 * clicked. Each band sits against one edge and takes the half behind that edge - the half a slab
+	 * has to fill to lie against the edge the player pointed at, which is the half of the block on
+	 * that same side since the two axes run along the world. The middle is named first, and the
+	 * caller gives it priority, so it wins in the corners where the bands overlap.
 	 *
 	 * <p>The answer does not depend on which cell the placement lands in. It is the same rule for a
 	 * click on a plain block, where the new slab is built in the cell beyond the clicked face, and

@@ -112,7 +112,7 @@ public final class VerticalSlab {
 	 *
 	 * <p>Only the clicked face matters. On that face the corner the frame starts at is the origin,
 	 * the first axis runs from its left edge towards its right one and the second from its bottom
-	 * edge towards its top edge; a click in the middle quarter of both picks the half lying behind
+	 * edge towards its top edge; a click in the middle third of both picks the half lying behind
 	 * that face, and a click in one of the four surrounding bands picks the half that band names.
 	 * The middle is tested first, so it wins in the corners where the bands overlap. A click on a
 	 * block's northern face therefore fills the half of the new block that lies against that face -
