@@ -3,7 +3,7 @@
   "category": "building",
   "group": "stairs",
   "key": {
-    "#": "morebuildingblocks:yellow_glazed_terracotta"
+    "#": "minecraft:yellow_glazed_terracotta"
   },
   "pattern": [
     "#  ",

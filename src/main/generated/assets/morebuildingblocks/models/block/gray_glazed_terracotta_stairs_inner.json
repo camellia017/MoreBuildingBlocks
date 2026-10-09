@@ -1,4 +1,5 @@
 {
+  "parent": "minecraft:block/block",
   "elements": [
     {
       "faces": {
@@ -17,9 +18,9 @@
           "texture": "#pattern",
           "uv": [
             0,
-            0,
+            8,
             16,
-            8
+            16
           ]
         },
         "north": {
@@ -27,9 +28,9 @@
           "texture": "#pattern",
           "uv": [
             0,
-            0,
+            8,
             16,
-            8
+            16
           ]
         },
         "south": {
@@ -37,9 +38,9 @@
           "texture": "#pattern",
           "uv": [
             0,
-            0,
+            8,
             16,
-            8
+            16
           ]
         },
         "up": {
@@ -55,9 +56,9 @@
           "texture": "#pattern",
           "uv": [
             0,
-            0,
+            8,
             16,
-            8
+            16
           ]
         }
       },
@@ -88,9 +89,9 @@
           "texture": "#pattern",
           "uv": [
             0,
-            8,
+            0,
             16,
-            16
+            8
           ]
         },
         "north": {
@@ -98,19 +99,19 @@
           "texture": "#pattern",
           "uv": [
             8,
-            8,
+            0,
             16,
-            16
+            8
           ]
         },
         "south": {
           "rotation": 270,
           "texture": "#pattern",
           "uv": [
+            0,
+            0,
             8,
-            8,
-            16,
-            16
+            8
           ]
         },
         "up": {
@@ -126,9 +127,9 @@
           "texture": "#pattern",
           "uv": [
             0,
-            8,
+            0,
             16,
-            16
+            8
           ]
         }
       },
@@ -158,10 +159,10 @@
           "rotation": 180,
           "texture": "#pattern",
           "uv": [
+            0,
+            0,
             8,
-            8,
-            16,
-            16
+            8
           ]
         },
         "north": {
@@ -169,37 +170,37 @@
           "texture": "#pattern",
           "uv": [
             0,
+            0,
             8,
-            8,
-            16
+            8
           ]
         },
         "south": {
           "rotation": 270,
           "texture": "#pattern",
           "uv": [
+            8,
             0,
-            8,
-            8,
-            16
+            16,
+            8
           ]
         },
         "up": {
           "texture": "#pattern",
           "uv": [
             0,
+            0,
             8,
-            8,
-            16
+            8
           ]
         },
         "west": {
           "texture": "#pattern",
           "uv": [
             8,
-            8,
+            0,
             16,
-            16
+            8
           ]
         }
       },

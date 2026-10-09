@@ -42,8 +42,13 @@ public final class MBBlockFamilies {
 	private MBBlockFamilies() {
 	}
 
-	/** A base block plus the two derived forms generated for it. */
-	public record Family(String basePath, Block base, Block stairs, Block slab) {
+	/**
+	 * A base block plus the two derived forms generated for it.
+	 *
+	 * @param glazed whether the base block is glazed terracotta, whose directional pattern cannot
+	 *               use the flat texture mapping vanilla's slab and stair templates apply
+	 */
+	public record Family(String basePath, Block base, Block stairs, Block slab, boolean glazed) {
 
 		/** Path of the stair block id, e.g. {@code red_terracotta_stairs}. */
 		public String stairsPath() {
@@ -60,10 +65,10 @@ public final class MBBlockFamilies {
 	 * Registers {@code <basePath>_stairs} and {@code <basePath>_slab} for an already registered
 	 * base block and records the trio for datagen, crafting recipes and the creative tab.
 	 */
-	public static Family create(final String basePath, final Block base) {
+	public static Family create(final String basePath, final Block base, final boolean glazed) {
 		Block stairs = registerStairs(basePath + "_stairs", base);
 		Block slab = registerSlab(basePath + "_slab", base);
-		Family family = new Family(basePath, base, stairs, slab);
+		Family family = new Family(basePath, base, stairs, slab, glazed);
 		FAMILIES.add(family);
 		return family;
 	}

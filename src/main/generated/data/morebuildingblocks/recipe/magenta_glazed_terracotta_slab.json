@@ -3,7 +3,7 @@
   "category": "building",
   "group": "slabs",
   "key": {
-    "#": "morebuildingblocks:magenta_glazed_terracotta"
+    "#": "minecraft:magenta_glazed_terracotta"
   },
   "pattern": [
     "###"

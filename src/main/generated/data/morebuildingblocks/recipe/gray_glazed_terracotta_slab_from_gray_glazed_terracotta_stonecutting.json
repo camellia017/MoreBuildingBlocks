@@ -1,6 +1,6 @@
 {
   "type": "minecraft:stonecutting",
-  "ingredient": "morebuildingblocks:gray_glazed_terracotta",
+  "ingredient": "minecraft:gray_glazed_terracotta",
   "result": {
     "count": 2,
     "id": "morebuildingblocks:gray_glazed_terracotta_slab"

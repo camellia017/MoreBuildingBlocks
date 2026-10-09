@@ -3,7 +3,7 @@
   "category": "building",
   "group": "stairs",
   "key": {
-    "#": "morebuildingblocks:lime_terracotta"
+    "#": "minecraft:lime_terracotta"
   },
   "pattern": [
     "#  ",

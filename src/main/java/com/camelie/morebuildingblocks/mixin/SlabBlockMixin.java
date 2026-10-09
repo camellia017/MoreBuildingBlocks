@@ -1,5 +1,6 @@
 package com.camelie.morebuildingblocks.mixin;
 
+import com.camelie.morebuildingblocks.block.FaceFrame;
 import com.camelie.morebuildingblocks.block.MBBlockStateProperties;
 import com.camelie.morebuildingblocks.block.VerticalSlab;
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
@@ -77,6 +78,19 @@ public abstract class SlabBlockMixin {
 		return vertical != null ? vertical : original;
 	}
 
+	/**
+	 * Which half of the block the player is pointing at, read off the clicked face.
+	 *
+	 * <p>Only the clicked face matters. On that face the corner the frame starts at is the origin,
+	 * the first axis runs from its left edge towards its right one and the second from its bottom
+	 * edge towards its top edge; a click in the middle quarter of both picks the half lying behind
+	 * that face, and a click in one of the four surrounding bands picks the half that band names.
+	 * The middle is tested first, so it wins in the corners where the bands overlap.
+	 *
+	 * <p>The frame itself lives in {@link FaceFrame}, in the block package: a record built inside
+	 * this mixin has its constructed values rewritten along with the mixin, and the table then reads
+	 * back different directions than it was written with.
+	 */
 	@ModifyReturnValue(method = "getStateForPlacement", at = @At("RETURN"))
 	private BlockState morebuildingblocks$verticalPlacement(final BlockState original, final BlockPlaceContext context) {
 		if (original == null || original.getValue(SlabBlock.TYPE) == SlabType.DOUBLE) {
@@ -85,27 +99,22 @@ public abstract class SlabBlockMixin {
 
 		BlockPos pos = context.getClickedPos();
 		Vec3 hit = context.getClickLocation();
-		double x = hit.x - (pos.getX() + 0.5);
-		double z = hit.z - (pos.getZ() + 0.5);
+		Direction face = context.getClickedFace();
+		FaceFrame frame = FaceFrame.of(face);
 
-		// Which way the slab faces: the thin axis follows whichever horizontal offset of
-		// the CLICK dominates, so clicking a block's eastern half fills its eastern half.
-		// The filled half along that axis is the "facing", so a player standing to the east
-		// gets a slab facing them.
-		//
-		// The click location is used rather than the player's eye position: what the
-		// player is aiming at is what decides how the block is oriented, and a click
-		// through the middle of a block leaves it flat.
-		Direction.Axis axis = Math.abs(x) >= Math.abs(z) ? Direction.Axis.X : Direction.Axis.Z;
-		double dominant = axis == Direction.Axis.X ? x : z;
-
-		if (Math.abs(dominant) < 0.15) {
-			// Dead centre: nothing to face, so the slab lies flat as it always did.
+		if (frame == null) {
 			return original;
 		}
 
-		SlabType half = dominant > 0.0 ? SlabType.TOP : SlabType.BOTTOM;
-		return VerticalSlab.withVertical(original, axis, half);
+		// Local coordinates on the clicked face: 0 is its left/bottom edge, 1 its right/top edge.
+		// Both are measured from the corner the frame starts at, which is not the same corner of
+		// the block for every face, so each is offset to that corner before projecting.
+		double u = frame.u(hit, pos);
+		double v = frame.v(hit, pos, face);
+		boolean middle = u > FaceFrame.middleMin() && u < FaceFrame.middleMax()
+			&& v > FaceFrame.middleMin() && v < FaceFrame.middleMax();
+
+		return VerticalSlab.withFill(original, frame.region(face, middle, u, v));
 	}
 
 	@ModifyReturnValue(method = "canBeReplaced", at = @At("RETURN"))

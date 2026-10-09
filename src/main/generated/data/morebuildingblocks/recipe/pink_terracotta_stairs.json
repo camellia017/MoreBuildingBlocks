@@ -3,7 +3,7 @@
   "category": "building",
   "group": "stairs",
   "key": {
-    "#": "morebuildingblocks:pink_terracotta"
+    "#": "minecraft:pink_terracotta"
   },
   "pattern": [
     "#  ",

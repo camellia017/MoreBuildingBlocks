@@ -1,6 +1,6 @@
 {
   "type": "minecraft:stonecutting",
-  "ingredient": "morebuildingblocks:lime_glazed_terracotta",
+  "ingredient": "minecraft:lime_glazed_terracotta",
   "result": {
     "count": 2,
     "id": "morebuildingblocks:lime_glazed_terracotta_slab"

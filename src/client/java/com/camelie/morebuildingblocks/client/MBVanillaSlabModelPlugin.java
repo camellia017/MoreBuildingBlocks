@@ -63,17 +63,23 @@ public class MBVanillaSlabModelPlugin implements ClientModInitializer {
 		Variant bottom = variant(flatModel(id, ""), null);
 		Variant top = variant(flatModel(id, "_top"), null);
 		Variant full = variant(doubleModel(id), null);
-		Identifier uprightModel = verticalModel(id);
-		Variant verticalX = variant(uprightModel, Quadrant.R90);
-		Variant verticalZ = variant(uprightModel, Quadrant.R270);
+		Variant verticalNegativeX = variant(verticalModel(id, "neg_x"), null);
+		Variant verticalPositiveX = variant(verticalModel(id, "pos_x"), null);
+		Variant verticalNegativeZ = variant(verticalModel(id, "neg_z"), null);
+		Variant verticalPositiveZ = variant(verticalModel(id, "pos_z"), null);
 
 		for (BlockState state : block.getStateDefinition().getPossibleStates()) {
 			boolean vertical = state.getValue(MBBlockStateProperties.VERTICAL);
 			Direction.Axis axis = state.getValue(MBBlockStateProperties.AXIS);
 			SlabType type = state.getValue(SlabBlock.TYPE);
 
-			if (vertical && axis != Direction.Axis.Y) {
-				context.setModel(state, new SingleVariant.Unbaked(axis == Direction.Axis.X ? verticalX : verticalZ).asRoot());
+			if (vertical && axis != Direction.Axis.Y && type != SlabType.DOUBLE) {
+				boolean positive = type == SlabType.TOP;
+				Variant upright = axis == Direction.Axis.X
+					? (positive ? verticalPositiveX : verticalNegativeX)
+					: (positive ? verticalPositiveZ : verticalNegativeZ);
+
+				context.setModel(state, new SingleVariant.Unbaked(upright).asRoot());
 				continue;
 			}
 
@@ -90,9 +96,14 @@ public class MBVanillaSlabModelPlugin implements ClientModInitializer {
 		return slabId.withPath(path -> "block/" + path + suffix);
 	}
 
-	/** {@code morebuildingblocks:block/vertical_slab/<slab path>}, written by datagen. */
-	private static Identifier verticalModel(Identifier slabId) {
-		return Identifier.fromNamespaceAndPath(MoreBuildingBlocks.MOD_ID, VERTICAL_DIRECTORY + slabId.getPath());
+	/**
+	 * {@code morebuildingblocks:vertical_slab/<slab path>/<fill>}, written by datagen: one box per
+	 * half the slab can fill, so each of the four upright directions reads the right half of the
+	 * block instead of two of them sharing a rotated copy of the same box.
+	 */
+	private static Identifier verticalModel(Identifier slabId, String fill) {
+		return Identifier.fromNamespaceAndPath(MoreBuildingBlocks.MOD_ID,
+			VERTICAL_DIRECTORY + slabId.getPath() + "/" + fill);
 	}
 
 	/**

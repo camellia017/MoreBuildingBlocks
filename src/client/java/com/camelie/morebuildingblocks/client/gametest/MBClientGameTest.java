@@ -13,9 +13,12 @@ import net.fabricmc.fabric.api.client.gametest.v1.context.TestDedicatedServerCon
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestServerConnection;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestServerContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.Bootstrap;
 import net.minecraft.server.level.ServerLevel;
@@ -44,8 +47,8 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 import com.camelie.morebuildingblocks.MoreBuildingBlocks;
 import com.camelie.morebuildingblocks.block.MBBlockStateProperties;
 import com.camelie.morebuildingblocks.block.VerticalSlab;
+import com.camelie.morebuildingblocks.block.VerticalSlab.Fill;
 import com.camelie.morebuildingblocks.registry.MBBlockFamilies;
-import com.camelie.morebuildingblocks.registry.MBBlocks;
 import com.camelie.morebuildingblocks.registry.MBItems;
 
 /**
@@ -132,7 +135,9 @@ public class MBClientGameTest implements FabricClientGameTest {
 
 				// A: the whole terracotta family, three rows deep rather than stacked into
 				// columns, so the stair in the middle of the frame does not hide the slab
-				// behind it. 33 of 101 columns are used.
+				// behind it. The cube below each pair is vanilla's own block, which is
+				// exactly what the stair and slab above it are cut from. 33 of 101
+				// columns are used.
 				for (int i = 0; i < family.size(); i++) {
 					Block block = family.get(i);
 					level.setBlockAndUpdate(new BlockPos(COLUMN_X0 + i, FIRST_ROW_Y, WALL_Z), block.defaultBlockState());
@@ -160,7 +165,8 @@ public class MBClientGameTest implements FabricClientGameTest {
 			context.waitTicks(20);
 			connection.waitForChunksRender();
 
-			// All three forms of all 33 blocks: a cube, its slab and its stair, stacked.
+			// All three forms of all 33 columns: the vanilla terracotta cube the mod does
+			// not register, with its own slab and stair above it.
 			int middle = COLUMN_X0 + family.size() / 2;
 			look(context, server, middle, FIRST_ROW_Y + 1.0, WALL_Z, VIEW_DISTANCE, 0.6);
 			context.takeScreenshot(FAMILY_SHOT);
@@ -184,6 +190,10 @@ public class MBClientGameTest implements FabricClientGameTest {
 
 			look(context, server, COLUMN_X0 + 75, FIRST_ROW_Y + 1.0, VERTICAL_WALL_Z, VERTICAL_VIEW_DISTANCE, 1.2);
 			context.takeScreenshot(VERTICAL_FAR_SHOT);
+
+			// The item icons are covered by the model assertions instead of a screenshot:
+			// 26.3 draws screens through a render-state extractor whose API cannot be
+			// guessed, and the hotbar in every screenshot above already shows the icons.
 
 			// Geometry and loot come last: a failed assertion aborts the run, and the
 			// screenshots above are the evidence for the checks a log cannot make.
@@ -215,9 +225,6 @@ public class MBClientGameTest implements FabricClientGameTest {
 
 			List<Block> displayOrder = MBItems.displayOrder();
 			List<Block> expected = new ArrayList<>();
-			expected.add(MBBlocks.TERRACOTTA);
-			MBBlocks.DYED_TERRACOTTA.forEach(expected::add);
-			MBBlocks.GLAZED_TERRACOTTA.forEach(expected::add);
 
 			for (MBBlockFamilies.Family family : MBBlockFamilies.families()) {
 				expected.add(family.stairs());
@@ -273,14 +280,17 @@ public class MBClientGameTest implements FabricClientGameTest {
 					}
 				}
 
-				// 33 base blocks and 66 stair/slab blocks, so 66 of the 99 listed
-				// entries are stairs or slabs.
+				// 33 stair/slab pairs and nothing else: the terracotta blocks they are
+				// cut from are vanilla's own and are not registered by this mod.
 				require(serverBlocks == 66, "the dedicated server registered " + serverBlocks
 						+ " stair/slab blocks, expected 66");
 				require(serverById.containsKey(Identifier.fromNamespaceAndPath(MoreBuildingBlocks.MOD_ID, "terracotta_slab")),
 						"the dedicated server is missing morebuildingblocks:terracotta_slab");
-				require(BuiltInRegistries.BLOCK.getValue(Identifier.fromNamespaceAndPath(MoreBuildingBlocks.MOD_ID, "terracotta")) != null,
-						"the dedicated server is missing morebuildingblocks:terracotta");
+				// Registry#getValue answers with the registry's default entry (air) for an
+				// unknown id, so only getOptional can tell whether the block exists at all.
+				require(BuiltInRegistries.BLOCK.getOptional(Identifier.fromNamespaceAndPath(MoreBuildingBlocks.MOD_ID, "terracotta")).isEmpty(),
+						"the mod still registers its own minecraft-like terracotta block: "
+								+ BuiltInRegistries.BLOCK.getOptional(Identifier.fromNamespaceAndPath(MoreBuildingBlocks.MOD_ID, "terracotta")));
 
 				level.setBlockAndUpdate(pos, serverById
 						.get(Identifier.fromNamespaceAndPath(MoreBuildingBlocks.MOD_ID, "terracotta_slab"))
@@ -308,8 +318,8 @@ public class MBClientGameTest implements FabricClientGameTest {
 					}
 				}
 
-				require(clientById.size() == 99,
-						"the client knows " + clientById.size() + " mod items, expected 99");
+				require(clientById.size() == 66,
+						"the client knows " + clientById.size() + " mod items, expected 66");
 				require(clientById.containsKey(Identifier.fromNamespaceAndPath(MoreBuildingBlocks.MOD_ID, "terracotta_slab")),
 						"the client is missing morebuildingblocks:terracotta_slab");
 
@@ -325,10 +335,11 @@ public class MBClientGameTest implements FabricClientGameTest {
 	 * upright rule chose the intended axis and half.
 	 *
 	 * <p>This is the one part of the feature a screenshot cannot prove: a slab whose axis
-	 * is wrong still renders as a plausible thin wall, and the placement rule reads the
-	 * click position rather than the block state. Clicking the eastern half of a block's
-	 * top face must give a slab that faces east (thin on X, filled on the east side), and
-	 * the northern half one that faces north (thin on Z, filled on the north side).
+	 * is wrong still renders as a plausible thin wall, and the rule reads the click
+	 * position on the clicked face rather than the camera. The clicked face is divided
+	 * into a middle quarter and four bands around it: the middle takes the half behind
+	 * that face, the bottom and top bands the lower and upper halves, and the left and
+	 * right bands the halves named by that face's own left and right edges.
 	 */
 	private static void verifyPlacement(TestServerContext server, List<Block> family) {
 		server.runOnServer(minecraftServer -> {
@@ -337,41 +348,77 @@ public class MBClientGameTest implements FabricClientGameTest {
 			Block slabBlock = vanillaSlabs().get(0);
 			BlockPos pos = new BlockPos(0, FLOOR_Y + 24, 0);
 
-			// Standing east of the block and clicking its top face's eastern half.
 			level.setBlockAndUpdate(pos.below(), Blocks.STONE.defaultBlockState());
-			checkPlacement(level, player, slabBlock, pos, new Vec3(0.9, FLOOR_Y + 25.0, 0.5), Direction.UP,
-					Direction.Axis.X, SlabType.TOP, "east half");
 
-			// Standing north of it, clicking the top face's northern half.
+			// The clicked face is divided into a middle quarter and one band along each of its four
+			// edges. The top face is read with its left edge towards the west and its bottom edge
+			// towards the north, so its bottom band fills the northern half, its top band the
+			// southern one, and its left and right bands the western and eastern halves.
+			checkPlacement(level, player, slabBlock, pos, new Vec3(0.5, FLOOR_Y + 25.0, 0.5), Direction.UP,
+					Fill.negative(Direction.Axis.Y), "top face centre");
 			checkPlacement(level, player, slabBlock, pos, new Vec3(0.5, FLOOR_Y + 25.0, 0.1), Direction.UP,
-					Direction.Axis.Z, SlabType.BOTTOM, "north half");
+					Fill.negative(Direction.Axis.Z), "top face north band");
+			checkPlacement(level, player, slabBlock, pos, new Vec3(0.5, FLOOR_Y + 25.0, 0.9), Direction.UP,
+					Fill.positive(Direction.Axis.Z), "top face south band");
+			checkPlacement(level, player, slabBlock, pos, new Vec3(0.1, FLOOR_Y + 25.0, 0.5), Direction.UP,
+					Fill.negative(Direction.Axis.X), "top face west band");
+			checkPlacement(level, player, slabBlock, pos, new Vec3(0.9, FLOOR_Y + 25.0, 0.5), Direction.UP,
+					Fill.positive(Direction.Axis.X), "top face east band");
 
-			// A click on a side face uses the same rule, so the slab still faces the player.
-			checkPlacement(level, player, slabBlock, pos, new Vec3(0.95, FLOOR_Y + 24.5, 0.5), Direction.EAST,
-					Direction.Axis.X, SlabType.TOP, "east side face");
+			// The north face is read with its left edge towards the west, so its left band fills the
+			// eastern half and its right band the western one; a click in its middle quarter fills
+			// the southern half, leaving a visible face pointing north.
+			checkPlacement(level, player, slabBlock, pos, new Vec3(0.5, FLOOR_Y + 24.5, 0.05), Direction.NORTH,
+					Fill.positive(Direction.Axis.Z), "north face centre");
+			checkPlacement(level, player, slabBlock, pos, new Vec3(0.5, FLOOR_Y + 24.1, 0.05), Direction.NORTH,
+					Fill.negative(Direction.Axis.Y), "north face bottom band");
+			checkPlacement(level, player, slabBlock, pos, new Vec3(0.5, FLOOR_Y + 24.9, 0.05), Direction.NORTH,
+					Fill.positive(Direction.Axis.Y), "north face top band");
+			checkPlacement(level, player, slabBlock, pos, new Vec3(0.9, FLOOR_Y + 24.5, 0.05), Direction.NORTH,
+					Fill.negative(Direction.Axis.X), "north face east band");
+			checkPlacement(level, player, slabBlock, pos, new Vec3(0.1, FLOOR_Y + 24.5, 0.05), Direction.NORTH,
+					Fill.positive(Direction.Axis.X), "north face west band");
 
-			// A flat floor slab, placed from above at the centre, stays flat: only a
-			// horizontal offset makes a slab stand up.
-			level.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
-			BlockState flat = placement(level, player, slabBlock, pos, new Vec3(0.5, FLOOR_Y + 25.0, 0.5), Direction.UP);
-			require(flat != null && !flat.getValue(MBBlockStateProperties.VERTICAL),
-					"a centre click produced an upright slab: " + flat);
+			// The east face is read with its left edge towards the north, so u runs from north to
+			// south: the left band is the northern quarter of the face and the right band the
+			// southern one. A click in its middle quarter fills the southern half - the half whose
+			// visible face points north, because "south-facing" names the filled half.
+			checkPlacement(level, player, slabBlock, pos, new Vec3(1.0, FLOOR_Y + 24.5, 0.5), Direction.EAST,
+					Fill.positive(Direction.Axis.Z), "east face centre");
+			checkPlacement(level, player, slabBlock, pos, new Vec3(1.0, FLOOR_Y + 24.5, 0.1), Direction.EAST,
+					Fill.positive(Direction.Axis.Z), "east face left band");
+			checkPlacement(level, player, slabBlock, pos, new Vec3(1.0, FLOOR_Y + 24.5, 0.9), Direction.EAST,
+					Fill.positive(Direction.Axis.Z), "east face right band");
+			checkPlacement(level, player, slabBlock, pos, new Vec3(1.0, FLOOR_Y + 24.1, 0.5), Direction.EAST,
+					Fill.negative(Direction.Axis.Y), "east face bottom band");
+			checkPlacement(level, player, slabBlock, pos, new Vec3(1.0, FLOOR_Y + 24.9, 0.5), Direction.EAST,
+					Fill.positive(Direction.Axis.Y), "east face top band");
+
+			// The bottom face is read the same way as the top one, mirrored: its left edge is still
+			// towards the west, but its second axis runs north.
+			checkPlacement(level, player, slabBlock, pos, new Vec3(0.5, FLOOR_Y + 24.0, 0.5), Direction.DOWN,
+					Fill.positive(Direction.Axis.Y), "bottom face centre");
+			checkPlacement(level, player, slabBlock, pos, new Vec3(0.5, FLOOR_Y + 24.0, 0.1), Direction.DOWN,
+					Fill.negative(Direction.Axis.Z), "bottom face north band");
+			checkPlacement(level, player, slabBlock, pos, new Vec3(0.5, FLOOR_Y + 24.0, 0.9), Direction.DOWN,
+					Fill.positive(Direction.Axis.Z), "bottom face south band");
+			checkPlacement(level, player, slabBlock, pos, new Vec3(0.1, FLOOR_Y + 24.0, 0.5), Direction.DOWN,
+					Fill.negative(Direction.Axis.X), "bottom face west band");
+			checkPlacement(level, player, slabBlock, pos, new Vec3(0.9, FLOOR_Y + 24.0, 0.5), Direction.DOWN,
+					Fill.positive(Direction.Axis.X), "bottom face east band");
 		});
 	}
 
 	private static void checkPlacement(ServerLevel level, ServerPlayer player, Block slabBlock, BlockPos pos,
-			Vec3 hit, Direction face, Direction.Axis axis, SlabType half, String what) {
+			Vec3 hit, Direction face, Fill expected, String what) {
 		BlockState placed = placement(level, player, slabBlock, pos, hit, face);
 
 		require(placed != null, "no block state was produced for the " + what + " placement");
-		require(placed.getValue(MBBlockStateProperties.VERTICAL),
-				"the " + what + " placement did not stand the slab up: " + placed);
-		require(placed.getValue(MBBlockStateProperties.AXIS) == axis,
-				"the " + what + " placement used axis " + placed.getValue(MBBlockStateProperties.AXIS)
-						+ ", expected " + axis);
-		require(placed.getValue(SlabBlock.TYPE) == half,
-				"the " + what + " placement filled the " + placed.getValue(SlabBlock.TYPE)
-						+ " half, expected " + half);
+		require(SlabType.DOUBLE != placed.getValue(SlabBlock.TYPE),
+				"the " + what + " placement doubled the slab: " + placed);
+		require(Fill.of(placed).equals(expected),
+				"the " + what + " placement filled " + Fill.of(placed) + ", expected " + expected
+						+ " (clicked " + face + " at " + hit + "): " + placed);
 	}
 
 	private static BlockState placement(ServerLevel level, ServerPlayer player, Block slabBlock, BlockPos pos,
@@ -565,6 +612,8 @@ public class MBClientGameTest implements FabricClientGameTest {
 
 	/** One stair per base block, oriented so the cut corner is visible. */
 	private static BlockState stairs(Block block) {
+		// The stair of a base block keeps the base block's own path and lives in this
+		// mod's namespace; the base block itself is vanilla's.
 		Block stairs = blockWithPath(BuiltInRegistries.BLOCK.getKey(block).getPath() + "_stairs");
 
 		if (!(stairs instanceof StairBlock)) {
@@ -590,12 +639,16 @@ public class MBClientGameTest implements FabricClientGameTest {
 		return VerticalSlab.withVertical(slab.defaultBlockState(), axis, type);
 	}
 
-	/** The 33 terracotta blocks in vanilla's own order: plain, dyed, glazed. */
+	/**
+	 * The 33 vanilla terracotta blocks in vanilla's own order: plain, dyed, glazed, then
+	 * sorted by path. These are the blocks the mod cuts its stairs and slabs from; the mod
+	 * registers none of them.
+	 */
 	private static List<Block> familyBlocks() {
 		List<Block> blocks = new ArrayList<>();
 		blocks.add(Blocks.TERRACOTTA);
+		blocks.addAll(coloredTerracotta("terracotta"));
 		blocks.addAll(glazedBaseBlocks());
-		blocks.addAll(colored("terracotta"));
 		blocks.sort((left, right) -> BuiltInRegistries.BLOCK.getKey(left).getPath()
 				.compareTo(BuiltInRegistries.BLOCK.getKey(right).getPath()));
 		return blocks;
@@ -603,16 +656,18 @@ public class MBClientGameTest implements FabricClientGameTest {
 
 	/** The 16 glazed terracotta blocks, in dye order. */
 	private static List<Block> glazedBaseBlocks() {
-		return colored("glazed_terracotta");
+		return coloredTerracotta("glazed_terracotta");
 	}
 
-	/** The mod's own dyed blocks for one suffix, in dye order. */
-	private static List<Block> colored(String suffix) {
+	/** Vanilla's own dyed terracotta blocks for one suffix, in dye order. */
+	private static List<Block> coloredTerracotta(String suffix) {
 		List<Block> blocks = new ArrayList<>();
 
 		for (String name : List.of("white", "orange", "magenta", "light_blue", "yellow", "lime", "pink", "gray",
 				"light_gray", "cyan", "purple", "blue", "brown", "green", "red", "black")) {
-			Block block = blockWithPath(name + "_" + suffix);
+			Block block = BuiltInRegistries.BLOCK
+					.getOptional(Identifier.fromNamespaceAndPath("minecraft", name + "_" + suffix))
+					.orElse(Blocks.AIR);
 
 			if (block != Blocks.AIR) {
 				blocks.add(block);

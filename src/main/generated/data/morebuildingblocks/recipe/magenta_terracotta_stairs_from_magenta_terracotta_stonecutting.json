@@ -1,6 +1,6 @@
 {
   "type": "minecraft:stonecutting",
-  "ingredient": "morebuildingblocks:magenta_terracotta",
+  "ingredient": "minecraft:magenta_terracotta",
   "result": {
     "id": "morebuildingblocks:magenta_terracotta_stairs"
   }

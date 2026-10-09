@@ -42,12 +42,8 @@ public final class MBItems {
 	private static CreativeModeTab mainTab;
 
 	static {
-		// Base blocks first (terracotta, then dyed, then glazed), so the tab shows
-		// the source block right before the stairs and slab made from it.
-		DISPLAY_ORDER.add(MBBlocks.TERRACOTTA);
-		MBBlocks.DYED_TERRACOTTA.forEach(DISPLAY_ORDER::add);
-		MBBlocks.GLAZED_TERRACOTTA.forEach(DISPLAY_ORDER::add);
-
+		// Every family in order: the stairs then the slab made from each terracotta block.
+		// The base blocks themselves are vanilla's, so they are not this mod's to list.
 		for (MBBlockFamilies.Family family : MBBlockFamilies.families()) {
 			DISPLAY_ORDER.add(family.stairs());
 			DISPLAY_ORDER.add(family.slab());
@@ -57,13 +53,18 @@ public final class MBItems {
 	private MBItems() {
 	}
 
+	/** The block shown as the tab icon: the first family's stairs. */
+	private static Block iconBlock() {
+		return MBBlockFamilies.families().get(0).stairs();
+	}
+
 	/** Registers the creative tab. Call once from the mod initialiser, before the registries freeze. */
 	public static CreativeModeTab register() {
 		if (mainTab == null) {
 			mainTab = Registry.register(BuiltInRegistries.CREATIVE_MODE_TAB, MAIN_TAB_KEY,
 					FabricCreativeModeTab.builder()
 							.title(Component.literal("MoreBuildingBlocks"))
-							.icon(() -> new ItemStack(MBBlocks.TERRACOTTA))
+							.icon(() -> new ItemStack(iconBlock()))
 							.displayItems((parameters, output) -> {
 								for (Block block : DISPLAY_ORDER) {
 									Item item = Item.BY_BLOCK.get(block);

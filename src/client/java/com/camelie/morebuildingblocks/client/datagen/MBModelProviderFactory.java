@@ -18,5 +18,10 @@ public class MBModelProviderFactory implements ModelProviderFactory {
 		// The cast is required: the pack also inherits vanilla's addProvider, so a
 		// bare method reference is ambiguous between the two factory types.
 		pack.addProvider((FabricDataGenerator.Pack.Factory<MBModelProvider>) MBModelProvider::new);
+
+		// Languages only need the common half of Minecraft, but they are registered
+		// here so that one entrypoint contributes everything the client source set
+		// owns and the data generator stays a single, ordered list.
+		pack.addProvider((FabricDataGenerator.Pack.Factory<MBLanguageProvider>) MBLanguageProvider::new);
 	}
 }

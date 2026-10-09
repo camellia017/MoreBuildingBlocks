@@ -3,7 +3,7 @@
   "category": "building",
   "group": "slabs",
   "key": {
-    "#": "morebuildingblocks:gray_terracotta"
+    "#": "minecraft:gray_terracotta"
   },
   "pattern": [
     "###"

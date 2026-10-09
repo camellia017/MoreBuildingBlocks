@@ -3,7 +3,7 @@
   "category": "building",
   "group": "stairs",
   "key": {
-    "#": "morebuildingblocks:purple_glazed_terracotta"
+    "#": "minecraft:purple_glazed_terracotta"
   },
   "pattern": [
     "#  ",

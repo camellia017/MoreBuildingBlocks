@@ -1,6 +1,6 @@
 {
   "type": "minecraft:stonecutting",
-  "ingredient": "morebuildingblocks:gray_terracotta",
+  "ingredient": "minecraft:gray_terracotta",
   "result": {
     "id": "morebuildingblocks:gray_terracotta_stairs"
   }
