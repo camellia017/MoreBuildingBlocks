@@ -241,7 +241,7 @@ public class MBClientGameTest implements FabricClientGameTest {
 			// screenshots above are the evidence for the checks a log cannot make.
 			verifyShapes(server);
 			verifyPlacement(server, family);
-			verifyUprightStacking(server);
+			verifyUprightNeighbours(server);
 			verifyDrops(context, server, family);
 			verifyCreativeTab(server);
 		}
@@ -465,25 +465,28 @@ public class MBClientGameTest implements FabricClientGameTest {
 	}
 
 	/**
-	 * Places a second upright slab against both broad faces of a first one, through the
-	 * real {@link BlockPlaceContext} path, and checks which block and which half it lands
-	 * in.
+	 * Places a second upright slab against both broad faces of a first one, and against its top,
+	 * through the real {@link BlockPlaceContext} path, and checks which block and which half each
+	 * one lands in.
 	 *
-	 * <p>This is the case the click position cannot decide. Both clicks land on the same
-	 * plane between two cells, and one of them means "continue the wall" while the other
-	 * means "complete this slab":
+	 * <p>An upright slab is not replaceable from any face, so a click on one is always taken into
+	 * the next cell along before the placement rule sees it. Every one of these clicks therefore
+	 * means the wall carrying on, never the clicked slab being replaced:
 	 *
 	 * <ul>
-	 *   <li>Against the <em>outer</em> face - here the northern one, the face a
-	 *       south-facing slab shows through - the new slab belongs in the next block north,
-	 *       filling the half that reaches back towards the clicked one. Getting this wrong
-	 *       puts it in the slab's own cell, where it fights the block already there.</li>
-	 *   <li>Against the <em>inner</em> face the new slab belongs in the clicked cell, and
-	 *       the placement is ignored entirely: the two halves are the two halves of one
-	 *       block, so the result is a double slab, not a second block beside it.</li>
+	 *   <li>Against the <em>outer</em> face - here the northern one, the face a south-facing slab
+	 *       shows through - the new slab belongs in the next block north, filling the half that
+	 *       reaches back towards the clicked one. The click has to be moved out of the slab for
+	 *       this, which is what makes {@code canBeReplaced} answer {@code false}.</li>
+	 *   <li>Against the <em>inner</em> face the new slab belongs in the next block south, filling
+	 *       that block's southern half. Leaving the click inside the clicked slab instead makes
+	 *       vanilla combine the two halves into one double slab and silently swaps the upright
+	 *       slab out.</li>
+	 *   <li>Against the <em>top</em>: the last of those three, and the one a player hits by
+	 *       accident while building. It lands in the block above with the half the click picked.</li>
 	 * </ul>
 	 */
-	private static void verifyUprightStacking(TestServerContext server) {
+	private static void verifyUprightNeighbours(TestServerContext server) {
 		server.runOnServer(minecraftServer -> {
 			ServerLevel level = minecraftServer.overworld();
 			ServerPlayer player = minecraftServer.getPlayerList().getPlayers().get(0);
@@ -500,9 +503,10 @@ public class MBClientGameTest implements FabricClientGameTest {
 			level.setBlockAndUpdate(pos, wall);
 			level.setBlockAndUpdate(north, Blocks.AIR.defaultBlockState());
 
-			// (a) The click has to be taken out of the slab: its outer face reports itself
-			// as replaceable, so without the fix getClickedPos() stays on the slab and the
-			// new state is computed for the block that is already full.
+			// (a) The click has to be taken out of the slab. SlabBlock reports an upright
+			// slab as replaceable from every face it presents, so without the mod's own
+			// canBeReplaced answer getClickedPos() stays on the slab and the new state is
+			// computed for the block that is already standing there.
 			BlockPlaceContext outer = new BlockPlaceContext(player, InteractionHand.MAIN_HAND,
 					new ItemStack(slabBlock.asItem()),
 					new BlockHitResult(new Vec3(0.5, FLOOR_Y + 24.5, 0.0), Direction.NORTH, pos, false));
@@ -521,25 +525,59 @@ public class MBClientGameTest implements FabricClientGameTest {
 					"the slab placed against the outer face of a south-facing slab filled " + Fill.of(continued)
 							+ ", expected the southern half so the two touch: " + continued);
 
-			// (b) The inner face is the clicked slab's own free half, so the placement lands
-			// in the same cell and doubles the block up.
+			// (b) The inner face is the clicked slab's open half, and it is not replaceable
+			// either, so this click is moved south instead of staying on the slab. Staying
+			// there is what vanilla would do with a replaceable half slab: it combines the
+			// two halves into one double and swaps the upright slab out.
+			BlockPos south = pos.south();
 			BlockPlaceContext inner = new BlockPlaceContext(player, InteractionHand.MAIN_HAND,
 					new ItemStack(slabBlock.asItem()),
 					new BlockHitResult(new Vec3(0.5, FLOOR_Y + 24.5, 1.0), Direction.SOUTH, pos, false));
 
-			require(inner.getClickedPos().equals(pos),
+			require(inner.getClickedPos().equals(south),
 					"clicking the inner face of an upright slab aimed at " + inner.getClickedPos()
-							+ ", expected the clicked block itself at " + pos);
+							+ ", expected the block beyond it at " + south);
 
-			BlockState doubled = slabBlock.getStateForPlacement(inner);
+			BlockState continuedSouth = slabBlock.getStateForPlacement(inner);
 
-			require(doubled != null, "no block state was produced for a click on an upright slab's inner face");
-			require(SlabType.DOUBLE == doubled.getValue(SlabBlock.TYPE),
-					"the click on the inner face of an upright slab produced " + doubled
-							+ ", expected a double slab completing the same block");
+			require(continuedSouth != null, "no block state was produced for a click on an upright slab's inner face");
+			require(continuedSouth.getValue(MBBlockStateProperties.VERTICAL),
+					"the slab placed against the inner face of an upright slab came out flat: " + continuedSouth);
+			require(SlabType.DOUBLE != continuedSouth.getValue(SlabBlock.TYPE),
+					"the click on the inner face of an upright slab produced " + continuedSouth
+							+ ", expected a second upright slab beside it rather than the clicked block completed");
+
+			// (c) A click on the top of an upright slab. The block it lands in has to be the
+			// one above, and the clicked slab has to survive it: the half that used to be
+			// built here was the clicked slab's own cell, where the new state replaced the
+			// standing slab with a differently turned one.
+			BlockPos above = pos.above();
+			level.setBlockAndUpdate(above, Blocks.AIR.defaultBlockState());
+
+			BlockPlaceContext top = new BlockPlaceContext(player, InteractionHand.MAIN_HAND,
+					new ItemStack(slabBlock.asItem()),
+					new BlockHitResult(new Vec3(pos.getX() + 0.9, FLOOR_Y + 25.0, pos.getZ() + 0.5),
+							Direction.UP, pos, false));
+
+			require(top.getClickedPos().equals(above),
+					"clicking the top of an upright slab aimed at " + top.getClickedPos()
+							+ ", expected the block above it at " + above);
+
+			BlockState stacked = slabBlock.getStateForPlacement(top);
+
+			require(stacked != null, "no block state was produced for a click on the top of an upright slab");
+			require(stacked.getValue(MBBlockStateProperties.VERTICAL),
+					"the slab placed on top of an upright slab came out flat: " + stacked);
+			require(Fill.of(stacked).equals(Fill.positive(Direction.Axis.X)),
+					"the slab placed on top of an upright slab filled " + Fill.of(stacked)
+							+ ", expected the eastern half the click picked: " + stacked);
+			require(level.getBlockState(pos).equals(wall),
+					"the upright slab that was clicked came out as " + level.getBlockState(pos)
+							+ " after a click on its top, expected it untouched at " + wall);
 
 			level.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
 			level.setBlockAndUpdate(north, Blocks.AIR.defaultBlockState());
+			level.setBlockAndUpdate(above, Blocks.AIR.defaultBlockState());
 		});
 	}
 

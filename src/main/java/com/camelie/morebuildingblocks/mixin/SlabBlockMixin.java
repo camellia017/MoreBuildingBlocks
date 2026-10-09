@@ -88,12 +88,15 @@ public abstract class SlabBlockMixin {
 	}
 
 	/**
-	 * Which half of the block the player is pointing at, read off the clicked face, plus the
-	 * direction the player was looking, which a glazed pattern is turned by.
+	 * Turns the flat slab vanilla just decided on into the half of the block the player aimed at,
+	 * and records the direction a glazed pattern has to be turned by.
 	 *
-	 * <p>The rule itself lives in {@link VerticalSlab#placementFill}, in the block package: a record
-	 * built inside this mixin has its constructed values rewritten along with the mixin, and the
-	 * frame table then reads back different directions than it was written with.
+	 * <p>Vanilla's own state is what the answer starts from: it already carries the axis the click
+	 * came in on for a layered slab, and the waterlogged flag. Only the half - and, for a glazed
+	 * block, which way the pattern faces - is decided here, by the rule in
+	 * {@link VerticalSlab#placementFill}. That rule lives in the block package because a record
+	 * built inside a mixin has its constructed values rewritten along with the mixin, and the frame
+	 * table then reads back different directions than it was written with.
 	 */
 	@ModifyReturnValue(method = "getStateForPlacement", at = @At("RETURN"))
 	private BlockState morebuildingblocks$verticalPlacement(final BlockState original, final BlockPlaceContext context) {
@@ -111,16 +114,30 @@ public abstract class SlabBlockMixin {
 			MBBlockStateProperties.GLAZED_FACING, context.getHorizontalDirection().getOpposite());
 	}
 
+	/**
+	 * Refuses to let an upright slab be replaced from any face.
+	 *
+	 * <p>{@link SlabBlock#canBeReplaced} only asks whether the slab is a double, so it reports every
+	 * upright slab as open from above, from below and from both of its own broad faces. That is
+	 * wrong in a way the player sees immediately: a click on the top of an upright slab is moved
+	 * into the slab's own cell, where {@code SlabBlock.getStateForPlacement} - blind to the axis it
+	 * is adding to - combines the click with the slab already standing there, and the half slab the
+	 * player just placed silently swaps the whole block out. On the broad faces it is wrong more
+	 * quietly: a click there would complete the block into a full cube instead of carrying the wall
+	 * on, which is the one placement the player is asking for while building one.
+	 *
+	 * <p>Answering {@code false} everywhere is what the reference implementation does
+	 * ({@code btsdhz/vanilla-refit}'s {@code SlabBlockMixin.canBeReplaced} returns {@code false} for
+	 * every state that is not its flat mode), and it is what puts every click on an upright slab
+	 * into the next cell along, where {@link VerticalSlab#placementFill} reads it as the wall
+	 * continuing.
+	 */
 	@ModifyReturnValue(method = "canBeReplaced", at = @At("RETURN"))
-	private boolean morebuildingblocks$replaceVertical(final boolean original, final BlockState state, final BlockPlaceContext context) {
-		if (original || !VerticalSlab.isVertical(state) || VerticalSlab.isDouble(state)) {
-			return original;
+	private boolean morebuildingblocks$keepVertical(final boolean original, final BlockState state, final BlockPlaceContext context) {
+		if (VerticalSlab.isVertical(state) && !VerticalSlab.isDouble(state)) {
+			return false;
 		}
 
-		// A vertical slab doubles up when its open face is clicked with the same item, and is left
-		// alone when the click lands on the face its other half shows through: a click there means
-		// the next block along, which is the one the player is building against.
-		return context.getClickedFace() != VerticalSlab.outward(state)
-			&& context.getItemInHand().is(state.getBlock().asItem());
+		return original;
 	}
 }
