@@ -94,9 +94,9 @@
           "rotation": 90,
           "texture": "#pattern",
           "uv": [
-            8,
             0,
-            16,
+            0,
+            8,
             8
           ]
         },
@@ -167,18 +167,18 @@
           "rotation": 90,
           "texture": "#pattern",
           "uv": [
-            0,
-            0,
             8,
+            0,
+            16,
             8
           ]
         },
         "north": {
           "texture": "#pattern",
           "uv": [
-            0,
-            0,
             8,
+            0,
+            16,
             8
           ]
         },

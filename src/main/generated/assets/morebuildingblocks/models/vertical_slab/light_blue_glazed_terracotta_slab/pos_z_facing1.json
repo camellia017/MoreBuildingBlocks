@@ -28,9 +28,9 @@
           "rotation": 180,
           "texture": "#pattern",
           "uv": [
-            8,
             0,
-            16,
+            0,
+            8,
             16
           ]
         },

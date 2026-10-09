@@ -17,9 +17,9 @@
           "cullface": "west",
           "texture": "#pattern",
           "uv": [
-            0,
-            0,
             8,
+            0,
+            16,
             16
           ]
         },

@@ -890,21 +890,28 @@ public class MBModelProvider implements DataProvider {
 	 * <p>Minecraft maps a face's {@code uv} rectangle onto the block's own face, so a quad that
 	 * spans only half of the block's face has to ask for only that half of the sprite.
 	 *
-	 * <p>The u axis always runs the same way as the world axis it stands for, on every face:
-	 * down and up read x, north and south read x, west and east read z. Reading a face from
-	 * behind - which is what the south and east faces of a box are - does therefore <em>not</em>
-	 * mirror the sprite. Vanilla's own {@code block/stairs} proves it: its step box
-	 * {@code [8,8,0]-[16,16,16]} crops {@code [8,0,16,8]} on south and {@code [0,0,16,8]} on
-	 * east, both straight copies of the box's own extent.
+	 * <p>Which half is not simply the box's own extent. A sprite's u runs with the world axis it
+	 * stands for - down and up read x, north and south read x, west and east read z - but the
+	 * quad's first vertices take the sprite's <em>left</em> column, and on the faces that are read
+	 * from behind that column lies at the far end of the axis. On a north face, seen from the
+	 * north, +x is to the left, so the sprite's left column belongs at the largest x and the
+	 * extent has to be reversed; the same goes for east. South and west are read from in front and
+	 * take the extent as it is.
+	 *
+	 * <p>Vanilla's own {@code block/stairs} proves it: its step box {@code [8,8,0]-[16,16,16]}
+	 * crops {@code [0,0,8,8]} on north - the box's x is 8 to 16, the sprite's u 0 to 8 - and
+	 * {@code [0,0,16,8]} on east, where the box's own z of 0 to 8 is taken as it stands. Its
+	 * bottom box, spanning the whole block, crops the whole sprite on both, which is why the
+	 * reversal only shows on a shape that covers part of a face.
 	 */
 	private static int[] crop(Box box, String direction) {
 		return switch (direction) {
 			case "down" -> new int[] { box.x1(), box.z1(), box.x2(), box.z2() };
 			case "up" -> new int[] { box.x1(), 16 - box.z2(), box.x2(), 16 - box.z1() };
-			case "north" -> new int[] { box.x1(), 16 - box.y2(), box.x2(), 16 - box.y1() };
+			case "north" -> new int[] { 16 - box.x2(), 16 - box.y2(), 16 - box.x1(), 16 - box.y1() };
 			case "south" -> new int[] { box.x1(), 16 - box.y2(), box.x2(), 16 - box.y1() };
 			case "west" -> new int[] { box.z1(), 16 - box.y2(), box.z2(), 16 - box.y1() };
-			case "east" -> new int[] { box.z1(), 16 - box.y2(), box.z2(), 16 - box.y1() };
+			case "east" -> new int[] { 16 - box.z2(), 16 - box.y2(), 16 - box.z1(), 16 - box.y1() };
 			default -> new int[] { 0, 0, 16, 16 };
 		};
 	}
