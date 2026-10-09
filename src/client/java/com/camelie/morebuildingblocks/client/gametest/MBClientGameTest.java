@@ -43,6 +43,7 @@ import net.minecraft.world.level.block.state.properties.StairsShape;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.level.EmptyBlockGetter;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
 import com.camelie.morebuildingblocks.MoreBuildingBlocks;
@@ -242,6 +243,7 @@ public class MBClientGameTest implements FabricClientGameTest {
 			verifyShapes(server);
 			verifyPlacement(server, family);
 			verifyUprightStacking(server);
+			verifyWallContinuation(server);
 			verifyDrops(context, server, family);
 			verifyCreativeTab(server);
 		}
@@ -555,23 +557,31 @@ public class MBClientGameTest implements FabricClientGameTest {
 	}
 
 	/**
-	 * Places a second upright slab against both broad faces of a first one, through the
-	 * real {@link BlockPlaceContext} path, and checks which block and which half it lands
-	 * in.
+	 * Clicks both broad faces of an upright slab through the real {@link BlockPlaceContext} path
+	 * and checks which block and which half the placement lands in.
 	 *
-	 * <p>This is the case the click position cannot decide. Both clicks land on the same
-	 * plane between two cells, and one of them means "continue the wall" while the other
-	 * means "complete this slab":
+	 * <p>Those two faces are the same plane seen from either side, and the difference between them
+	 * is what the fix is about. The fixture wall is {@code axis=z, type=bottom}, which fills the
+	 * southern half of its cell - an upright {@code bottom} is the half showing its face towards the
+	 * positive end of the axis, unlike a flat slab - so the cell boundary it reaches towards is its
+	 * southern one and the boundary of the free half beside it is its northern one.
 	 *
 	 * <ul>
-	 *   <li>Against the <em>outer</em> face - here the northern one, the face a
-	 *       south-facing slab shows through - the new slab belongs in the next block north,
-	 *       filling the half that reaches back towards the clicked one. Getting this wrong
-	 *       puts it in the slab's own cell, where it fights the block already there.</li>
-	 *   <li>Against the <em>inner</em> face the new slab belongs in the clicked cell, and
-	 *       the placement is ignored entirely: the two halves are the two halves of one
-	 *       block, so the result is a double slab, not a second block beside it.</li>
+	 *   <li>The <em>open</em> face - the boundary the filled half reaches towards, the plane the
+	 *       slab is named after, {@link VerticalSlab#openFace} - is at the south. Pointing at it
+	 *       means the block is only half done: the click stays on the slab so the placement rule
+	 *       sees it, and the answer there is a double slab rather than a second block beside
+	 *       it.</li>
+	 *   <li>The <em>back</em> face - the boundary of the half the slab does not fill, the plane the
+	 *       free half lies behind, and the plane of the block's own interior - is at the north.
+	 *       Pointing at it means "keep this wall going", so the new slab belongs in the
+	 *       neighbouring cell, filling the very half the clicked one fills so the two line up into
+	 *       one plane rather than turning the wall a quarter turn at the joint.</li>
 	 * </ul>
+	 *
+	 * <p>Both clicks used to be read as if they were the same face: the open one completed the
+	 * block only from the wrong side of it, and a click on the back face stayed in the clicked
+	 * slab's own cell and doubled it up instead of continuing the wall.
 	 */
 	private static void verifyUprightStacking(TestServerContext server) {
 		server.runOnServer(minecraftServer -> {
@@ -579,62 +589,185 @@ public class MBClientGameTest implements FabricClientGameTest {
 			ServerPlayer player = minecraftServer.getPlayerList().getPlayers().get(0);
 			Block slabBlock = vanillaSlabs().get(0);
 			BlockPos pos = new BlockPos(6, FLOOR_Y + 24, 0);
-			BlockPos north = pos.north();
-			BlockState wall = slabBlock.defaultBlockState()
-					.setValue(MBBlockStateProperties.VERTICAL, true)
-					.setValue(MBBlockStateProperties.AXIS, Direction.Axis.Z)
-					.setValue(SlabBlock.TYPE, SlabType.TOP);
+			BlockState wall = vertical(slabBlock, Direction.Axis.Z, SlabType.BOTTOM);
 
+			// The open face is geometry, not a naming choice, so it is checked against the shape the
+			// game itself builds for this state before anything is placed.
+			Direction open = VerticalSlab.openFace(wall);
+
+			checkOpenFaceGeometry(wall, open);
+
+			Direction back = open.getOpposite();
+			BlockPos beyond = pos.relative(back);
 			level.setBlockAndUpdate(pos.below(), Blocks.STONE.defaultBlockState());
-			level.setBlockAndUpdate(north.below(), Blocks.STONE.defaultBlockState());
+			level.setBlockAndUpdate(beyond.below(), Blocks.STONE.defaultBlockState());
 			level.setBlockAndUpdate(pos, wall);
-			level.setBlockAndUpdate(north, Blocks.AIR.defaultBlockState());
+			level.setBlockAndUpdate(beyond, Blocks.AIR.defaultBlockState());
 
-			// (a) The click has to be taken out of the slab: its outer face reports itself
-			// as replaceable, so without the fix getClickedPos() stays on the slab and the
-			// new state is computed for the block that is already full. The click is in world
-			// coordinates like every other one in this test, so it is built from the block's own
-			// corner rather than assuming the block sits at the origin.
-			BlockPlaceContext outer = new BlockPlaceContext(player, InteractionHand.MAIN_HAND,
+			// The click has to be taken out of the slab: the back face is a plane of the block's
+			// own interior, so a placement pointed at it continues the wall and getClickedPos()
+			// is the cell beyond. Clicks are written in world coordinates like every other one in
+			// this test, so they are built from the block's own centre rather than assuming the
+			// block sits at the origin. The hit point sits exactly on the boundary between the two
+			// cells, which is where the shared plane is.
+			Vec3 centre = Vec3.atCenterOf(pos);
+
+			BlockPlaceContext continuation = new BlockPlaceContext(player, InteractionHand.MAIN_HAND,
 					new ItemStack(slabBlock.asItem()),
-					new BlockHitResult(new Vec3(pos.getX() + 0.5, FLOOR_Y + 24.5, pos.getZ()), Direction.NORTH, pos,
-							false));
+					new BlockHitResult(centre.add(back.getUnitVec3().scale(0.5)), back, pos, false));
 
-			require(outer.getClickedPos().equals(north),
-					"clicking the outer face of an upright slab aimed at " + outer.getClickedPos()
-							+ ", expected the block beyond it at " + north);
+			require(continuation.getClickedPos().equals(beyond),
+					"clicking the back face of an upright slab aimed at " + continuation.getClickedPos()
+							+ ", expected the block beyond it at " + beyond);
+			BlockState continued = slabBlock.getStateForPlacement(continuation);
 
-			BlockState continued = slabBlock.getStateForPlacement(outer);
-
-			require(continued != null, "no block state was produced for a click on an upright slab's outer face");
+			require(continued != null, "no block state was produced for a click on an upright slab's back face");
 			require(continued.getValue(MBBlockStateProperties.VERTICAL),
-					"the slab placed against the outer face of an upright slab came out flat: " + continued);
+					"the slab placed against the back face of an upright slab came out flat: " + continued);
 
-			require(Fill.of(continued).equals(Fill.positive(Direction.Axis.Z)),
-					"the slab placed against the outer face of a south-facing slab filled " + Fill.of(continued)
-							+ ", expected the southern half so the two touch: " + continued);
+			require(Fill.of(continued).equals(Fill.of(wall)),
+					"the slab placed against the back face of a slab filling " + Fill.of(wall) + " filled "
+							+ Fill.of(continued) + ", expected the clicked slab's own half so the two line up"
+							+ " across the shared plane: " + continued);
 
-			// (b) The inner face is the clicked slab's own free half, so the placement lands
-			// in the same cell and doubles the block up.
-			BlockPlaceContext inner = new BlockPlaceContext(player, InteractionHand.MAIN_HAND,
+			// The open face is the boundary the filled half reaches towards, and pointing at it
+			// means the block is only half done: the click is left on the slab so the placement
+			// rule sees it, and the answer there is a double slab rather than a second block
+			// beside it. This is the one broad face of an upright slab that is left alone; the
+			// back face and both thin sides all hand the click on to the next cell instead.
+			BlockPos openSide = pos.relative(open);
+			level.setBlockAndUpdate(openSide, Blocks.AIR.defaultBlockState());
+
+			BlockPlaceContext completion = new BlockPlaceContext(player, InteractionHand.MAIN_HAND,
 					new ItemStack(slabBlock.asItem()),
-					new BlockHitResult(new Vec3(pos.getX() + 0.5, FLOOR_Y + 24.5, pos.getZ() + 1.0),
-							Direction.SOUTH, pos, false));
+					new BlockHitResult(centre.add(open.getUnitVec3().scale(0.5)), open, pos, false));
 
-			require(inner.getClickedPos().equals(pos),
-					"clicking the inner face of an upright slab aimed at " + inner.getClickedPos()
+			require(completion.getClickedPos().equals(pos),
+					"clicking the open face of an upright slab aimed at " + completion.getClickedPos()
 							+ ", expected the clicked block itself at " + pos);
+			BlockState completed = slabBlock.getStateForPlacement(completion);
 
-			BlockState doubled = slabBlock.getStateForPlacement(inner);
-
-			require(doubled != null, "no block state was produced for a click on an upright slab's inner face");
-			require(SlabType.DOUBLE == doubled.getValue(SlabBlock.TYPE),
-					"the click on the inner face of an upright slab produced " + doubled
+			require(completed != null, "no block state was produced for a click on an upright slab's open face");
+			require(SlabType.DOUBLE == completed.getValue(SlabBlock.TYPE),
+					"the click on the open face of an upright slab produced " + completed
 							+ ", expected a double slab completing the same block");
 
 			level.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
-			level.setBlockAndUpdate(north, Blocks.AIR.defaultBlockState());
+			level.setBlockAndUpdate(beyond, Blocks.AIR.defaultBlockState());
+			level.setBlockAndUpdate(openSide, Blocks.AIR.defaultBlockState());
 		});
+	}
+
+	/**
+	 * Clicks each of the three reachable faces of an upright slab that mean "continue the wall" and
+	 * checks that the wall lands in the cell beyond, then clicks the open face and checks that it
+	 * completes the block instead.
+	 *
+	 * <p>The two thin sides are the reason this is a test of its own. A pick ray aimed at a thin side
+	 * ends on a half-block-wide plane, and the face a player is looking at and the cell being built
+	 * in are then different axes entirely: reading the click position to choose the half fills the
+	 * wrong one, which turns the wall into a block and a half at that joint.
+	 */
+	private static void verifyWallContinuation(TestServerContext server) {
+		server.runOnServer(minecraftServer -> {
+			ServerLevel level = minecraftServer.overworld();
+			ServerPlayer player = minecraftServer.getPlayerList().getPlayers().get(0);
+			Block slabBlock = vanillaSlabs().get(0);
+			BlockPos pos = new BlockPos(6, FLOOR_Y + 30, 0);
+
+			// "South-facing": the filled half is the positive half of Z, so its open face - the
+			// boundary it reaches towards, which is the one that completes the block - looks south,
+			// and the boundary of the free half beside it is the north one.
+			BlockState wall = vertical(slabBlock, Direction.Axis.Z, SlabType.BOTTOM);
+			level.setBlockAndUpdate(pos, wall);
+
+			// Both thin sides are the wall seen end on, and both carry it into the cell they look
+			// at, filled with the clicked slab's own half so the wall keeps its plane and thickness.
+			checkAgainstWall(level, player, slabBlock, pos, wall, Direction.EAST,
+					new Vec3(pos.getX() + 1.0, FLOOR_Y + 30.5, pos.getZ() + 0.5), pos.east());
+			checkAgainstWall(level, player, slabBlock, pos, wall, Direction.WEST,
+					new Vec3(pos.getX(), FLOOR_Y + 30.5, pos.getZ() + 0.5), pos.west());
+
+			// The boundary of the free half - the plane of the block's own interior - continues
+			// the wall the same way.
+			checkAgainstWall(level, player, slabBlock, pos, wall, Direction.NORTH,
+					new Vec3(pos.getX() + 0.5, FLOOR_Y + 30.5, pos.getZ()), pos.north());
+
+			// The open face is the one face that finishes the block instead.
+			checkAgainstOpenFace(player, slabBlock, pos, wall);
+
+			level.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
+		});
+	}
+
+	/**
+	 * Checks what makes a face the open one against the shape the game itself builds for the state:
+	 * the open face is the cell boundary the filled half reaches, so it is the one face of the block
+	 * the slab covers completely. The other broad face has the free half behind it, so it is only
+	 * half covered, and the two thin sides are only a sliver of it - a single coordinate cannot tell
+	 * them apart, which is why this measures the whole face.
+	 */
+	private static void checkOpenFaceGeometry(BlockState wall, Direction open) {
+		AABB box = wall.getShape(EmptyBlockGetter.INSTANCE, BlockPos.ZERO).bounds();
+		Direction.Axis axis = open.getAxis();
+		Direction.Axis u = axis == Direction.Axis.X ? Direction.Axis.Y : Direction.Axis.X;
+		Direction.Axis v = axis == Direction.Axis.Z ? Direction.Axis.Y : Direction.Axis.Z;
+		double coverage = (box.max(u) - box.min(u)) * (box.max(v) - box.min(v));
+
+		require(coverage == 1.0,
+				"an upright slab built as " + wall + " has its box at " + box + ", so its " + open
+						+ " face is only " + coverage + " covered, yet that is the face it calls open; the open face"
+						+ " is the boundary the filled half reaches and has to be covered completely");
+	}
+
+	/**
+	 * Clicks one of the three faces of an upright slab that look at the next cell along and checks
+	 * that the wall continues into that cell.
+	 *
+	 * <p>The half is the clicked slab's own, which is the whole point: reading the click position
+	 * instead would fill the half nearest the click every time, and since the two thin sides are
+	 * opposite faces of the same wall, one of them would come out at the wrong thickness.
+	 */
+	private static void checkAgainstWall(ServerLevel level, ServerPlayer player, Block slabBlock, BlockPos pos,
+			BlockState wall, Direction face, Vec3 hit, BlockPos expectedPos) {
+		BlockPlaceContext context = new BlockPlaceContext(player, InteractionHand.MAIN_HAND,
+				new ItemStack(slabBlock.asItem()), new BlockHitResult(hit, face, pos, false));
+
+		require(context.getClickedPos().equals(expectedPos),
+				"clicking the " + face + " face of an upright slab aimed at " + context.getClickedPos()
+						+ ", expected the cell beyond it at " + expectedPos);
+
+		BlockState placed = slabBlock.getStateForPlacement(context);
+
+		require(placed != null, "no block state was produced for a click on the " + face + " face of an upright slab");
+		require(SlabType.DOUBLE != placed.getValue(SlabBlock.TYPE),
+				"clicking the " + face + " face of an upright slab doubled it: " + placed);
+		require(placed.getValue(MBBlockStateProperties.VERTICAL),
+				"the slab placed against the " + face + " face of an upright slab came out flat: " + placed);
+		require(Fill.of(placed).equals(Fill.of(wall)),
+				"the slab placed against the " + face + " face of an upright slab filled " + Fill.of(placed)
+						+ ", expected the clicked slab's own half " + Fill.of(wall) + " so the wall keeps its plane: "
+						+ placed);
+	}
+
+	/** Clicks the open face, which is the one that completes the clicked block and doubles it. */
+	private static void checkAgainstOpenFace(ServerPlayer player, Block slabBlock, BlockPos pos,
+			BlockState wall) {
+		Direction face = VerticalSlab.openFace(wall);
+		Vec3 hit = Vec3.atCenterOf(pos).add(face.getUnitVec3().scale(0.5));
+		BlockPlaceContext context = new BlockPlaceContext(player, InteractionHand.MAIN_HAND,
+				new ItemStack(slabBlock.asItem()), new BlockHitResult(hit, face, pos, false));
+
+		require(context.getClickedPos().equals(pos),
+				"clicking the open face of an upright slab aimed at " + context.getClickedPos()
+						+ ", expected the clicked block itself at " + pos);
+
+		BlockState doubled = slabBlock.getStateForPlacement(context);
+
+		require(doubled != null, "no block state was produced for a click on the open face of an upright slab");
+		require(SlabType.DOUBLE == doubled.getValue(SlabBlock.TYPE),
+				"the click on the open face of an upright slab produced " + doubled
+						+ ", expected a double slab completing the same block");
 	}
 
 	private static void checkPlacement(ServerLevel level, ServerPlayer player, Block slabBlock, BlockPos pos,

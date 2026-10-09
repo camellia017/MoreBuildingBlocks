@@ -117,10 +117,13 @@ public abstract class SlabBlockMixin {
 			return original;
 		}
 
-		// A vertical slab doubles up when its open face is clicked with the same item, and is left
-		// alone when the click lands on the face its other half shows through: a click there means
-		// the next block along, which is the one the player is building against.
-		return context.getClickedFace() != VerticalSlab.outward(state)
+		// Only the open face - the plane the slab shows through, where its own missing half is -
+		// completes the block. The two thin sides and the boundary of the cell the slab fills all
+		// look at the next cell along, so a click there continues the wall instead: an upright slab
+		// answers those three faces as replaceable, which is what lets a wall be built against, and
+		// every one of them has to be refused here so the click moves out of the slab rather than
+		// landing inside the half that is already taken.
+		return context.getClickedFace() != VerticalSlab.openFace(state)
 			&& context.getItemInHand().is(state.getBlock().asItem());
 	}
 }

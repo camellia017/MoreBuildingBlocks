@@ -14,38 +14,42 @@ import net.minecraft.world.phys.BlockHitResult;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
-
-import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * Makes a click on the outer face of an upright slab build the wall one block further out.
+ * Makes a click on an upright slab build the wall one block further out, except on the one face
+ * of it that means the block is only half finished.
  *
  * <p>{@link BlockPlaceContext} decides which block a placement lands in while it is being
  * constructed, and by the time the block's own {@code getStateForPlacement} runs it is far too late
  * to change its mind: {@code getClickedPos()} already returns either the clicked block or the one
- * beyond it. The mod's own placement code always wants the block beyond the clicked face, and the
- * constructor's usual rule gets that wrong for exactly one click.
+ * beyond it. For an upright slab this mod wants the second answer on every face a player can point
+ * at, with one exception.
  *
- * <p>An upright slab has two faces a player can point at, and they do not mean the same thing. Its
- * <em>outer</em> face is the one the filled half shows through, and pointing there means continuing
- * the wall into the next block along. Its <em>inner</em> face is the open half of the block, and
- * pointing there means completing the slab, which the constructor's rule already gets right: the
- * slab reports that face as replaceable, so the click stays in the same block and the placement
- * rule doubles it up.
+ * <p>The exception is the <em>open</em> face: the cell boundary the filled half reaches towards,
+ * {@link VerticalSlab#openFace}. Pointing there means completing this slab, so the click stays in
+ * the same block for the placement rule to double up. The two thin sides, half a block wide, mean
+ * the opposite - they are the wall seen end on, and a click there carries it into the cell they
+ * look at - and the boundary of the half that is <em>not</em> filled continues the wall the same
+ * way. Those three all leave the click on the cell beyond the clicked face.
  *
- * <p>For the outer face the constructor's rule is the wrong way round. It may replace the clicked
- * block - {@code SlabBlock.canBeReplaced} reports an upright slab's outer face as open, which is
- * what lets it be built against at all - but that makes {@code getClickedPos()} return the slab
- * itself, and the new block then lands inside the one that is already there.
+ * <p>That decision is written here rather than filtered out of the vanilla one. The slab answers
+ * {@code canBeReplaced} for reasons of its own - a bottom half clicked on a side face above its
+ * centre is refused, for one - and such a refusal is indistinguishable from "this is not the open
+ * face" once it has become the {@code replaceClicked} flag, so leaving the vanilla answer in place
+ * anywhere keeps the click on the slab and lets the placement land inside the half that is already
+ * full. That reads as the slab quietly turning into a solid cube, which is the bug this replaces.
  *
- * <p>Two ways round that were not usable: {@code relativePos} is {@code private final}, and a
+ * <p>Two ways round that were not usable. {@code relativePos} is {@code private final}, and a
  * Mixin handler is not the field's initialiser, so writing it throws
  * {@code IllegalAccessError: Update to non-static final field ... attempted from a different method}.
- * What is left is the constructor's own decision, so this bends the value it decides from instead:
- * the {@code canBeReplaced} call whose result becomes {@code replaceClicked}. Refusing to replace
- * the slab leaves {@code replaceClicked} false, and then {@code getClickedPos()} is the block
- * beyond the clicked face - the default {@code relativePos} the constructor computed one line
- * earlier - which is exactly where the wall continues.
+ * What is left is the constructor's own decision, so this rewrites that: {@code replaceClicked} is
+ * the finished answer to "does the placement land in the clicked block", it is written as the
+ * constructor's last act and only read afterwards, so setting it at the tail changes the outcome
+ * without touching the bytecode in between. Leaving it false makes {@code getClickedPos()} the
+ * block beyond the clicked face - the {@code relativePos} the constructor computed one line earlier
+ * - which is exactly where the wall continues.
  *
  * <p>Moving the click also costs the placement rule the one thing it still needs: which face the
  * player pointed at and where on it. Once {@code getClickedPos()} is the new block, the click point
@@ -61,6 +65,15 @@ public abstract class BlockPlaceContextMixin implements PlacementClick {
 	 */
 	@Shadow
 	private BlockPos relativePos;
+
+	/**
+	 * Whether the placement lands in the clicked block rather than the one beyond its face.
+	 *
+	 * <p>Also a field of the target, and not final, so {@code @Shadow} both finds it and lets the
+	 * handler below write to it.
+	 */
+	@Shadow
+	private boolean replaceClicked;
 
 	/** {@inheritDoc} */
 	@Override
@@ -78,37 +91,30 @@ public abstract class BlockPlaceContextMixin implements PlacementClick {
 	}
 
 	/**
-	 * Reports an upright slab's outer face as not replaceable, so the click moves one block out.
+	 * Decides, for every click on an upright slab, that the placement is ignored and lands in the
+	 * slab's own block - and only then.
 	 *
-	 * <p>Only that one click is touched. Clicking the inner face must stay replaceable, or the
-	 * placement rule cannot double the slab up; and a horizontal face has no "outer" one at all, so
-	 * a plain slab stays replaceable from above and below exactly like a vanilla one.
+	 * <p>Replacing the constructor's own {@code canBeReplaced} answer rather than filtering it is
+	 * what makes this work. The vanilla slab refuses a replacement for reasons of its own - a
+	 * bottom half clicked on a side face above its centre, for one - and those refusals have
+	 * nothing to do with the mod's rule, yet the constructor's {@code replaceClicked} ends up
+	 * false for both kinds of refusal. A handler that could only veto the value left the click on
+	 * the slab in exactly those cases, which is the bug this replaces.
 	 *
-	 * <p>The target is a constructor, which captures no {@code this} to pass on, so the handler
-	 * takes the constructor's own parameters after the modified value instead of the clicked state
-	 * the call was made on. Mixin insists on that ordering and rejects anything else with
-	 * {@code has an invalid signature. Found unexpected argument type ... expected net.minecraft.world.level.Level}.
+	 * <p>{@code replaceClicked} is written as the constructor's last act and read by
+	 * {@code getClickedPos} afterwards, so setting it at the tail rewrites the finished decision
+	 * without touching the bytecode in between.
 	 */
-	@ModifyExpressionValue(
-		method = "<init>(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/entity/player/Player;"
-			+ "Lnet/minecraft/world/InteractionHand;Lnet/minecraft/world/item/ItemStack;"
-			+ "Lnet/minecraft/world/phys/BlockHitResult;)V",
-		at = @At(
-			value = "INVOKE",
-			target = "Lnet/minecraft/world/level/block/state/BlockState;"
-				+ "canBeReplaced(Lnet/minecraft/world/item/context/BlockPlaceContext;)Z"
-		)
-	)
-	private boolean morebuildingblocks$outerFaceIsSolid(final boolean original, final Level level,
-			final Player player, final InteractionHand hand, final ItemStack stack,
-			final BlockHitResult hitResult) {
+	@Inject(method = "<init>(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/entity/player/Player;"
+		+ "Lnet/minecraft/world/InteractionHand;Lnet/minecraft/world/item/ItemStack;"
+		+ "Lnet/minecraft/world/phys/BlockHitResult;)V", at = @At("TAIL"))
+	private void morebuildingblocks$decideReplaceClicked(final Level level, final Player player,
+			final InteractionHand hand, final ItemStack stack, final BlockHitResult hitResult,
+			final CallbackInfo info) {
 		BlockState clicked = level.getBlockState(hitResult.getBlockPos());
 
-		if (!VerticalSlab.isVertical(clicked)) {
-			return original;
+		if (VerticalSlab.isVertical(clicked)) {
+			this.replaceClicked = hitResult.getDirection() == VerticalSlab.openFace(clicked);
 		}
-
-		Direction face = hitResult.getDirection();
-		return face == VerticalSlab.outward(clicked) ? false : original;
 	}
 }

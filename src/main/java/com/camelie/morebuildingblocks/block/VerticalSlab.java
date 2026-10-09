@@ -119,21 +119,26 @@ public final class VerticalSlab {
 	 * the southern half of the cell to the north - and a click at its centre carries a wall on
 	 * straight, because the region around the centre is the one that names the half behind the face.
 	 *
-	 * <p>Clicking an upright slab lands on one of its two broad faces, and the rule reads it the
-	 * same way: the region the click lands in names a half, and a half of one block lines up with
-	 * the same half of the block next door. Against its <em>outer</em> face - the one its filled
-	 * half reaches towards - the click is moved out into the next block along, where filling that
-	 * same half continues the wall. Against its <em>inner</em> face - the open half, which a slab
-	 * reports as replaceable - the two halves are the two halves of one block, so vanilla combines
-	 * them into a double slab instead of a second block appearing beside it.
+	 * <p>Clicking an upright slab lands on one of its four flat faces, and only the open one -
+	 * {@link #openFace}, the plane between its filled half and the empty half beside it - means
+	 * "finish this block". The rule reads a click there the way vanilla does: the region the click
+	 * lands in names a half, and the two halves of one block combine into a double slab rather than
+	 * a second block appearing beside it.
+	 *
+	 * <p>The other three - the two thin sides, and the boundary the filled half reaches towards -
+	 * all look at the next cell along instead, and the wall continues into it. The half that cell
+	 * is filled with is the clicked slab's own half, not the one the click landed nearest: the two
+	 * thin sides are the same wall seen end on, so filling the neighbouring cell with the same half
+	 * carries the wall on at its own thickness and in its own plane, while the half nearest the
+	 * click would thicken that one cell into a block and a half and leave the plane broken.
 	 *
 	 * <p>The moved click is why the frame is read off the block the click landed on -
 	 * {@link PlacementClick#morebuildingblocks$hitPos()}, which is where the face the player pointed
 	 * at really is - rather than off {@code context.getClickedPos()}, the block that will be built
-	 * in. Those two are the same block for every placement except that one, and for that one the
-	 * click point itself lies a whole block outside the block being placed in: a click on the outer
-	 * face of an upright slab at the middle of its face would read as a click on the far edge of the
-	 * new block and fill the wrong half entirely.
+	 * in. Those two are the same block for every placement except those three faces, and for them
+	 * the click point itself lies a whole block outside the block being placed in: a click on the
+	 * boundary of an upright slab at the middle of its face would read as a click on the far edge of
+	 * the new block and fill the wrong half entirely.
 	 */
 	public static Fill placementFill(final BlockPlaceContext context) {
 		Direction face = context.getClickedFace();
@@ -141,6 +146,17 @@ public final class VerticalSlab {
 
 		if (context instanceof PlacementClick click) {
 			clickedPos = click.morebuildingblocks$hitPos();
+		}
+
+		// Continuing a wall is not the same rule as starting one: which half the next block takes is
+		// settled by the slab the player built against, not by where on the face the click landed.
+		// Reading the click instead would turn the wall a quarter turn at that joint, because the two
+		// thin sides are faces of one axis while the cell they look at is filled along the other.
+		BlockState clicked = context.getLevel().getBlockState(clickedPos);
+
+		if (VerticalSlab.isVertical(clicked) && !VerticalSlab.isDouble(clicked)
+				&& face != VerticalSlab.openFace(clicked)) {
+			return Fill.of(clicked);
 		}
 
 		FaceFrame frame = FaceFrame.of(face);
@@ -169,9 +185,19 @@ public final class VerticalSlab {
 		return frame.region(face, middle, u, v);
 	}
 
-	/** The direction this slab's visible face points: the way {@code canBeReplaced} tests a click. */
-	public static Direction outward(final BlockState state) {
-		return Fill.of(state).outward();
+	/**
+	 * The direction this slab's open face looks, which is the one face a click on it means
+	 * "complete this block" rather than "continue the wall".
+	 *
+	 * <p>An upright slab fills the half of one horizontal axis, so the faces it reaches with are
+	 * the two thin sides, half a block wide, and the cell boundary its filled half runs up to.
+	 * That boundary is the open face and is reported by {@link #outward}; a click there means the
+	 * player is drawing the rest of this slab, which is why it is the only one of the three that
+	 * stays in the block and doubles it up. The two thin sides are read as a continuation of the
+	 * wall towards whichever cell they look at instead.
+	 */
+	public static Direction openFace(final BlockState state) {
+		return Fill.of(state).open();
 	}
 
 	/**
@@ -275,13 +301,28 @@ public final class VerticalSlab {
 		}
 
 		/**
-		 * The direction this filled half reaches towards: the way its visible face points. A fill of
-		 * the positive half of X is {@code EAST}, a fill of the bottom half of Y is {@code DOWN}.
+		 * The direction this filled half reaches towards, which is the cell boundary it fills up
+		 * to. A fill of the positive half of X is {@code EAST}, a fill of the bottom half of Y is
+		 * {@code DOWN}.
 		 */
 		public Direction outward() {
 			return Direction.fromAxisAndDirection(this.axis, positive()
 				? Direction.AxisDirection.POSITIVE
 				: Direction.AxisDirection.NEGATIVE);
+		}
+
+		/**
+		 * The one face of an upright slab that completing the block belongs to, which is the
+		 * boundary the filled half reaches towards and so the same value as {@link #outward()}.
+		 *
+		 * <p>A fill of the positive half of X has its empty half on the west side of the block and
+		 * runs up to the eastern boundary, so a click on the {@code EAST} face stays in the block
+		 * and doubles the slab up. Naming the empty half instead would put that click at
+		 * {@code WEST} and send it into the neighbouring block, leaving the slab impossible to
+		 * finish from the face that shows it half full.
+		 */
+		public Direction open() {
+			return this.outward();
 		}
 	}
 }
