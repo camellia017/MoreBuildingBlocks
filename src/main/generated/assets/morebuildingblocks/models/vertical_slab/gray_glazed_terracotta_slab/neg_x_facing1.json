@@ -7,13 +7,13 @@
           "texture": "#pattern",
           "uv": [
             0,
-            0,
             8,
+            16,
             16
           ]
         },
         "east": {
-          "rotation": 90,
+          "rotation": 270,
           "texture": "#pattern",
           "uv": [
             0,
@@ -23,7 +23,7 @@
           ]
         },
         "north": {
-          "cullface": "west",
+          "rotation": 270,
           "texture": "#pattern",
           "uv": [
             0,
@@ -33,7 +33,8 @@
           ]
         },
         "south": {
-          "rotation": 180,
+          "cullface": "west",
+          "rotation": 90,
           "texture": "#pattern",
           "uv": [
             0,
@@ -47,12 +48,12 @@
           "uv": [
             0,
             0,
-            8,
-            16
+            16,
+            8
           ]
         },
         "west": {
-          "rotation": 270,
+          "rotation": 90,
           "texture": "#pattern",
           "uv": [
             8,

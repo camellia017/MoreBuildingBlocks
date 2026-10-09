@@ -4,6 +4,7 @@
     {
       "faces": {
         "down": {
+          "rotation": 180,
           "texture": "#pattern",
           "uv": [
             0,
@@ -43,6 +44,7 @@
         },
         "up": {
           "cullface": "up",
+          "rotation": 180,
           "texture": "#pattern",
           "uv": [
             0,

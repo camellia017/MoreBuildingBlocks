@@ -13,6 +13,7 @@ import net.fabricmc.fabric.api.client.gametest.v1.context.TestDedicatedServerCon
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestServerConnection;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestServerContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.BlockPos;
@@ -38,13 +39,14 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.Half;
 import net.minecraft.world.level.block.state.properties.SlabType;
-import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.level.block.state.properties.StairsShape;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
 import com.camelie.morebuildingblocks.MoreBuildingBlocks;
+import com.camelie.morebuildingblocks.block.GlazedPattern;
 import com.camelie.morebuildingblocks.block.MBBlockStateProperties;
 import com.camelie.morebuildingblocks.block.VerticalSlab;
 import com.camelie.morebuildingblocks.block.VerticalSlab.Fill;
@@ -71,6 +73,14 @@ public class MBClientGameTest implements FabricClientGameTest {
 	private static final String VERTICAL_NEAR_SHOT = "vertical-slabs-b.png";
 	private static final String VERTICAL_FAR_SHOT = "vertical-slabs-c.png";
 
+	/**
+	 * The glazed comparison: vanilla's own block and the mod's cut forms, all filled with the
+	 * same pattern and placed for the same direction, each photographed straight down from
+	 * above so the reference and the candidate are the same pixels when the orientation is
+	 * right and a quarter turn out when it is not.
+	 */
+	private static final String MEASURE_SHOT = "glazed-measure-";
+
 	/** The world's minimum build height, which is where a flat test world builds. */
 	private static final int FLOOR_Y = -63;
 
@@ -82,6 +92,24 @@ public class MBClientGameTest implements FabricClientGameTest {
 
 	/** The upright wall is a thin line seen edge on, so it is photographed from nearer. */
 	private static final double VERTICAL_VIEW_DISTANCE = 8.0;
+
+	/** The comparison row builds one above the floor, clear of the showcase behind it. */
+	private static final int MEASURE_Y = FLOOR_Y + 2;
+
+	/**
+	 * Where the comparison patch is built. It stands clear of the showcase, which is
+	 * photographed from the other side, so neither camera ever has the other's subject in
+	 * the frame.
+	 */
+	private static final int CELL_X = -36;
+	private static final int CELL_Z = -34;
+
+	/**
+	 * How high the comparison camera looks down from. The patch is photographed from its own
+	 * centre line, so its middle block is seen straight on and has the whole field of view
+	 * to itself: a block covers about ninety pixels here, which is ample for the pattern.
+	 */
+	private static final double MEASURE_EYE_ABOVE = 12.0;
 
 	private static final int WALL_Z = -6;
 	private static final int VERTICAL_WALL_Z = -20;
@@ -128,6 +156,18 @@ public class MBClientGameTest implements FabricClientGameTest {
 								continue;
 							}
 
+							level.setBlockAndUpdate(new BlockPos(x, y, z), Blocks.AIR.defaultBlockState());
+						}
+					}
+				}
+
+				// The comparison patch gets a room of its own: the flat world's own terrain
+				// would otherwise stand in the camera's way, and the showcase clearing above
+				// does not reach this far. Everything above the surface goes, and the surface
+				// itself is left where it is as the floor.
+				for (int x = CELL_X - 10; x <= CELL_X + 10; x++) {
+					for (int z = CELL_Z - 10; z <= CELL_Z + 10; z++) {
+						for (int y = FLOOR_Y + 2; y <= MEASURE_Y + 20; y++) {
 							level.setBlockAndUpdate(new BlockPos(x, y, z), Blocks.AIR.defaultBlockState());
 						}
 					}
@@ -194,6 +234,8 @@ public class MBClientGameTest implements FabricClientGameTest {
 			// The item icons are covered by the model assertions instead of a screenshot:
 			// 26.3 draws screens through a render-state extractor whose API cannot be
 			// guessed, and the hotbar in every screenshot above already shows the icons.
+
+			measureGlazed(context, server);
 
 			// Geometry and loot come last: a failed assertion aborts the run, and the
 			// screenshots above are the evidence for the checks a log cannot make.
@@ -640,6 +682,142 @@ public class MBClientGameTest implements FabricClientGameTest {
 	 * The eye is lifted {@code eyeOffset} above {@code aimY} and the pitch is computed
 	 * to point straight back at it, so the target always lands on the crosshair.
 	 */
+	/**
+	 * Photographs the mod's glazed forms against vanilla's own block, turned the way a
+	 * player placing them would turn them, with every square's position on screen found by
+	 * ray casting so the comparison knows exactly which pixels to compare.
+	 *
+	 * <p>A glazed pattern has a direction, and the question this run has to answer is
+	 * whether the mod's cut forms carry it the way the block they are cut from does. That
+	 * is a comparison no assertion in the log can make: the model can be well formed,
+	 * complete and correctly named and still show the pattern a quarter turn out. So
+	 * vanilla's own block and each of the mod's forms are filled with the same pattern,
+	 * placed for the same direction, and photographed one at a time from straight above; the
+	 * pictures are then subtracted, and the turn that makes them agree is the error, if any.
+	 */
+	private static void measureGlazed(ClientGameTestContext context, TestServerContext server) {
+		Block base = Blocks.GLAZED_TERRACOTTA.white();
+		Block slab = blockWithPath("white_glazed_terracotta_slab");
+		Block stairs = blockWithPath("white_glazed_terracotta_stairs");
+
+		record Placed(String label, BlockState state) {
+		}
+		List<Placed> row = List.of(
+				new Placed("pillar-south", withFacing(base.defaultBlockState(), Direction.SOUTH)),
+				new Placed("pillar-west", withFacing(base.defaultBlockState(), Direction.WEST)),
+				new Placed("pillar-north", withFacing(base.defaultBlockState(), Direction.NORTH)),
+				new Placed("pillar-east", withFacing(base.defaultBlockState(), Direction.EAST)),
+				new Placed("slab-south", glazed(slab, SlabType.TOP, Direction.SOUTH)),
+				new Placed("slab-west", glazed(slab, SlabType.TOP, Direction.WEST)),
+				new Placed("slab-north", glazed(slab, SlabType.TOP, Direction.NORTH)),
+				new Placed("slab-east", glazed(slab, SlabType.TOP, Direction.EAST)),
+				new Placed("stairs-south", glazedStairs(Blocks.GLAZED_TERRACOTTA.white(), Direction.SOUTH)),
+				new Placed("stairs-west", glazedStairs(Blocks.GLAZED_TERRACOTTA.white(), Direction.WEST)),
+				new Placed("stairs-north", glazedStairs(Blocks.GLAZED_TERRACOTTA.white(), Direction.NORTH)),
+				new Placed("stairs-east", glazedStairs(Blocks.GLAZED_TERRACOTTA.white(), Direction.EAST)));
+
+		for (Placed placed : row) {
+			shootCell(context, server, placed.state(), MEASURE_SHOT + placed.label() + ".png");
+			reportCell(server, placed.label());
+		}
+	}
+
+	/**
+	 * Writes the state the server actually holds at the photographed block.
+	 *
+	 * <p>Half of the trouble with a picture is knowing what was in it. A state that was built
+	 * one call out - a fill written where a vertical slab was meant, a facing left at its
+	 * default - produces a picture that looks like a modelling fault and is nothing of the
+	 * sort, and the two cannot be told apart from the image alone.
+	 */
+	private static void reportCell(TestServerContext server, String label) {
+		server.runOnServer(minecraftServer -> {
+			BlockState state = minecraftServer.overworld()
+					.getBlockState(new BlockPos(CELL_X, MEASURE_Y, CELL_Z));
+
+			MoreBuildingBlocks.LOGGER.info("glazed measurement {} held {}", label, state);
+		});
+	}
+
+	/**
+	 * Builds a patch of one block and photographs it from straight above.
+	 *
+	 * <p>One patch per shot is what makes the comparison exact: with the camera on the
+	 * patch's own centre line the pattern sits in the middle of the frame, so the same
+	 * pixels of the screenshot hold the same texels of the pattern in every shot, whatever
+	 * the pattern's orientation turns out to be. Measuring where a row of patches landed
+	 * would mean projecting world points through a camera whose field of view and whose
+	 * idea of which way the world runs have to be got exactly right first, and any error
+	 * there slides a high frequency pattern out of phase and reads as a wrong orientation.
+	 *
+	 * <p>The patch is three blocks square so the middle one is seen with a margin of its own
+	 * kind around it: one block alone would have the floor at its edge inside the same
+	 * window.
+	 */
+	private static void shootCell(ClientGameTestContext context, TestServerContext server, BlockState state,
+			String shot) {
+		server.runOnServer(minecraftServer -> {
+			ServerLevel level = minecraftServer.overworld();
+
+			for (int x = -1; x <= 1; x++) {
+				for (int z = -1; z <= 1; z++) {
+					level.setBlockAndUpdate(new BlockPos(CELL_X, MEASURE_Y, CELL_Z).offset(x, 0, z), state);
+				}
+			}
+
+			ServerPlayer player = minecraftServer.getPlayerList().getPlayers().get(0);
+			player.teleportTo(level, CELL_X + 0.5, MEASURE_Y + MEASURE_EYE_ABOVE, CELL_Z + 0.5, Set.of(), 180.0F, 90.0F,
+					false);
+		});
+		context.waitTicks(6);
+		context.takeScreenshot(shot);
+	}
+
+	/**
+	 * A glazed stair laid the way the player would have laid it: its own {@code facing} is the
+	 * way they were looking, which is also the way the pattern points.
+	 *
+	 * <p>The two are one value in play and two properties in the block, and a measurement that
+	 * sets only the pattern measures a stair nobody can place: the step would point one way and
+	 * the pattern another, and the picture would be read as a modelling fault.
+	 */
+	private static BlockState glazedStairs(Block block, Direction facing) {
+		return glazedFacing(stairs(block)
+				.setValue(BlockStateProperties.HORIZONTAL_FACING, facing), facing);
+	}
+
+	/**
+	 * Writes vanilla's own {@code facing} onto a full glazed block. The two directions are
+	 * both photographed: the default state is north, and north is a quarter turn off south,
+	 * so a reference taken from the default alone silently measures every derivative against
+	 * the wrong quarter.
+	 */
+	private static BlockState withFacing(BlockState state, Direction facing) {
+		return state.hasProperty(BlockStateProperties.HORIZONTAL_FACING)
+				? state.setValue(BlockStateProperties.HORIZONTAL_FACING, facing)
+				: state;
+	}
+
+	/** Writes the pattern's own facing onto a derivative that carries one. */
+	private static BlockState glazedFacing(BlockState state, Direction facing) {
+		if (!(state.getBlock() instanceof GlazedPattern) || !state.hasProperty(MBBlockStateProperties.GLAZED_FACING)) {
+			return state;
+		}
+
+		return state.setValue(MBBlockStateProperties.GLAZED_FACING, facing);
+	}
+
+	/**
+	 * A glazed slab filled to the given half and carrying the given pattern facing. It goes
+	 * through {@code withFill}, not through a raw property write, because that is the call
+	 * the placement code itself makes: a slab filled through it lies flat the way a placed
+	 * one does, with the same half standing above the block's own bottom.
+	 */
+	private static BlockState glazed(Block block, SlabType type, Direction facing) {
+		Fill fill = type == SlabType.TOP ? Fill.positive(Direction.Axis.Y) : Fill.negative(Direction.Axis.Y);
+		return glazedFacing(VerticalSlab.withFill(block.defaultBlockState(), fill), facing);
+	}
+
 	private static void look(ClientGameTestContext context, TestServerContext server, double x, double aimY,
 			double z) {
 		look(context, server, x, aimY, z, VIEW_DISTANCE, 0.5);

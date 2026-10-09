@@ -5,6 +5,7 @@
       "faces": {
         "down": {
           "cullface": "down",
+          "rotation": 90,
           "texture": "#pattern",
           "uv": [
             0,
@@ -14,7 +15,7 @@
           ]
         },
         "east": {
-          "rotation": 90,
+          "rotation": 270,
           "texture": "#pattern",
           "uv": [
             0,
@@ -24,15 +25,6 @@
           ]
         },
         "north": {
-          "texture": "#pattern",
-          "uv": [
-            0,
-            8,
-            16,
-            16
-          ]
-        },
-        "south": {
           "rotation": 180,
           "texture": "#pattern",
           "uv": [
@@ -42,7 +34,17 @@
             16
           ]
         },
+        "south": {
+          "texture": "#pattern",
+          "uv": [
+            0,
+            8,
+            16,
+            16
+          ]
+        },
         "up": {
+          "rotation": 90,
           "texture": "#pattern",
           "uv": [
             0,
@@ -52,7 +54,7 @@
           ]
         },
         "west": {
-          "rotation": 270,
+          "rotation": 90,
           "texture": "#pattern",
           "uv": [
             0,
@@ -78,14 +80,14 @@
         "down": {
           "texture": "#pattern",
           "uv": [
-            8,
+            0,
             0,
             16,
-            16
+            8
           ]
         },
         "east": {
-          "rotation": 90,
+          "rotation": 270,
           "texture": "#pattern",
           "uv": [
             8,
@@ -95,6 +97,7 @@
           ]
         },
         "north": {
+          "rotation": 180,
           "texture": "#pattern",
           "uv": [
             0,
@@ -104,7 +107,6 @@
           ]
         },
         "south": {
-          "rotation": 180,
           "texture": "#pattern",
           "uv": [
             0,
@@ -116,14 +118,14 @@
         "up": {
           "texture": "#pattern",
           "uv": [
-            8,
             0,
+            8,
             16,
             16
           ]
         },
         "west": {
-          "rotation": 270,
+          "rotation": 90,
           "texture": "#pattern",
           "uv": [
             0,

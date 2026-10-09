@@ -23,6 +23,7 @@ import net.minecraft.client.data.models.model.TextureMapping;
 import net.minecraft.client.data.models.model.TextureSlot;
 import net.minecraft.client.renderer.block.dispatch.BlockStateModelDispatcher;
 import net.minecraft.client.renderer.block.dispatch.Variant;
+import net.minecraft.client.renderer.block.dispatch.VariantMutator;
 import net.minecraft.client.renderer.item.ClientItem;
 import net.minecraft.client.renderer.item.ItemModel;
 import net.minecraft.client.resources.model.sprite.Material;
@@ -32,13 +33,16 @@ import net.minecraft.data.CachedOutput;
 import net.minecraft.data.DataProvider;
 import net.minecraft.data.PackOutput;
 import net.minecraft.resources.Identifier;
+import net.minecraft.util.Mth;
 import net.minecraft.util.random.WeightedList;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.SlabBlock;
 import net.minecraft.world.level.block.StairBlock;
+import net.minecraft.world.level.block.state.properties.Half;
 import net.minecraft.world.level.block.state.properties.SlabType;
+import net.minecraft.world.level.block.state.properties.StairsShape;
 
 import com.camelie.morebuildingblocks.MoreBuildingBlocks;
 import com.camelie.morebuildingblocks.block.MBBlockStateProperties;
@@ -320,21 +324,83 @@ public class MBModelProvider implements DataProvider {
 	}
 
 	/**
-	 * The stair blockstate of a glazed family: vanilla's own stair table, with every variant chosen
-	 * by the {@code facing} the player was looking when they placed it.
+	 * The stair blockstate of a glazed family: vanilla's own stair table, with the pattern turned
+	 * to suit where the player stood.
+	 *
+	 * <p>Two rotations are in play and they are not the same one. The stair's own {@code facing}
+	 * turns the geometry, exactly as it does for an ordinary stair, and a blockstate {@code y}
+	 * carries that turn out. The glazed pattern is a second, independent rotation: the model that
+	 * turn selects has its pattern baked into the geometry, and the pattern has to end up pointing
+	 * the way the full block's would for the same placement.
+	 *
+	 * <p>So each model carries the difference, one quarter short of it. Unturned, the family's
+	 * models show the pattern a south-facing full block shows ({@code turns} 0), while their step
+	 * points east - the direction vanilla's own stair templates point. Those two are not a quarter
+	 * apart in vanilla either: vanilla's stair textures are drawn against an east-facing step while
+	 * its glazed pattern is drawn against a south-facing one, and the templates reconcile them, so
+	 * this family's models have to be turned one quarter less than the slab's for the same pattern.
+	 * That is the {@code - 1}: measured against a full glazed block of the same facing, a model
+	 * built without it puts every pattern exactly one quarter turn clockwise of where it belongs,
+	 * and with it every facing lands on the reference to within the step's own cropped texels.
+	 *
+	 * <p>A {@code y} rotation of {@code turns(facing)} quarters then carries the pattern to
+	 * {@code turns(facing)} quarters and the step with it, so the model chosen has to supply the
+	 * remaining {@code turns(glazed) - turns(facing) - 1}.
+	 *
+	 * <p>Vanilla's {@code *_left} shapes do not take that {@code y}. Their models are the other
+	 * hand of the same step, so one quarter of the turn is already cut into the geometry and the
+	 * {@code y} table starts a quarter earlier; see {@link #rotation}. Reusing the {@code straight}
+	 * table for them turns the step a quarter out and leaves the pattern a quarter out with it.
 	 */
 	private BlockModelDefinitionGenerator glazedStairsState(Block stairs) {
 		return MultiVariantGenerator.dispatch(stairs).with(PropertyDispatch
 				.initial(StairBlock.FACING, StairBlock.HALF, StairBlock.SHAPE, MBBlockStateProperties.GLAZED_FACING)
 				.generate((facing, half, shape, placed) -> {
-					int turn = MBBlockStateProperties.glazedTurns(placed);
+					int turn = Mth.positiveModulo(
+							MBBlockStateProperties.glazedTurns(placed) - MBBlockStateProperties.glazedTurns(facing) - 1,
+							TURNS);
 
-					return plainVariant(switch (shape) {
+					MultiVariant variant = plainVariant(switch (shape) {
 						case STRAIGHT -> formModelId(stairs, suffix("", turn));
 						case INNER_LEFT, INNER_RIGHT -> formModelId(stairs, suffix("inner", turn));
 						case OUTER_LEFT, OUTER_RIGHT -> formModelId(stairs, suffix("outer", turn));
 					});
+
+					return variant.with(rotation(shape, facing)).with(upsideDown(half));
 				}));
+	}
+
+	/**
+	 * The rotation that stands a stair on its head, which vanilla gives every {@code half=top}
+	 * variant.
+	 *
+	 * <p>Without it an upside-down stair is drawn the right way up: {@code half} is carried by the
+	 * blockstate alone, and a stair is the one family here whose two halves are not the same shape
+	 * seen from the other end.
+	 */
+	private static VariantMutator upsideDown(final Half half) {
+		return half == Half.TOP ? BlockModelGenerators.X_ROT_180 : BlockModelGenerators.NOP;
+	}
+
+	/**
+	 * The {@code y} rotation vanilla gives a stair of this shape facing {@code facing}.
+	 *
+	 * <p>{@code straight}, {@code inner_right} and {@code outer_right} share one table and the two
+	 * {@code *_left} shapes share the other, exactly as {@code BlockModelGenerators.createStairs}
+	 * lays them out: east 0, south 90, west 180, north 270 for the first, and east 270, south 0,
+	 * west 90, north 180 for the second. The difference is real geometry, not a preference - the
+	 * left templates are the mirror of the right ones, so the same facing needs a quarter turn less.
+	 */
+	private static VariantMutator rotation(final StairsShape shape, final Direction facing) {
+		boolean left = shape == StairsShape.INNER_LEFT || shape == StairsShape.OUTER_LEFT;
+
+		return switch (facing) {
+			case SOUTH -> left ? BlockModelGenerators.NOP : BlockModelGenerators.Y_ROT_90;
+			case WEST -> left ? BlockModelGenerators.Y_ROT_90 : BlockModelGenerators.Y_ROT_180;
+			case NORTH -> left ? BlockModelGenerators.Y_ROT_180 : BlockModelGenerators.Y_ROT_270;
+			case EAST -> left ? BlockModelGenerators.Y_ROT_270 : BlockModelGenerators.NOP;
+			default -> BlockModelGenerators.NOP;
+		};
 	}
 
 	/**
@@ -569,13 +635,22 @@ public class MBModelProvider implements DataProvider {
 	 * the turn here as well would rotate the pattern twice.
 	 */
 	private record Turn(int count) {
-		/** The world direction {@code direction} of the model this one was turned from. */
+		/**
+		 * The world direction of the unturned model that {@code direction} of this one was turned
+		 * from.
+		 *
+		 * <p>The turn carries a box's east face onto the new box's north face, so a face read off
+		 * the turned box has to be looked up under the <em>inverse</em> turn: the new north face is
+		 * the old east one. This reads that way round. Written the other way round - each direction
+		 * mapped onto its own image - the labels would turn twice as far as the geometry they
+		 * describe, and every turned face would come out a half turn from where it belongs.
+		 */
 		private static String reverse(final String direction) {
 			return switch (direction) {
-				case "north" -> "west";
-				case "west" -> "south";
-				case "south" -> "east";
-				case "east" -> "north";
+				case "north" -> "east";
+				case "east" -> "south";
+				case "south" -> "west";
+				case "west" -> "north";
 				default -> direction;
 			};
 		}
@@ -624,11 +699,12 @@ public class MBModelProvider implements DataProvider {
 
 		for (JsonElement element : root.getAsJsonArray("elements")) {
 			JsonObject box = element.getAsJsonObject();
-			JsonObject turnedBox = boxElement(rotation.box(boxOf(box)));
+			Box moved = rotation.box(boxOf(box));
+			JsonObject turnedBox = boxElement(moved);
 			JsonObject faces = new JsonObject();
 
 			for (String direction : FACE_DIRECTIONS) {
-				faces.add(direction, turnedFace(box.getAsJsonObject("faces"), direction, rotation));
+				faces.add(direction, turnedFace(box.getAsJsonObject("faces"), moved, direction, rotation));
 			}
 
 			turnedBox.add("faces", faces);
@@ -649,14 +725,46 @@ public class MBModelProvider implements DataProvider {
 	}
 
 	/**
-	 * One face of a turned box: a verbatim copy of the face that was turned onto it, so the crop and
-	 * the rotation stay exactly as the unturned model wrote them. The turn itself is already in the
-	 * geometry, and a blockstate {@code y} rotation would not have altered these values either.
+	 * One face of a turned box: the face that was turned onto it, its crop taken again from where
+	 * the box has landed, and the turn added to its rotation when it covers the whole block face.
+	 *
+	 * <p>The crop is a fact about where the quad sits in the block, not about the quad: it is the
+	 * slice of the sprite that the slice of block face under the quad shows. Turning the box moves
+	 * that slice, so the crop has to be taken again. A face covering the whole block face crops the
+	 * whole sprite and reads the same however it is turned, but a face covering part of one asks for
+	 * a different part once it has moved, and copying the old numbers through slides the pattern
+	 * across the shape. On a stair that reads as a seam: its half-width step goes on showing the
+	 * strip of pattern it was cut from, wherever the turn has carried it.
+	 *
+	 * <p>A quad covering the whole block face is the other case: it looks the same however far it is
+	 * turned, so only the rotation of the pattern on it can show the turn, and the turn has to be
+	 * written onto it here. A face rotation of {@code r} degrees turns the quad's texture by
+	 * {@code r} quarters clockwise, so the turn goes on as {@code +90 * count}. The face the quad is
+	 * read from - {@link Turn#direction} - is what keeps a cropped face's pattern lined up with the
+	 * geometry.
+	 *
+	 * <p>A blockstate {@code y} rotation would not have altered any of these values, which is why
+	 * this has to be done here rather than by rotating the variant.
 	 */
-	private static JsonObject turnedFace(JsonObject faces, final String direction, final Turn turn) {
+	private static JsonObject turnedFace(JsonObject faces, final Box moved, final String direction, final Turn turn) {
 		JsonObject original = faces.getAsJsonObject(turn.direction(direction));
 		JsonObject turned = new JsonObject();
 		original.entrySet().forEach(entry -> turned.add(entry.getKey(), entry.getValue()));
+
+		int[] crop = crop(moved, direction);
+		turned.add("uv", uv(crop[0], crop[1], crop[2], crop[3]));
+
+		if (crop[2] - crop[0] == 16 && crop[3] - crop[1] == 16) {
+			int rotation = Math.floorMod(
+					(turned.has("rotation") ? turned.get("rotation").getAsInt() : 0) + 90 * turn.count(), 360);
+
+			if (rotation != 0) {
+				turned.addProperty("rotation", rotation);
+			} else {
+				turned.remove("rotation");
+			}
+		}
+
 		return turned;
 	}
 
@@ -717,6 +825,9 @@ public class MBModelProvider implements DataProvider {
 	/**
 	 * A glazed face: the pattern of the face it shows, with vanilla's own rotation for that face,
 	 * cropped to the part of the block face the quad covers.
+	 *
+	 * <p>This writes the unturned model. A turn is written afterwards by {@link #turnedFace}, which
+	 * is the only place that knows how far the shape has been carried round.
 	 *
 	 * @param turn the turn that carried this face to where it is, which decides where its pattern
 	 *             was cropped from

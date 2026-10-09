@@ -7,9 +7,9 @@
           "texture": "#pattern",
           "uv": [
             0,
-            0,
+            8,
             16,
-            8
+            16
           ]
         },
         "east": {
@@ -22,7 +22,7 @@
           ]
         },
         "north": {
-          "rotation": 270,
+          "rotation": 90,
           "texture": "#pattern",
           "uv": [
             0,
@@ -33,7 +33,7 @@
         },
         "south": {
           "cullface": "north",
-          "rotation": 90,
+          "rotation": 270,
           "texture": "#pattern",
           "uv": [
             0,
@@ -46,9 +46,9 @@
           "texture": "#pattern",
           "uv": [
             0,
-            8,
+            0,
             16,
-            16
+            8
           ]
         },
         "west": {

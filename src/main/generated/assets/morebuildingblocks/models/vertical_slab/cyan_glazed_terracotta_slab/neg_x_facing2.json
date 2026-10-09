@@ -6,14 +6,15 @@
         "down": {
           "texture": "#pattern",
           "uv": [
-            0,
-            0,
             8,
+            0,
+            16,
             16
           ]
         },
         "east": {
           "cullface": "west",
+          "rotation": 180,
           "texture": "#pattern",
           "uv": [
             0,
@@ -45,14 +46,13 @@
         "up": {
           "texture": "#pattern",
           "uv": [
-            0,
-            0,
             8,
+            0,
+            16,
             16
           ]
         },
         "west": {
-          "rotation": 180,
           "texture": "#pattern",
           "uv": [
             0,
