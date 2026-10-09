@@ -1,5 +1,7 @@
 package com.camelie.morebuildingblocks.client;
 
+import java.util.Map;
+
 import com.mojang.math.Quadrant;
 
 import net.minecraft.client.renderer.block.dispatch.SingleVariant;
@@ -45,6 +47,22 @@ public class MBVanillaSlabModelPlugin implements ClientModInitializer {
 	 * file above it to inherit those slots from.
 	 */
 	private static final String VERTICAL_DIRECTORY = "vertical_slab/";
+
+	/**
+	 * The five vanilla slabs whose doubled form is not drawn with their {@code #side} sprite,
+	 * mapped to the model vanilla's own blockstate names. Every other slab doubles into its
+	 * {@code #side} sprite's model (see {@link #doubleModel}).
+	 *
+	 * <p>These were read back from the 101 {@code blockstates/*_slab.json} files in the 26.3
+	 * client jar; the four sandstone and quartz entries name a texture rather than their own
+	 * block because their smooth and cut faces are not the side of the full block.
+	 */
+	private static final Map<String, String> DOUBLE_MODEL_OVERRIDES = Map.of(
+		"smooth_stone_slab", "smooth_stone_slab_double",
+		"quartz_slab", "quartz_block",
+		"smooth_quartz_slab", "smooth_quartz",
+		"smooth_sandstone_slab", "smooth_sandstone",
+		"smooth_red_sandstone_slab", "smooth_red_sandstone");
 
 	@Override
 	public void onInitializeClient() {
@@ -94,9 +112,21 @@ public class MBVanillaSlabModelPlugin implements ClientModInitializer {
 		}
 	}
 
-	/** Vanilla's {@code block/<id>_slab} / {@code block/<id>_slab_top} naming. */
+	/**
+	 * Vanilla's {@code block/<id>_slab} / {@code block/<id>_slab_top} naming, which all but the
+	 * four waxed copper slabs follow.
+	 */
 	private static Identifier flatModel(Identifier slabId, String suffix) {
-		return slabId.withPath(path -> "block/" + path + suffix);
+		String path = slabId.getPath();
+
+		if (path.endsWith("_cut_copper_slab")) {
+			// The waxed copper slabs have no models of their own: their blockstates draw the
+			// unwaxed ones, which are what the UVs and the cutting pattern belong to.
+			path = path.replace("waxed_", "");
+		}
+
+		String model = path;
+		return slabId.withPath(ignored -> "block/" + model + suffix);
 	}
 
 	/**
@@ -116,15 +146,16 @@ public class MBVanillaSlabModelPlugin implements ClientModInitializer {
 	 * {@code block/bricks}.
 	 *
 	 * <p>The full block uses its {@code #side} sprite, so the texture table - which already
-	 * holds the real 26.3 values for all 101 vanilla slabs - names the model directly. Only
-	 * {@code smooth_stone_slab} differs, because its side sprite
-	 * ({@code block/smooth_stone_slab_side}) is not the model vanilla draws when doubled.
+	 * holds the real 26.3 values for all 101 vanilla slabs - names the model directly. Five
+	 * slabs differ, and each one is listed in {@link #DOUBLE_MODEL_OVERRIDES} with the model
+	 * vanilla's own blockstate names.
 	 */
 	private static Identifier doubleModel(Identifier slabId) {
 		String path = slabId.getPath();
+		String override = DOUBLE_MODEL_OVERRIDES.get(path);
 
-		if (path.equals("smooth_stone_slab")) {
-			return slabId.withPath(ignored -> "block/smooth_stone_slab_double");
+		if (override != null) {
+			return slabId.withPath(ignored -> "block/" + override);
 		}
 
 		VanillaSlabTextures.Textures textures = VanillaSlabTextures.bySlab(path);

@@ -852,11 +852,22 @@ public class MBModelProvider implements DataProvider {
 	}
 
 	/**
-	 * Only a face that covers the whole block face it lies on, and lies on the block's outer
-	 * boundary, may cull; otherwise the two boxes of a stair would hide each other.
+	 * Whether a face may be hidden when the block behind it is solid.
+	 *
+	 * <p>Two things are needed. The face has to lie on the block's own outer boundary, or it is
+	 * an internal seam and culling it would punch a hole in the model. And it has to fill the
+	 * whole block face along at least one axis, because {@code cullface} hides the entire block
+	 * face, not the part of it the quad covers - a half-height upright slab's down face is a
+	 * full 16x16 in plan even though the slab is only half as tall, so it may cull; the up face
+	 * of a stair's bottom box, which the step only partly covers, may not.
+	 *
+	 * <p>Vanilla's {@code block/slab} culls its four sides from a box that stops at y=8, and
+	 * {@code block/stairs} culls its step's up face from a box that starts at (8,8,0), so
+	 * "on the boundary plus full along one axis" is exactly the rule vanilla follows.
 	 */
 	private static boolean canCull(int[] crop, Box box, String direction) {
-		return crop[2] - crop[0] == 16 && crop[3] - crop[1] == 16 && isOnBoundary(box, direction);
+		boolean fillsAnAxis = (crop[0] == 0 && crop[2] == 16) || (crop[1] == 0 && crop[3] == 16);
+		return fillsAnAxis && isOnBoundary(box, direction);
 	}
 
 	/** @return whether {@code box} touches the outer face of the block in {@code direction}. */
@@ -878,15 +889,22 @@ public class MBModelProvider implements DataProvider {
 	 *
 	 * <p>Minecraft maps a face's {@code uv} rectangle onto the block's own face, so a quad that
 	 * spans only half of the block's face has to ask for only that half of the sprite.
+	 *
+	 * <p>The u axis always runs the same way as the world axis it stands for, on every face:
+	 * down and up read x, north and south read x, west and east read z. Reading a face from
+	 * behind - which is what the south and east faces of a box are - does therefore <em>not</em>
+	 * mirror the sprite. Vanilla's own {@code block/stairs} proves it: its step box
+	 * {@code [8,8,0]-[16,16,16]} crops {@code [8,0,16,8]} on south and {@code [0,0,16,8]} on
+	 * east, both straight copies of the box's own extent.
 	 */
 	private static int[] crop(Box box, String direction) {
 		return switch (direction) {
 			case "down" -> new int[] { box.x1(), box.z1(), box.x2(), box.z2() };
 			case "up" -> new int[] { box.x1(), 16 - box.z2(), box.x2(), 16 - box.z1() };
 			case "north" -> new int[] { box.x1(), 16 - box.y2(), box.x2(), 16 - box.y1() };
-			case "south" -> new int[] { 16 - box.x2(), 16 - box.y2(), 16 - box.x1(), 16 - box.y1() };
+			case "south" -> new int[] { box.x1(), 16 - box.y2(), box.x2(), 16 - box.y1() };
 			case "west" -> new int[] { box.z1(), 16 - box.y2(), box.z2(), 16 - box.y1() };
-			case "east" -> new int[] { 16 - box.z2(), 16 - box.y2(), 16 - box.z1(), 16 - box.y1() };
+			case "east" -> new int[] { box.z1(), 16 - box.y2(), box.z2(), 16 - box.y1() };
 			default -> new int[] { 0, 0, 16, 16 };
 		};
 	}
