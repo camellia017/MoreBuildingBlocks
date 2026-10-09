@@ -381,8 +381,9 @@ public class MBClientGameTest implements FabricClientGameTest {
 	 * is wrong still renders as a plausible thin wall, and the rule reads the click
 	 * position on the clicked face rather than the camera. The clicked face is divided
 	 * into a middle quarter and four bands around it: the middle takes the half behind
-	 * that face, the bottom and top bands the lower and upper halves, and the left and
-	 * right bands the halves named by that face's own left and right edges.
+	 * that face, and each band takes the half of the block on the same side as the band -
+	 * a click at a face's own eastern edge fills the eastern half, and a click at the
+	 * northern edge of a top face the northern half.
 	 */
 	private static void verifyPlacement(TestServerContext server, List<Block> family) {
 		server.runOnServer(minecraftServer -> {
@@ -393,24 +394,23 @@ public class MBClientGameTest implements FabricClientGameTest {
 
 			level.setBlockAndUpdate(pos.below(), Blocks.STONE.defaultBlockState());
 
-			// The clicked face is divided into a middle quarter and one band along each of its four
-			// edges. The top face is read with its left edge towards the west and its bottom edge
-			// towards the north, so its bottom band fills the northern half, its top band the
-			// southern one, and its left and right bands the western and eastern halves.
+			// The top face is read with east to the right and north upwards, so each band fills the
+			// half on its own side of the block: north band the northern half, south band the
+			// southern, west band the western half and east band the eastern one.
 			checkPlacement(level, player, slabBlock, pos, new Vec3(0.5, FLOOR_Y + 25.0, 0.5), Direction.UP,
 					Fill.negative(Direction.Axis.Y), "top face centre");
 			checkPlacement(level, player, slabBlock, pos, new Vec3(0.5, FLOOR_Y + 25.0, 0.1), Direction.UP,
-					Fill.negative(Direction.Axis.Z), "top face north band");
+					Fill.negative(Direction.Axis.Z), "top face south band");
 			checkPlacement(level, player, slabBlock, pos, new Vec3(0.5, FLOOR_Y + 25.0, 0.9), Direction.UP,
-					Fill.positive(Direction.Axis.Z), "top face south band");
+					Fill.positive(Direction.Axis.Z), "top face north band");
 			checkPlacement(level, player, slabBlock, pos, new Vec3(0.1, FLOOR_Y + 25.0, 0.5), Direction.UP,
 					Fill.negative(Direction.Axis.X), "top face west band");
 			checkPlacement(level, player, slabBlock, pos, new Vec3(0.9, FLOOR_Y + 25.0, 0.5), Direction.UP,
 					Fill.positive(Direction.Axis.X), "top face east band");
 
-			// The north face is read with its left edge towards the west, so its left band fills the
-			// eastern half and its right band the western one; a click in its middle quarter fills
-			// the southern half, leaving a visible face pointing north.
+			// A side face that looks north carries the same two axes: east to the right and down the
+			// face, so its bands name the same halves as the top face's do. The centre fills the half
+			// behind the face - the southern half - which carries a wall on straight.
 			checkPlacement(level, player, slabBlock, pos, new Vec3(0.5, FLOOR_Y + 24.5, 0.05), Direction.NORTH,
 					Fill.positive(Direction.Axis.Z), "north face centre");
 			checkPlacement(level, player, slabBlock, pos, new Vec3(0.5, FLOOR_Y + 24.1, 0.05), Direction.NORTH,
@@ -418,33 +418,33 @@ public class MBClientGameTest implements FabricClientGameTest {
 			checkPlacement(level, player, slabBlock, pos, new Vec3(0.5, FLOOR_Y + 24.9, 0.05), Direction.NORTH,
 					Fill.positive(Direction.Axis.Y), "north face top band");
 			checkPlacement(level, player, slabBlock, pos, new Vec3(0.9, FLOOR_Y + 24.5, 0.05), Direction.NORTH,
-					Fill.negative(Direction.Axis.X), "north face east band");
+					Fill.positive(Direction.Axis.X), "north face east band");
 			checkPlacement(level, player, slabBlock, pos, new Vec3(0.1, FLOOR_Y + 24.5, 0.05), Direction.NORTH,
-					Fill.positive(Direction.Axis.X), "north face west band");
+					Fill.negative(Direction.Axis.X), "north face west band");
 
-			// The east face is read with its left edge towards the north, so u runs from north to
-			// south: the left band is the northern quarter of the face and the right band the
-			// southern one. A click in its middle quarter fills the southern half - the half whose
-			// visible face points north, because "south-facing" names the filled half.
+			// A face that looks east is read with south to the right and down the face, so its north
+			// band fills the northern half and its south band the southern one. Its right band fills
+			// the southern half as well, both being the half on the side those two edges sit on.
 			checkPlacement(level, player, slabBlock, pos, new Vec3(1.0, FLOOR_Y + 24.5, 0.5), Direction.EAST,
-					Fill.positive(Direction.Axis.Z), "east face centre");
+					Fill.negative(Direction.Axis.X), "east face centre");
 			checkPlacement(level, player, slabBlock, pos, new Vec3(1.0, FLOOR_Y + 24.5, 0.1), Direction.EAST,
-					Fill.positive(Direction.Axis.Z), "east face left band");
+					Fill.negative(Direction.Axis.Z), "east face north band");
 			checkPlacement(level, player, slabBlock, pos, new Vec3(1.0, FLOOR_Y + 24.5, 0.9), Direction.EAST,
-					Fill.positive(Direction.Axis.Z), "east face right band");
+					Fill.positive(Direction.Axis.Z), "east face south band");
 			checkPlacement(level, player, slabBlock, pos, new Vec3(1.0, FLOOR_Y + 24.1, 0.5), Direction.EAST,
 					Fill.negative(Direction.Axis.Y), "east face bottom band");
 			checkPlacement(level, player, slabBlock, pos, new Vec3(1.0, FLOOR_Y + 24.9, 0.5), Direction.EAST,
 					Fill.positive(Direction.Axis.Y), "east face top band");
 
-			// The bottom face is read the same way as the top one, mirrored: its left edge is still
-			// towards the west, but its second axis runs north.
+			// The bottom face is read the same way as the top one, mirrored: east is still to the
+			// right, but its second axis runs north as well, so the band against its northern edge
+			// fills the northern half all the same.
 			checkPlacement(level, player, slabBlock, pos, new Vec3(0.5, FLOOR_Y + 24.0, 0.5), Direction.DOWN,
 					Fill.positive(Direction.Axis.Y), "bottom face centre");
 			checkPlacement(level, player, slabBlock, pos, new Vec3(0.5, FLOOR_Y + 24.0, 0.1), Direction.DOWN,
-					Fill.negative(Direction.Axis.Z), "bottom face north band");
+					Fill.negative(Direction.Axis.Z), "bottom face south band");
 			checkPlacement(level, player, slabBlock, pos, new Vec3(0.5, FLOOR_Y + 24.0, 0.9), Direction.DOWN,
-					Fill.positive(Direction.Axis.Z), "bottom face south band");
+					Fill.positive(Direction.Axis.Z), "bottom face north band");
 			checkPlacement(level, player, slabBlock, pos, new Vec3(0.1, FLOOR_Y + 24.0, 0.5), Direction.DOWN,
 					Fill.negative(Direction.Axis.X), "bottom face west band");
 			checkPlacement(level, player, slabBlock, pos, new Vec3(0.9, FLOOR_Y + 24.0, 0.5), Direction.DOWN,
@@ -471,8 +471,8 @@ public class MBClientGameTest implements FabricClientGameTest {
 
 		checkPlacement(level, player, slabBlock, pos, new Vec3(pos.getX() + 0.5, FLOOR_Y + 25.0, pos.getZ() + 0.5),
 				Direction.UP, Fill.negative(Direction.Axis.Y), "top face centre far from the origin");
-		checkPlacement(level, player, slabBlock, pos, new Vec3(pos.getX() + 0.5, FLOOR_Y + 25.0, pos.getZ() + 0.1),
-				Direction.UP, Fill.negative(Direction.Axis.Z), "top face north band far from the origin");
+		checkPlacement(level, player, slabBlock, pos, new Vec3(pos.getX() + 0.5, FLOOR_Y + 25.0, pos.getZ() + 0.9),
+				Direction.UP, Fill.positive(Direction.Axis.Z), "top face north band far from the origin");
 		checkPlacement(level, player, slabBlock, pos, new Vec3(pos.getX() + 0.5, FLOOR_Y + 24.5, pos.getZ()),
 				Direction.NORTH, Fill.positive(Direction.Axis.Z), "north face centre far from the origin");
 	}

@@ -9,19 +9,20 @@ import net.minecraft.world.phys.Vec3;
 /**
  * The frame of one clicked face of a block, as the slab placement rule reads it.
  *
- * <p>Every face is viewed from outside and divided into a middle quarter with one band along each of
- * its four edges. Two axes describe a point on it: {@code u} runs from the face's left edge towards
- * its right edge, and {@code v} from its bottom edge towards its top edge, both in blocks, so a
- * whole face is the unit square.
+ * <p>Every face is divided into a middle quarter with one band along each of its four edges. Two
+ * axes describe a point on it: {@code u} runs from the face's left edge towards its right one, and
+ * {@code v} from its bottom edge towards its top one, both in blocks, so a whole face is the unit
+ * square.
  *
- * <p>A face is not a picture on a screen: the block has to be read in its own coordinates. Each
- * frame therefore records the corner the face's left and bottom edges meet at, together with the
- * direction {@code u} grows in along the block.
+ * <p>The two run along the world, not along the screen, so that a click names the half of the block
+ * it points at: {@code u} grows east on the faces that face north and south, south on the faces that
+ * face east and west, and {@code v} grows up the block on the four side faces and north on the two
+ * horizontal ones. A click at a face's own eastern edge therefore fills the eastern half whether
+ * that edge is the player's left or their right, and a click at the northern edge of a top face
+ * fills the northern half, the one nearest the player.
  *
- * <p>Looking at a face from outside, its left edge is west on a north face, east on a south face,
- * north on a west face and south on an east face. The top and bottom faces are read with the same
- * left edge - west - and their second axis runs south, so that a click near the northern edge is the
- * same band on both of them.
+ * <p>Each frame therefore records the corner the face's left and bottom edges meet at, together
+ * with the direction {@code u} grows in along the block.
  *
  * <p>A click at a left or right edge fills the half lying <em>behind</em> that edge, so the frame
  * carries those two edges as world directions and turns them into halves itself.
@@ -36,8 +37,8 @@ import net.minecraft.world.phys.Vec3;
  * @param cornerZ z of that corner, relative to the block
  * @param uAxis the axis {@code u} runs along
  * @param uPositive {@code true} when {@code u} grows towards the positive end of {@code uAxis}
- * @param leftEdge the world direction of the face's left edge, seen from outside
- * @param rightEdge the world direction of the face's right edge, seen from outside
+ * @param leftEdge the world direction of the face's left edge
+ * @param rightEdge the world direction of the face's right edge
  */
 public record FaceFrame(int cornerX, int cornerY, int cornerZ, Direction.Axis uAxis, boolean uPositive,
 		Direction leftEdge, Direction rightEdge) {
@@ -70,8 +71,9 @@ public record FaceFrame(int cornerX, int cornerY, int cornerZ, Direction.Axis uA
 	 *
 	 * <p>The middle quarter takes the half behind the face, so its visible face is the one that was
 	 * clicked. Each other quarter sits against one edge and takes the half behind that edge - the
-	 * half a slab has to fill to lie against the edge the player pointed at. The middle is named
-	 * first, and the caller gives it priority, so it wins in the corners where the bands overlap.
+	 * half a slab has to fill to lie against the edge the player pointed at, which is the half of the
+	 * block on that same side since the two axes run along the world. The middle is named first, and
+	 * the caller gives it priority, so it wins in the corners where the bands overlap.
 	 *
 	 * <p>The answer does not depend on which cell the placement lands in. It is the same rule for a
 	 * click on a plain block, where the new slab is built in the cell beyond the clicked face, and
@@ -81,7 +83,9 @@ public record FaceFrame(int cornerX, int cornerY, int cornerZ, Direction.Axis uA
 	 */
 	public VerticalSlab.Fill region(final Direction face, final boolean middle, final double u, final double v) {
 		if (middle) {
-			return fill(face);
+			// The half that face points away from, which is the one running along the face the
+			// player clicked and carries a wall on straight.
+			return VerticalSlab.Fill.opposite(face);
 		}
 
 		if (v < MIDDLE_MIN) {
@@ -102,29 +106,33 @@ public record FaceFrame(int cornerX, int cornerY, int cornerZ, Direction.Axis uA
 
 	/** The half filled by the band along the bottom edge of {@code face}. */
 	public VerticalSlab.Fill floor(final Direction face) {
-		return fill(vDirection(face));
+		return fill(vDirection(face).getOpposite());
 	}
 
 	/** The half filled by the band along the top edge of {@code face}. */
 	public VerticalSlab.Fill ceiling(final Direction face) {
-		return fill(vDirection(face).getOpposite());
+		return fill(vDirection(face));
 	}
 
 	/**
-	 * The half of the block lying behind {@code side}, which is a side of the block: an edge seen on
-	 * the outside of a block has a half of the block behind it, and a click on that edge fills it.
-	 * The east edge of a north face has the eastern half behind it, and the northern edge of a top
-	 * face the northern half.
+	 * The half of the block whose visible face points along {@code side}, which is a side of the
+	 * block: a band along an edge of a face fills the half that edge names, so a click at the
+	 * eastern edge of a face fills the eastern half and a click at the northern edge of a top face
+	 * the northern half.
+	 *
+	 * <p>A {@link Direction} and a {@link VerticalSlab.Fill} name a half in opposite terms - the
+	 * direction is the way its visible face points, the fill is the end of the axis it starts from -
+	 * so the two are translated here rather than by negating the direction.
 	 */
 	private static VerticalSlab.Fill fill(final Direction side) {
-		return VerticalSlab.Fill.opposite(side);
+		return VerticalSlab.Fill.fillBeyond(side);
 	}
 
 	/**
-	 * {@code u} of a click: how far along the face's first axis it landed, measured from the frame's
-	 * corner. It is the projection of the click onto that axis, taken with the sign the axis grows
-	 * in, so a click past the corner counts as more than one - callers only ever compare it against
-	 * the fractions of a block that divide the face.
+	 * {@code u} of a click: how far across the face it landed, from the left edge towards the right
+	 * one. It is the click's offset along the world direction {@link #uAxis()} names, so a face read
+	 * from outside maps a click onto the half it points at: a click at a face's own eastern edge
+	 * fills the eastern half, wherever that edge sits on the screen.
 	 *
 	 * <p>{@code hit} is measured from the corner of the block the click was read against, the one
 	 * the frame's own corner is relative to - not from the corner of the world. The two are a whole
@@ -141,7 +149,11 @@ public record FaceFrame(int cornerX, int cornerY, int cornerZ, Direction.Axis uA
 		return this.uPositive ? distance : -distance;
 	}
 
-	/** {@code v} of a click, measured the same way but along the face's second axis. */
+	/**
+	 * {@code v} of a click: how far along the face it landed, from the edge {@link #vDirection}
+	 * starts at towards the one it names, so a click at the bottom edge of a side face fills the
+	 * lower half of the block and a click at the northern edge of a top face the northern half.
+	 */
 	public double v(final Vec3 hit, final Direction face) {
 		Direction vAxis = vDirection(face);
 
@@ -151,32 +163,35 @@ public record FaceFrame(int cornerX, int cornerY, int cornerZ, Direction.Axis uA
 	}
 
 	/**
-	 * The direction {@code v} grows in: from the face's bottom edge towards its top edge. It is up
-	 * the block on every side face, and on the two horizontal faces it is the block's south - the
-	 * direction the top face is read with, and the one the bottom face is read with as well, because
-	 * a face seen from outside is read the same way round whichever end of the block the viewer
-	 * stands at.
+	 * The direction of the positive end of {@code v}: the end the top band lies at, which
+	 * {@link #ceiling} fills. It is the world's up on the four side faces, so {@link #floor} - the
+	 * bottom band - fills the lower half and {@code ceiling} the upper one.
+	 *
+	 * <p>On the two horizontal faces it is the world's north, so the band along the edge nearest
+	 * the player's north fills the northern half and the band along the southern edge the
+	 * southern one - the band and the half it fills are on the same side of the block, the same
+	 * rule the side faces follow.
 	 */
 	public Direction vDirection(final Direction face) {
 		return switch (face) {
-			case UP, DOWN -> Direction.SOUTH;
+			case UP, DOWN -> Direction.NORTH;
 			default -> Direction.UP;
 		};
 	}
 
 	private static final Map<Direction, FaceFrame> FRAMES = Map.of(
-		// A side face. Its left edge is the one to the west of a north face, to the east of a south
-		// face, to the north of a west face and to the south of an east face, and u runs from there
-		// inwards. Behind the west edge of a north face lies its eastern half, and so on round.
+		// A side face is read with the world's east to the right on the faces that face north and
+		// south, and the world's south to the right on the ones that face east and west: whichever
+		// way the block is turned, the edge the player points at is the half that gets filled. Its
+		// other axis runs down the world.
 		Direction.NORTH, new FaceFrame(0, 0, 1, Direction.Axis.X, true, Direction.WEST, Direction.EAST),
-		Direction.SOUTH, new FaceFrame(1, 0, 1, Direction.Axis.X, false, Direction.EAST, Direction.WEST),
-		Direction.WEST, new FaceFrame(1, 0, 1, Direction.Axis.Z, false, Direction.SOUTH, Direction.NORTH),
-		Direction.EAST, new FaceFrame(1, 0, 1, Direction.Axis.Z, true, Direction.NORTH, Direction.SOUTH),
-		// The horizontal faces: left is west on both, the second axis runs south on the top face and
-		// north on the bottom one, so a click at the northern edge fills the northern half either
-		// way, a click at the southern edge the southern half, and a click at the western edge the
-		// western half.
-		Direction.UP, new FaceFrame(1, 1, 0, Direction.Axis.X, false, Direction.WEST, Direction.EAST),
-		Direction.DOWN, new FaceFrame(1, 0, 0, Direction.Axis.X, false, Direction.WEST, Direction.EAST)
+		Direction.SOUTH, new FaceFrame(1, 0, 1, Direction.Axis.X, false, Direction.WEST, Direction.EAST),
+		Direction.WEST, new FaceFrame(1, 0, 0, Direction.Axis.Z, true, Direction.NORTH, Direction.SOUTH),
+		Direction.EAST, new FaceFrame(1, 0, 0, Direction.Axis.Z, true, Direction.NORTH, Direction.SOUTH),
+		// The horizontal faces are read with east to the right, and their other axis runs north, so
+		// the band nearest the player's north fills the northern half. Their frame starts at the
+		// south-west corner for that reason: u grows east from it and v grows north.
+		Direction.UP, new FaceFrame(0, 1, 1, Direction.Axis.X, true, Direction.WEST, Direction.EAST),
+		Direction.DOWN, new FaceFrame(0, 0, 1, Direction.Axis.X, true, Direction.WEST, Direction.EAST)
 	);
 }
