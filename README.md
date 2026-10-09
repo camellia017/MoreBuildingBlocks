@@ -32,12 +32,18 @@
 配合原版自带的 `type`（`bottom` / `top` / `double`）表示「填满哪一半」，
 竖直半砖只用 **2 个新属性**就完整表达了 4 个朝向 × 上下两半的 8 种形态。
 
-- **放置逻辑**：竖直半砖朝玩家面向的水平方向；看向方块**上/下表面**时按视线落点判定
-  薄板沿 X 还是 Z、填上半还是下半，看向侧面时保持原版水平半砖行为。
+- **放置逻辑**：看向**侧面**一律平放（与原版一致）；看向**上/下表面**时按视线落点判定——
+  命中点离方块中轴两轴都在 1/4 格以内就是平放；两轴都超出才是竖放，薄板沿**落点更偏的那个轴**
+  竖起，`type` 按竖放语义取（竖放时 `type=top` 是**负半轴**，与平放相反）。
+- **续墙**：已经立起来的竖半砖（`vertical=true` 且非 `double`）另有一套：
+  - 点**开面**（填满那半抵达的格子边界，`VerticalSlab.openFace`）= 这块只做了一半 → 留在原格补成 `double`；
+  - 点**两个薄侧面**或**空半那侧的格子边界** = 墙继续 → 落到相邻格，并填**被点那块自己的半**
+    （不是点击点最近的那半，否则墙会在接缝处转 90°）。
 - **碰撞箱**：8/16 厚度，`getShape` 按 `axis` + `type` 返回对应薄板盒。
 - **旋转与镜像**：`BlockBehaviourMixin` 覆盖 `rotate` / `mirror`，让竖直半砖
   随结构方块旋转/镜像正确改变朝向。
-- **上下颠倒**：`type` 为 `TOP` 即上半、`BOTTOM` 即下半，两种放置都支持。
+- **上下颠倒**：竖直形态的 `type` 沿用「立起来的那块板占哪半」的语义——`type=top` 是**负半轴**、
+  `type=bottom` 是**正半轴**（与平放恰好相反）；两种都支持，也是竖半砖能从两水平面各自竖起半格的原因。
 
 ### 3. 配方（全部由 datagen 生成）
 
@@ -109,6 +115,11 @@ src/client/java/com/camelie/morebuildingblocks/client/
 工作区应当没有 diff，这正是「datagen 可复现」的验收方式
 （内容未变时输出为 `removed stale: 0, written: 0`）。
 
+`build` / `runDatagen` / `runClientGameTest` 请**分开单跑**：一条命令里连跑时
+`:runDatagen` 会被 Gradle 拒绝（`Task ':sourcesJar' uses this output of task ':runDatagen'
+without declaring an explicit or implicit dependency`），因为 `src/main/generated` 被两边同时读写。
+另外本仓库的 `main` 没有设置 upstream tracking，推送要写全 `git push origin main`。
+
 ## 自动化验收（`runClientGameTest`）
 
 基于 Fabric 的 `fabric-client-gametest-api-v1`，一次运行覆盖下列检查，
@@ -117,11 +128,14 @@ src/client/java/com/camelie/morebuildingblocks/client/
 | 检查 | 内容 |
 |---|---|
 | `verifyShapes` | 101 个原版半砖在 `axis=x` / `axis=z` 下碰撞箱厚度均为 0.5、高度为 1；水平半砖仍是 0～0.5；66 个陶瓦楼梯 `maxY=1.0`、台阶 `maxY=0.5` |
-| `verifyPlacement` | 用真实 `BlockPlaceContext` 放置：点东半边 → 朝东的竖半砖（`axis=x` + `type=top`）；点北半边 → 朝北（`axis=z` + `type=bottom`）；点侧面同样成立；点正中心仍是水平半砖 |
+| `verifyPlacement` | 用真实 `BlockPlaceContext` 放置：点东半边 → 朝东的竖半砖（`axis=x` + `type=top`）；点北半边 → 朝北（`axis=z` + `type=bottom`）；点侧面一律平放；点正中心仍是水平半砖 |
+| `verifyUprightStacking` | 竖半砖的**开面**与它背面（空半那侧的格子边界）各点一次：开面 → 留在原格补成 double，背面 → 越到相邻格并填被点那块自己的半 |
+| `verifyWallContinuation` | 一堵 `axis=z` 的竖半砖墙：两个薄侧面与空半那侧的格子边界都续到相邻格，且新方块填的是**被点那块自己的半**；点开面则留在原格补成 double |
 | `verifyDrops` | 破坏楼梯与台阶后各自掉落自身 |
 | `verifyCreativeTab` | 标签页注册在 `morebuildingblocks:main`，且按顺序收录全部 99 个方块，每个都有对应物品 |
 | `verifyDedicatedServer` | 由测试自己拉起专用服务端并连接：服务端注册 66 个楼梯/台阶 + 33 个基础方块，客户端也认得这 99 个物品；服务端放置的方块能同步到客户端 |
-| 截图 | 陶瓦家族全景、带釉陶瓦近景、带釉陶瓦楼梯近景、三段竖半砖长墙（共 6 张） |
+| `measureGlazed` | 带釉陶瓦花纹方向的**像素级**对照：把原版整方块与模组楼梯/台阶各按南/西/北/东填满 3×3 补丁、从正上方逐一拍照（12 张 `glazed-measure-*.png`），并把每一格服务端实际持有的状态写进日志（`glazed measurement <标签> held <状态>`）；两张图相减后能让它们一致的那个转角就是花纹的误差 |
+| 截图 | 陶瓦家族全景、带釉陶瓦近景、带釉陶瓦楼梯近景、三段竖半砖长墙（6 张），外加 `measureGlazed` 的 12 张，共 18 张 |
 
 > 手工验证多人时请注意：开发环境的客户端没有有效的 Mojang 会话，
 > 直连专用服务端会在登录阶段卡在 `sessionserver.mojang.com/session/minecraft/join` 后断开。
