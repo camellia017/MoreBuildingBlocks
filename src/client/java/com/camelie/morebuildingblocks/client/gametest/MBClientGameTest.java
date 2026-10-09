@@ -384,6 +384,18 @@ public class MBClientGameTest implements FabricClientGameTest {
 	 * that face, the bottom and top bands the lower and upper halves, and the left and
 	 * right bands the halves named by that face's own left and right edges.
 	 */
+	/**
+	 * The upright half a placement picks, which is read off the top or the bottom face alone.
+	 *
+	 * <p>Each of those two faces is a 16x16 plan, and the click is compared against its centre: the
+	 * nearer half of the plan along whichever horizontal axis the click is further out on is the
+	 * half that gets filled, so a click in the eastern half of the top face fills the eastern half
+	 * of the block. A click within a quarter of a block of the centre picks no half at all and
+	 * leaves the slab flat, which is what a player building a floor means by clicking the middle.
+	 *
+	 * <p>A click on one of the four <em>side</em> faces never makes an upright slab, whichever band
+	 * of that face it lands in: that click means vanilla's own flat slab.
+	 */
 	private static void verifyPlacement(TestServerContext server, List<Block> family) {
 		server.runOnServer(minecraftServer -> {
 			ServerLevel level = minecraftServer.overworld();
@@ -393,62 +405,62 @@ public class MBClientGameTest implements FabricClientGameTest {
 
 			level.setBlockAndUpdate(pos.below(), Blocks.STONE.defaultBlockState());
 
-			// The clicked face is divided into a middle quarter and one band along each of its four
-			// edges. The top face is read with its left edge towards the west and its bottom edge
-			// towards the north, so its bottom band fills the northern half, its top band the
-			// southern one, and its left and right bands the western and eastern halves.
+			// Top face: the click's own x and z offsets from the centre of the block pick the half.
 			checkPlacement(level, player, slabBlock, pos, new Vec3(0.5, FLOOR_Y + 25.0, 0.5), Direction.UP,
 					Fill.negative(Direction.Axis.Y), "top face centre");
 			checkPlacement(level, player, slabBlock, pos, new Vec3(0.5, FLOOR_Y + 25.0, 0.1), Direction.UP,
-					Fill.negative(Direction.Axis.Z), "top face north band");
+					Fill.negative(Direction.Axis.Z), "top face north half");
 			checkPlacement(level, player, slabBlock, pos, new Vec3(0.5, FLOOR_Y + 25.0, 0.9), Direction.UP,
-					Fill.positive(Direction.Axis.Z), "top face south band");
+					Fill.positive(Direction.Axis.Z), "top face south half");
 			checkPlacement(level, player, slabBlock, pos, new Vec3(0.1, FLOOR_Y + 25.0, 0.5), Direction.UP,
-					Fill.negative(Direction.Axis.X), "top face west band");
+					Fill.negative(Direction.Axis.X), "top face west half");
 			checkPlacement(level, player, slabBlock, pos, new Vec3(0.9, FLOOR_Y + 25.0, 0.5), Direction.UP,
-					Fill.positive(Direction.Axis.X), "top face east band");
+					Fill.positive(Direction.Axis.X), "top face east half");
+			// A corner click is nearer to two halves; the further-out axis is the one that wins.
+			checkPlacement(level, player, slabBlock, pos, new Vec3(0.9, FLOOR_Y + 25.0, 0.2), Direction.UP,
+					Fill.positive(Direction.Axis.X), "top face north-east corner");
+			checkPlacement(level, player, slabBlock, pos, new Vec3(0.2, FLOOR_Y + 25.0, 0.9), Direction.UP,
+					Fill.positive(Direction.Axis.Z), "top face south-west corner");
 
-			// The north face is read with its left edge towards the west, so its left band fills the
-			// eastern half and its right band the western one; a click in its middle quarter fills
-			// the southern half, leaving a visible face pointing north.
+			// Bottom face: read the same way, so the offsets pick the same halves.
+			checkPlacement(level, player, slabBlock, pos, new Vec3(0.5, FLOOR_Y + 24.0, 0.5), Direction.DOWN,
+					Fill.positive(Direction.Axis.Y), "bottom face centre");
+			checkPlacement(level, player, slabBlock, pos, new Vec3(0.5, FLOOR_Y + 24.0, 0.1), Direction.DOWN,
+					Fill.negative(Direction.Axis.Z), "bottom face north half");
+			checkPlacement(level, player, slabBlock, pos, new Vec3(0.5, FLOOR_Y + 24.0, 0.9), Direction.DOWN,
+					Fill.positive(Direction.Axis.Z), "bottom face south half");
+			checkPlacement(level, player, slabBlock, pos, new Vec3(0.1, FLOOR_Y + 24.0, 0.5), Direction.DOWN,
+					Fill.negative(Direction.Axis.X), "bottom face west half");
+			checkPlacement(level, player, slabBlock, pos, new Vec3(0.9, FLOOR_Y + 24.0, 0.5), Direction.DOWN,
+					Fill.positive(Direction.Axis.X), "bottom face east half");
+
+			// Every side face stays flat, in whichever band the click lands.
 			checkPlacement(level, player, slabBlock, pos, new Vec3(0.5, FLOOR_Y + 24.5, 0.05), Direction.NORTH,
-					Fill.positive(Direction.Axis.Z), "north face centre");
+					Fill.negative(Direction.Axis.Y), "north face centre");
 			checkPlacement(level, player, slabBlock, pos, new Vec3(0.5, FLOOR_Y + 24.1, 0.05), Direction.NORTH,
 					Fill.negative(Direction.Axis.Y), "north face bottom band");
 			checkPlacement(level, player, slabBlock, pos, new Vec3(0.5, FLOOR_Y + 24.9, 0.05), Direction.NORTH,
 					Fill.positive(Direction.Axis.Y), "north face top band");
 			checkPlacement(level, player, slabBlock, pos, new Vec3(0.9, FLOOR_Y + 24.5, 0.05), Direction.NORTH,
-					Fill.negative(Direction.Axis.X), "north face east band");
+					Fill.negative(Direction.Axis.Y), "north face east band");
 			checkPlacement(level, player, slabBlock, pos, new Vec3(0.1, FLOOR_Y + 24.5, 0.05), Direction.NORTH,
-					Fill.positive(Direction.Axis.X), "north face west band");
+					Fill.negative(Direction.Axis.Y), "north face west band");
 
-			// The east face is read with its left edge towards the north, so u runs from north to
-			// south: the left band is the northern quarter of the face and the right band the
-			// southern one. A click in its middle quarter fills the southern half - the half whose
-			// visible face points north, because "south-facing" names the filled half.
 			checkPlacement(level, player, slabBlock, pos, new Vec3(1.0, FLOOR_Y + 24.5, 0.5), Direction.EAST,
-					Fill.positive(Direction.Axis.Z), "east face centre");
+					Fill.negative(Direction.Axis.Y), "east face centre");
 			checkPlacement(level, player, slabBlock, pos, new Vec3(1.0, FLOOR_Y + 24.5, 0.1), Direction.EAST,
-					Fill.positive(Direction.Axis.Z), "east face left band");
+					Fill.negative(Direction.Axis.Y), "east face left band");
 			checkPlacement(level, player, slabBlock, pos, new Vec3(1.0, FLOOR_Y + 24.5, 0.9), Direction.EAST,
-					Fill.positive(Direction.Axis.Z), "east face right band");
+					Fill.negative(Direction.Axis.Y), "east face right band");
 			checkPlacement(level, player, slabBlock, pos, new Vec3(1.0, FLOOR_Y + 24.1, 0.5), Direction.EAST,
 					Fill.negative(Direction.Axis.Y), "east face bottom band");
 			checkPlacement(level, player, slabBlock, pos, new Vec3(1.0, FLOOR_Y + 24.9, 0.5), Direction.EAST,
 					Fill.positive(Direction.Axis.Y), "east face top band");
 
-			// The bottom face is read the same way as the top one, mirrored: its left edge is still
-			// towards the west, but its second axis runs north.
-			checkPlacement(level, player, slabBlock, pos, new Vec3(0.5, FLOOR_Y + 24.0, 0.5), Direction.DOWN,
-					Fill.positive(Direction.Axis.Y), "bottom face centre");
-			checkPlacement(level, player, slabBlock, pos, new Vec3(0.5, FLOOR_Y + 24.0, 0.1), Direction.DOWN,
-					Fill.negative(Direction.Axis.Z), "bottom face north band");
-			checkPlacement(level, player, slabBlock, pos, new Vec3(0.5, FLOOR_Y + 24.0, 0.9), Direction.DOWN,
-					Fill.positive(Direction.Axis.Z), "bottom face south band");
-			checkPlacement(level, player, slabBlock, pos, new Vec3(0.1, FLOOR_Y + 24.0, 0.5), Direction.DOWN,
-					Fill.negative(Direction.Axis.X), "bottom face west band");
-			checkPlacement(level, player, slabBlock, pos, new Vec3(0.9, FLOOR_Y + 24.0, 0.5), Direction.DOWN,
-					Fill.positive(Direction.Axis.X), "bottom face east band");
+			checkPlacement(level, player, slabBlock, pos, new Vec3(0.05, FLOOR_Y + 24.5, 0.5), Direction.WEST,
+					Fill.negative(Direction.Axis.Y), "west face centre");
+			checkPlacement(level, player, slabBlock, pos, new Vec3(0.05, FLOOR_Y + 24.5, 0.5), Direction.SOUTH,
+					Fill.negative(Direction.Axis.Y), "south face centre");
 		});
 	}
 

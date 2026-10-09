@@ -108,15 +108,7 @@ public final class VerticalSlab {
 	}
 
 	/**
-	 * The half of the block a placement fills, read off the clicked face.
-	 *
-	 * <p>Only the clicked face matters. On that face the corner the frame starts at is the origin,
-	 * the first axis runs from its left edge towards its right one and the second from its bottom
-	 * edge towards its top edge; a click in the middle quarter of both picks the half lying behind
-	 * that face, and a click in one of the four surrounding bands picks the half that band names.
-	 * The middle is tested first, so it wins in the corners where the bands overlap.
-	 *
-	 * <p>Two clicks are not simply a click point on a face.
+	 * The half of the block a placement fills.
 	 *
 	 * <p>Clicking an upright slab lands on one of its two broad faces, and in both cases the answer
 	 * is that the new slab goes next to the old one. Against its <em>inner</em> face - the open half,
@@ -125,22 +117,21 @@ public final class VerticalSlab {
 	 * the one its filled half reaches towards - the click is moved out into the next block along,
 	 * where the new slab fills the half reaching back towards the slab that was clicked.
 	 *
-	 * <p>The moved click is why {@code placementFill} reads the frame off the block the click landed
-	 * on - {@link PlacementClick#morebuildingblocks$hitPos()}, which is where the face the player
-	 * pointed at really is - rather than off {@code context.getClickedPos()}, the block that will be
-	 * built in. Those two are the same block for every placement except that one, and for that one
-	 * the click point itself now lies a whole block outside the block being placed in: a click on
-	 * the outer face of an upright slab at the middle of its face would read as a click on the far
-	 * edge of the new block and fill the wrong half entirely.
+	 * <p>The moved click is why the frame is read off the block the click landed on -
+	 * {@link PlacementClick#morebuildingblocks$hitPos()}, which is where the face the player pointed
+	 * at really is - rather than off {@code context.getClickedPos()}, the block that will be built
+	 * in. Those two are the same block for every placement except that one, and for that one the
+	 * click point itself now lies a whole block outside the block being placed in.
+	 *
+	 * <p>Every other click is a click on a block's own face, and {@link #verticalFromFace} decides
+	 * whether it makes an upright slab at all.
 	 */
 	public static Fill placementFill(final BlockPlaceContext context) {
 		Direction face = context.getClickedFace();
 		BlockPos clickedPos = context.getClickedPos();
-		boolean moved = false;
 
 		if (context instanceof PlacementClick click) {
 			clickedPos = click.morebuildingblocks$hitPos();
-			moved = !context.getClickedPos().equals(clickedPos);
 		}
 
 		BlockState clicked = context.getLevel().getBlockState(clickedPos);
@@ -157,22 +148,56 @@ public final class VerticalSlab {
 			return Fill.fillBeyond(face);
 		}
 
-		FaceFrame frame = FaceFrame.of(face);
+		return verticalFromFace(context, face, clickedPos);
+	}
 
-		if (frame == null) {
+	/**
+	 * How far from the centre of the clicked face a click may land and still pick a half of it: a
+	 * quarter of a block. Inside that radius the click is too close to the middle to be pointing at
+	 * one half rather than the other, and the slab stays flat.
+	 */
+	private static final double MIDDLE_RADIUS = 0.25;
+
+	/**
+	 * The half to fill when the click landed on the top or the bottom of a block, or {@code null}
+	 * to leave the placement flat.
+	 *
+	 * <p>Only those two faces can make an upright slab. A side face is not a frame the player can
+	 * aim inside: its width is real estate they are already standing next to, so a click there
+	 * always means vanilla's own flat slab, which is what a player building a wall or a floor is
+	 * pointing at. The reference implementation this rule follows
+	 * ({@code btsdhz/vanilla-refit}'s {@code SlabPlacementRules.wantsVertical}) draws the same
+	 * line: {@code if (face != Direction.UP && face != Direction.DOWN) return false;}.
+	 *
+	 * <p>Which half is then decided by <em>where</em> on that face the click landed, not by which
+	 * way the player is looking. Looking down at a block, the click is somewhere in its 16x16 plan,
+	 * and the new slab fills the half of the plan the click is nearest to: an upright slab's visible
+	 * face looks back along the axis it is thin on, so a click in the eastern half of the top face
+	 * fills the eastern half of the block. Comparing the two offsets from the centre by magnitude
+	 * rather than taking a frame's own left/right and bottom/top bands is what makes the rule
+	 * symmetric under every rotation of the block, and it is the same comparison vanilla-refit uses
+	 * ({@code getHorizontalDirectionFromClick}).
+	 *
+	 * <p>A click within {@link #MIDDLE_RADIUS} of the centre fills nothing: it is too close to the
+	 * middle to point at a half, and leaves the slab flat.
+	 */
+	private static @Nullable Fill verticalFromFace(final BlockPlaceContext context, final Direction face,
+			final BlockPos clickedPos) {
+		if (face.getAxis() != Direction.Axis.Y) {
 			return null;
 		}
 
-		// Local coordinates on the clicked face: 0 is its left/bottom edge, 1 its right/top edge.
-		// Both are measured from the corner the frame starts at, which is not the same corner of
-		// the block for every face, so each is offset to that corner before projecting.
 		Vec3 hit = context.getClickLocation();
-		double u = frame.u(hit, clickedPos);
-		double v = frame.v(hit, clickedPos, face);
-		boolean middle = u > FaceFrame.middleMin() && u < FaceFrame.middleMax()
-			&& v > FaceFrame.middleMin() && v < FaceFrame.middleMax();
+		double x = hit.x - clickedPos.getX() - 0.5;
+		double z = hit.z - clickedPos.getZ() - 0.5;
 
-		return frame.region(face, middle, moved, u, v);
+		if (Math.abs(x) < MIDDLE_RADIUS && Math.abs(z) < MIDDLE_RADIUS) {
+			return null;
+		}
+
+		return Math.abs(x) >= Math.abs(z)
+			? Fill.of(Direction.Axis.X, x >= 0.0 ? Direction.AxisDirection.POSITIVE : Direction.AxisDirection.NEGATIVE)
+			: Fill.of(Direction.Axis.Z, z >= 0.0 ? Direction.AxisDirection.POSITIVE : Direction.AxisDirection.NEGATIVE);
 	}
 
 	/** The direction this slab's visible face points: the way {@code canBeReplaced} tests a click. */
