@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
 import net.minecraft.client.data.models.BlockModelGenerators;
@@ -36,10 +37,12 @@ import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.SlabBlock;
+import net.minecraft.world.level.block.StairBlock;
 import net.minecraft.world.level.block.state.properties.SlabType;
 
 import com.camelie.morebuildingblocks.MoreBuildingBlocks;
 import com.camelie.morebuildingblocks.block.MBBlockStateProperties;
+import com.camelie.morebuildingblocks.block.VerticalSlab.Fill;
 import com.camelie.morebuildingblocks.registry.MBBlockFamilies;
 
 /**
@@ -100,6 +103,15 @@ public class MBModelProvider implements DataProvider {
 	private static final String FILL_POSITIVE_X = "pos_x";
 	private static final String FILL_NEGATIVE_Z = "neg_z";
 	private static final String FILL_POSITIVE_Z = "pos_z";
+
+	/**
+	 * How many quarter turns a glazed model is written in. Vanilla gives a glazed block one model
+	 * per {@code facing}, and these shapes have to follow the block they are cut from.
+	 */
+	private static final int TURNS = 4;
+
+	/** The six faces of a box, in the order a model file lists them. */
+	private static final String[] FACE_DIRECTIONS = { "down", "up", "north", "south", "west", "east" };
 
 	private final PackOutput.PathProvider blockStatePathProvider;
 	private final PackOutput.PathProvider itemPathProvider;
@@ -175,39 +187,51 @@ public class MBModelProvider implements DataProvider {
 
 	/**
 	 * Glazed terracotta: the same shapes as vanilla stairs and slabs, but with the pattern's
-	 * per-face rotation baked into the geometry so the motif survives the cut corner.
+	 * per-face rotation baked into the geometry so the motif survives the cut corner, and with the
+	 * whole model turned by the {@code facing} the player was looking when they placed it.
 	 *
-	 * <p>Every face a player can see takes the sprite of the <em>same world direction</em> of the
-	 * full glazed block, rotated exactly as vanilla rotates it on that face. A south-facing upright
-	 * slab is therefore filled on the south side, and the face the player sees - the north one -
-	 * carries the glazed block's north face.
+	 * <p>Vanilla gives a glazed block one model per {@code facing}, rotated by a quarter turn at a
+	 * time, so a player looking west gets a pattern a quarter turn round from one looking south.
+	 * The stairs and the slab cut out of that block have to follow it, or a staircase made of them
+	 * runs against the wall behind it. A blockstate {@code y} rotation cannot do it here - it would
+	 * turn the cut corner along with the texture - so each of the four facings gets its own model.
+	 *
+	 * <p>Every face takes the sprite of the <em>same world direction</em> of the full glazed block,
+	 * rotated exactly as vanilla rotates it on that face, and then turned with the rest of the model.
 	 */
 	private void generateGlazed(BlockModelGenerators generators, Block base, Block stairs, Block slab) {
 		Material pattern = vanillaTexture(base);
-
-		Identifier slabModel = baseModelId(slab);
-		Identifier slabTopModel = baseModelId(slab, "top");
-		Identifier straight = baseModelId(stairs);
-		Identifier inner = baseModelId(stairs, "inner");
-		Identifier outer = baseModelId(stairs, "outer");
+		Material[] all = { pattern, pattern, pattern, pattern, pattern, pattern };
 
 		// Element for element, box for box, the geometry vanilla's slab, stairs, inner_stairs and
 		// outer_stairs templates lay down. Only the face rotations differ, so the pattern keeps
 		// pointing the same way it does on the full block.
-		this.models.put(slabModel, modelInstance(glazedCubeGeometry(pattern, pattern, pattern, pattern, pattern, pattern, SLAB_BOX)));
-		this.models.put(slabTopModel, modelInstance(glazedCubeGeometry(pattern, pattern, pattern, pattern, pattern, pattern, TOP_SLAB_BOX)));
-		this.models.put(straight, modelInstance(glazedCubeGeometry(pattern, pattern, pattern, pattern, pattern, pattern, SLAB_BOX, STAIR_BOX)));
-		this.models.put(inner, modelInstance(glazedCubeGeometry(pattern, pattern, pattern, pattern, pattern, pattern, SLAB_BOX, STAIR_BOX, INNER_BOX)));
-		this.models.put(outer, modelInstance(glazedCubeGeometry(pattern, pattern, pattern, pattern, pattern, pattern, SLAB_BOX, OUTER_BOX)));
+		Map<String, JsonObject> upright = glazedVerticalSlab(base);
 
-		writeVerticalModels(slab, glazedVerticalSlab(base));
-		generateModSlabState(slab, slabModel, slabTopModel, baseBlockModelId(base));
+		for (int turn = 0; turn < TURNS; turn++) {
+			// formModelId, not baseModelId: the unturned copy has an empty suffix and must keep
+			// the block's own model id. baseModelId would append "_" and emit a model named
+			// "…_stairs_" that nothing - least of all the item definition - ever asks for.
+			this.models.put(formModelId(slab, suffix("", turn)),
+				modelInstance(turned(glazedCubeGeometry(all, SLAB_BOX), turn)));
+			this.models.put(formModelId(slab, suffix("top", turn)),
+				modelInstance(turned(glazedCubeGeometry(all, TOP_SLAB_BOX), turn)));
+			this.models.put(formModelId(stairs, suffix("", turn)),
+				modelInstance(turned(glazedCubeGeometry(all, SLAB_BOX, STAIR_BOX), turn)));
+			this.models.put(formModelId(stairs, suffix("inner", turn)),
+				modelInstance(turned(glazedCubeGeometry(all, SLAB_BOX, STAIR_BOX, INNER_BOX), turn)));
+			this.models.put(formModelId(stairs, suffix("outer", turn)),
+				modelInstance(turned(glazedCubeGeometry(all, SLAB_BOX, OUTER_BOX), turn)));
 
-		this.blockStates.put(stairs, BlockModelGenerators.createStairs(stairs,
-				plainVariant(inner), plainVariant(straight), plainVariant(outer)));
+			writeVerticalModels(slab, upright, turn);
+		}
 
-		registerItemModel(Item.BY_BLOCK.get(slab), slabModel);
-		registerItemModel(Item.BY_BLOCK.get(stairs), straight);
+		generateModSlabState(slab, baseModelId(slab), baseModelId(slab, "top"), baseBlockModelId(base), true);
+
+		this.blockStates.put(stairs, glazedStairsState(stairs));
+
+		registerItemModel(Item.BY_BLOCK.get(slab), baseModelId(slab));
+		registerItemModel(Item.BY_BLOCK.get(stairs), baseModelId(stairs));
 	}
 
 	/** The vanilla texture of a block, i.e. {@code minecraft:block/<its id>}. */
@@ -225,37 +249,92 @@ public class MBModelProvider implements DataProvider {
 	 * horizontal {@code axis}, and only leaves {@code axis} at its flat default when {@code
 	 * vertical} is off. {@link PropertyDispatch} still demands a definition for every combination
 	 * of the properties it declares, so the impossible states reuse the flat shapes.
+	 *
+	 * @param glazed {@code true} for a glazed slab, whose model is turned by its placement direction
+	 *               and therefore needs one model per quarter turn. Only a glazed slab declares the
+	 *               property that holds it, so the table has to be built two ways.
 	 */
 	private void generateModSlabState(Block slab, Identifier bottomModel, Identifier topModel, Identifier fullModel) {
-		MultiVariant bottom = plainVariant(bottomModel);
-		MultiVariant top = plainVariant(topModel);
+		generateModSlabState(slab, bottomModel, topModel, fullModel, false);
+	}
+
+	private void generateModSlabState(Block slab, Identifier bottomModel, Identifier topModel, Identifier fullModel,
+			final boolean glazed) {
 		MultiVariant full = plainVariant(fullModel);
-		MultiVariant verticalNegativeX = plainVariant(verticalModelId(slab, FILL_NEGATIVE_X));
-		MultiVariant verticalPositiveX = plainVariant(verticalModelId(slab, FILL_POSITIVE_X));
-		MultiVariant verticalNegativeZ = plainVariant(verticalModelId(slab, FILL_NEGATIVE_Z));
-		MultiVariant verticalPositiveZ = plainVariant(verticalModelId(slab, FILL_POSITIVE_Z));
 
-		PropertyDispatch<MultiVariant> dispatch = PropertyDispatch
-				.initial(MBBlockStateProperties.VERTICAL, MBBlockStateProperties.AXIS, SlabBlock.TYPE)
-				.generate((vertical, axis, type) -> {
-					if (vertical && axis != Direction.Axis.Y && type != SlabType.DOUBLE) {
-						boolean positive = type == SlabType.TOP;
-
-						if (axis == Direction.Axis.X) {
-							return positive ? verticalPositiveX : verticalNegativeX;
+		if (!glazed) {
+			PropertyDispatch<MultiVariant> dispatch = PropertyDispatch
+					.initial(MBBlockStateProperties.VERTICAL, MBBlockStateProperties.AXIS, SlabBlock.TYPE)
+					.generate((vertical, axis, type) -> {
+						if (vertical && axis != Direction.Axis.Y && type != SlabType.DOUBLE) {
+							return plainVariant(verticalModelId(slab, fillName(axis, type)));
 						}
 
-						return positive ? verticalPositiveZ : verticalNegativeZ;
+						return switch (type) {
+							case BOTTOM -> plainVariant(bottomModel);
+							case TOP -> plainVariant(topModel);
+							case DOUBLE -> full;
+						};
+					});
+
+			this.blockStates.put(slab, MultiVariantGenerator.dispatch(slab).with(dispatch));
+			return;
+		}
+
+		PropertyDispatch<MultiVariant> dispatch = PropertyDispatch
+				.initial(MBBlockStateProperties.VERTICAL, MBBlockStateProperties.AXIS, SlabBlock.TYPE, MBBlockStateProperties.GLAZED_FACING)
+				.generate((vertical, axis, type, facing) -> {
+					int turn = MBBlockStateProperties.glazedTurns(facing);
+
+					if (vertical && axis != Direction.Axis.Y && type != SlabType.DOUBLE) {
+						return plainVariant(verticalModelId(slab, fillName(axis, type), turn));
 					}
 
 					return switch (type) {
-						case BOTTOM -> bottom;
-						case TOP -> top;
+						case BOTTOM -> plainVariant(formModelId(slab, suffix("", turn)));
+						case TOP -> plainVariant(formModelId(slab, suffix("top", turn)));
 						case DOUBLE -> full;
 					};
 				});
 
 		this.blockStates.put(slab, MultiVariantGenerator.dispatch(slab).with(dispatch));
+	}
+
+	/**
+	 * The name of the upright model half that holds {@code type} of the {@code axis} pair.
+	 *
+	 * <p>{@link SlabType} names a side of the block, not a side of an axis: upright it is the half
+	 * showing its face towards the <em>negative</em> end, which is the opposite of what it means on
+	 * the Y axis. {@link VerticalSlab.Fill#positive()} is where that translation lives; asking
+	 * whether the blockstate would be {@code bottom} when the half is the positive one is the same
+	 * question.
+	 */
+	private static String fillName(final Direction.Axis axis, final SlabType type) {
+		boolean positive = type == Fill.positive(axis).type();
+
+		if (axis == Direction.Axis.X) {
+			return positive ? FILL_POSITIVE_X : FILL_NEGATIVE_X;
+		}
+
+		return positive ? FILL_POSITIVE_Z : FILL_NEGATIVE_Z;
+	}
+
+	/**
+	 * The stair blockstate of a glazed family: vanilla's own stair table, with every variant chosen
+	 * by the {@code facing} the player was looking when they placed it.
+	 */
+	private BlockModelDefinitionGenerator glazedStairsState(Block stairs) {
+		return MultiVariantGenerator.dispatch(stairs).with(PropertyDispatch
+				.initial(StairBlock.FACING, StairBlock.HALF, StairBlock.SHAPE, MBBlockStateProperties.GLAZED_FACING)
+				.generate((facing, half, shape, placed) -> {
+					int turn = MBBlockStateProperties.glazedTurns(placed);
+
+					return plainVariant(switch (shape) {
+						case STRAIGHT -> formModelId(stairs, suffix("", turn));
+						case INNER_LEFT, INNER_RIGHT -> formModelId(stairs, suffix("inner", turn));
+						case OUTER_LEFT, OUTER_RIGHT -> formModelId(stairs, suffix("outer", turn));
+					});
+				}));
 	}
 
 	/**
@@ -293,7 +372,21 @@ public class MBModelProvider implements DataProvider {
 
 	/** Writes the four upright boxes of {@code slab}, one per half it can fill. */
 	private void writeVerticalModels(Block slab, Map<String, JsonObject> geometries) {
-		geometries.forEach((fill, geometry) -> this.models.put(verticalModelId(slab, fill), modelInstance(geometry)));
+		geometries.forEach((fill, geometry) ->
+			this.models.put(verticalModelId(slab, fill), modelInstance(geometry)));
+	}
+
+	/**
+	 * Writes the upright boxes of a glazed {@code slab} as they look once turned by {@code turn}
+	 * quarter turns.
+	 *
+	 * <p>The boxes themselves never move - only the pattern on them does - so this is one copy of
+	 * each box per turn, and the {@code glazed_facing} the player placed the slab with selects
+	 * between them.
+	 */
+	private void writeVerticalModels(Block slab, Map<String, JsonObject> geometries, final int turn) {
+		geometries.forEach((fill, geometry) ->
+			this.models.put(verticalModelId(slab, fill, turn), modelInstance(turned(geometry, turn))));
 	}
 
 	/**
@@ -320,19 +413,21 @@ public class MBModelProvider implements DataProvider {
 	}
 
 	/**
-	 * The four upright geometries of a glazed slab. Unlike a plain slab every face gets the sprite
-	 * of the direction it faces, so a half cut out of a glazed block still reads as that block.
+	 * The four upright geometries of a glazed slab, each turned the way the glazed block the player
+	 * placed alongside it would have been. Unlike a plain slab every face gets the sprite of the
+	 * direction it faces, so a half cut out of a glazed block still reads as that block.
 	 *
 	 * @param base the vanilla glazed block the slab is cut from
 	 */
 	private static Map<String, JsonObject> glazedVerticalSlab(Block base) {
 		Material pattern = vanillaTexture(base);
+		Material[] all = { pattern, pattern, pattern, pattern, pattern, pattern };
 
 		Map<String, JsonObject> geometries = new LinkedHashMap<>(4);
-		geometries.put(FILL_NEGATIVE_X, glazedCubeGeometry(pattern, pattern, pattern, pattern, pattern, pattern, NEGATIVE_X_BOX));
-		geometries.put(FILL_POSITIVE_X, glazedCubeGeometry(pattern, pattern, pattern, pattern, pattern, pattern, POSITIVE_X_BOX));
-		geometries.put(FILL_NEGATIVE_Z, glazedCubeGeometry(pattern, pattern, pattern, pattern, pattern, pattern, NEGATIVE_Z_BOX));
-		geometries.put(FILL_POSITIVE_Z, glazedCubeGeometry(pattern, pattern, pattern, pattern, pattern, pattern, POSITIVE_Z_BOX));
+		geometries.put(FILL_NEGATIVE_X, glazedCubeGeometry(all, NEGATIVE_X_BOX));
+		geometries.put(FILL_POSITIVE_X, glazedCubeGeometry(all, POSITIVE_X_BOX));
+		geometries.put(FILL_NEGATIVE_Z, glazedCubeGeometry(all, NEGATIVE_Z_BOX));
+		geometries.put(FILL_POSITIVE_Z, glazedCubeGeometry(all, POSITIVE_Z_BOX));
 		return geometries;
 	}
 
@@ -452,11 +547,124 @@ public class MBModelProvider implements DataProvider {
 	}
 
 	/**
+	 * One quarter turn of a glazed model, as seen from above.
+	 *
+	 * <p>A model is turned the way a blockstate's {@code y} would turn it - clockwise looking down -
+	 * but a slab and a stair cannot use one, because it would carry the cut corner round with the
+	 * pattern. Turning the geometry a quarter at a time by hand reproduces it exactly: the boxes move
+	 * by {@code (x, z) -> (z, 16 - x)}, the six face directions move with them, and the pattern's own
+	 * per-face rotation gains the same quarter turn.
+	 *
+	 * <p>{@link #direction} maps a face of the <em>turned</em> model back to the face of the
+	 * unturned one it was made from, which is both where its sprite was cropped from and the value
+	 * it keeps.
+	 *
+	 * <p>That value is deliberately <em>not</em> adjusted by the turn. A blockstate {@code y}
+	 * rotation turns the model's geometry and nothing else: {@code FaceBakery.bakeQuad} leaves a
+	 * face's sprite alone whenever the model state's UV transform is the identity, which it is for an
+	 * ordinary variant without {@code uvlock}, and the texture on a turned face comes out rotated by
+	 * exactly the turn because the quad under it turned. Vanilla shows this outright - one model,
+	 * {@code template_glazed_terracotta}, with fixed per-face rotations serves all four {@code
+	 * facing} values of a glazed terracotta block through nothing but a {@code y} rotation. Adding
+	 * the turn here as well would rotate the pattern twice.
+	 */
+	private record Turn(int count) {
+		/** The world direction {@code direction} of the model this one was turned from. */
+		private static String reverse(final String direction) {
+			return switch (direction) {
+				case "north" -> "west";
+				case "west" -> "south";
+				case "south" -> "east";
+				case "east" -> "north";
+				default -> direction;
+			};
+		}
+
+		private String direction(final String direction) {
+			String turned = direction;
+
+			for (int i = 0; i < this.count; i++) {
+				turned = reverse(turned);
+			}
+
+			return turned;
+		}
+
+		/** The box {@code box} occupies once this turn has been applied to it. */
+		private Box box(final Box box) {
+			return switch (this.count) {
+				case 0 -> box;
+				case 1 -> new Box(box.z1(), box.y1(), 16 - box.x2(), box.z2(), box.y2(), 16 - box.x1());
+				case 2 -> new Box(16 - box.x2(), box.y1(), 16 - box.z2(), 16 - box.x1(), box.y2(), 16 - box.z1());
+				default -> new Box(16 - box.z2(), box.y1(), box.x1(), 16 - box.z1(), box.y2(), box.x2());
+			};
+		}
+	}
+
+	/**
+	 * A glazed model turned {@code turn} quarter turns clockwise, as seen from above.
+	 *
+	 * <p>This is what a blockstate {@code y} rotation would do to the model, and it is the reason
+	 * one cannot be used here: it would carry the cut corner of a slab or a stair round with the
+	 * pattern, so a staircase would no longer line up with the wall behind it. Turning the geometry
+	 * face by face applies the turn to the pattern while leaving the shape where it belongs.
+	 *
+	 * <p>The texture slot is a reference, so it is copied through untouched.
+	 */
+	private static JsonObject turned(JsonObject geometry, final int turn) {
+		if (turn == 0) {
+			return geometry;
+		}
+
+		Turn rotation = new Turn(turn);
+		JsonObject root = new JsonObject();
+		geometry.entrySet().forEach(entry -> root.add(entry.getKey(), entry.getValue()));
+
+		JsonArray elements = new JsonArray();
+
+		for (JsonElement element : root.getAsJsonArray("elements")) {
+			JsonObject box = element.getAsJsonObject();
+			JsonObject turnedBox = boxElement(rotation.box(boxOf(box)));
+			JsonObject faces = new JsonObject();
+
+			for (String direction : FACE_DIRECTIONS) {
+				faces.add(direction, turnedFace(box.getAsJsonObject("faces"), direction, rotation));
+			}
+
+			turnedBox.add("faces", faces);
+			elements.add(turnedBox);
+		}
+
+		root.add("elements", elements);
+		return root;
+	}
+
+	/** The box a written element covers, read back out of its {@code from}/{@code to} arrays. */
+	private static Box boxOf(JsonObject element) {
+		JsonArray from = element.getAsJsonArray("from");
+		JsonArray to = element.getAsJsonArray("to");
+		return new Box(
+				from.get(0).getAsInt(), from.get(1).getAsInt(), from.get(2).getAsInt(),
+				to.get(0).getAsInt(), to.get(1).getAsInt(), to.get(2).getAsInt());
+	}
+
+	/**
+	 * One face of a turned box: a verbatim copy of the face that was turned onto it, so the crop and
+	 * the rotation stay exactly as the unturned model wrote them. The turn itself is already in the
+	 * geometry, and a blockstate {@code y} rotation would not have altered these values either.
+	 */
+	private static JsonObject turnedFace(JsonObject faces, final String direction, final Turn turn) {
+		JsonObject original = faces.getAsJsonObject(turn.direction(direction));
+		JsonObject turned = new JsonObject();
+		original.entrySet().forEach(entry -> turned.add(entry.getKey(), entry.getValue()));
+		return turned;
+	}
+
+	/**
 	 * One glazed box: the pattern's rotation is written onto every face, so the motif on a cut
 	 * shape continues to point the way it does on the full block.
 	 */
-	private static JsonObject glazedCubeGeometry(Material down, Material up, Material north, Material south,
-			Material west, Material east, Box... boxes) {
+	private static JsonObject glazedCubeGeometry(final Material[] materials, final Box... boxes) {
 		JsonObject root = new JsonObject();
 		root.addProperty("parent", BLOCK_PARENT.toString());
 
@@ -464,8 +672,8 @@ public class MBModelProvider implements DataProvider {
 		// template_glazed_terracotta only names "particle" because it inherits the rest from the
 		// per-block model that parents it; these models have no such parent.
 		JsonObject textures = new JsonObject();
-		textures.addProperty("pattern", down.sprite().toString());
-		textures.addProperty("particle", down.sprite().toString());
+		textures.addProperty("pattern", materials[0].sprite().toString());
+		textures.addProperty("particle", materials[0].sprite().toString());
 		root.add("textures", textures);
 
 		JsonArray elements = new JsonArray();
@@ -474,12 +682,9 @@ public class MBModelProvider implements DataProvider {
 			JsonObject element = boxElement(box);
 			JsonObject faces = new JsonObject();
 
-			faces.add("down", glazedFace(box, "down", down));
-			faces.add("up", glazedFace(box, "up", up));
-			faces.add("north", glazedFace(box, "north", north));
-			faces.add("south", glazedFace(box, "south", south));
-			faces.add("west", glazedFace(box, "west", west));
-			faces.add("east", glazedFace(box, "east", east));
+			for (String direction : FACE_DIRECTIONS) {
+				faces.add(direction, glazedFace(box, direction, new Turn(0)));
+			}
 
 			element.add("faces", faces);
 			elements.add(element);
@@ -510,16 +715,19 @@ public class MBModelProvider implements DataProvider {
 	}
 
 	/**
-	 * A glazed face: the pattern, rotated the way vanilla rotates it on that direction, cropped to
-	 * the part of the block face the quad covers.
+	 * A glazed face: the pattern of the face it shows, with vanilla's own rotation for that face,
+	 * cropped to the part of the block face the quad covers.
+	 *
+	 * @param turn the turn that carried this face to where it is, which decides where its pattern
+	 *             was cropped from
 	 */
-	private static JsonObject glazedFace(Box box, String direction, Material material) {
+	private static JsonObject glazedFace(Box box, String direction, Turn turn) {
 		JsonObject face = new JsonObject();
 		int[] crop = crop(box, direction);
 		face.add("uv", uv(crop[0], crop[1], crop[2], crop[3]));
 		face.addProperty("texture", "#pattern");
 
-		int rotation = GLAZED_FACE_ROTATION.get(direction);
+		int rotation = GLAZED_FACE_ROTATION.get(turn.direction(direction));
 
 		if (rotation != 0) {
 			face.addProperty("rotation", rotation);
@@ -615,6 +823,18 @@ public class MBModelProvider implements DataProvider {
 	}
 
 	/**
+	 * The suffix of the model for one quarter turn: the plain shape keeps its name, and the three
+	 * turned copies are told apart by the {@code facing} they belong to.
+	 */
+	private static String suffix(final String shape, final int turn) {
+		if (turn == 0) {
+			return shape;
+		}
+
+		return shape.isEmpty() ? "facing" + turn : shape + "_facing" + turn;
+	}
+
+	/**
 	 * {@code morebuildingblocks:block/<id>}, or {@code <id>_<suffix>} when the same block needs more
 	 * than one model.
 	 *
@@ -649,6 +869,15 @@ public class MBModelProvider implements DataProvider {
 	private static Identifier verticalModelId(Block block, String fill) {
 		return Identifier.fromNamespaceAndPath(MoreBuildingBlocks.MOD_ID,
 				VERTICAL_DIRECTORY + BuiltInRegistries.BLOCK.getKey(block).getPath() + "/" + fill);
+	}
+
+	/**
+	 * {@code morebuildingblocks:vertical_slab/<block path>/<fill>_facing<turn>}, for a glazed slab
+	 * whose pattern is turned by the {@code facing} the player placed it with.
+	 */
+	private static Identifier verticalModelId(Block block, String fill, final int turn) {
+		return turn == 0 ? verticalModelId(block, fill)
+				: verticalModelId(block, fill + "_facing" + turn);
 	}
 
 	/**

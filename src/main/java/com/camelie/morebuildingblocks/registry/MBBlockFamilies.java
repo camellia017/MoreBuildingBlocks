@@ -1,6 +1,8 @@
 package com.camelie.morebuildingblocks.registry;
 
 import com.camelie.morebuildingblocks.MoreBuildingBlocks;
+import com.camelie.morebuildingblocks.block.MBGlazedSlabBlock;
+import com.camelie.morebuildingblocks.block.MBGlazedStairsBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.SlabBlock;
 import net.minecraft.world.level.block.StairBlock;
@@ -66,8 +68,8 @@ public final class MBBlockFamilies {
 	 * base block and records the trio for datagen, crafting recipes and the creative tab.
 	 */
 	public static Family create(final String basePath, final Block base, final boolean glazed) {
-		Block stairs = registerStairs(basePath + "_stairs", base);
-		Block slab = registerSlab(basePath + "_slab", base);
+		Block stairs = registerStairs(basePath + "_stairs", base, glazed);
+		Block slab = registerSlab(basePath + "_slab", base, glazed);
 		Family family = new Family(basePath, base, stairs, slab, glazed);
 		FAMILIES.add(family);
 		return family;
@@ -78,25 +80,45 @@ public final class MBBlockFamilies {
 		return Collections.unmodifiableList(FAMILIES);
 	}
 
-	private static Block registerStairs(final String name, final Block base) {
+	/**
+	 * A glazed stair remembers the direction it was placed from, so its pattern can be turned to
+	 * match the glazed terracotta block the player would have got instead. That one property is
+	 * declared by {@link MBGlazedStairsBlock}; every other stair is vanilla's own {@link StairBlock},
+	 * with vanilla's own states.
+	 */
+	private static Block registerStairs(final String name, final Block base, final boolean glazed) {
+		BlockBehaviour.Properties properties =
+			BlockBehaviour.Properties.ofFullCopy(base).isViewBlocking(NEAR_PLANE_INTERSECTS_OUTLINE);
+
+		if (glazed) {
+			return MBRegistry.register(
+				name,
+				blockProperties -> new MBGlazedStairsBlock(MBGlazedStairsBlock.baseState(base), blockProperties),
+				properties
+			);
+		}
+
 		BlockState baseState = base.defaultBlockState();
-		return MBRegistry.register(
-			name,
-			properties -> new StairBlock(baseState, properties),
-			BlockBehaviour.Properties.ofFullCopy(base).isViewBlocking(NEAR_PLANE_INTERSECTS_OUTLINE)
-		);
+		return MBRegistry.register(name, blockProperties -> new StairBlock(baseState, blockProperties), properties);
 	}
 
 	/**
 	 * Vanilla marks {@code ofLegacyCopy} deprecated but still uses it for every slab it registers
 	 * (`Blocks.registerSlab`), so the mod deliberately mirrors that call and silences the warning.
+	 *
+	 * <p>A glazed slab gets {@link MBGlazedSlabBlock}, which declares the pattern direction. Both
+	 * kinds stand upright either way: that half of the behaviour comes from {@link
+	 * com.camelie.morebuildingblocks.mixin.SlabBlockMixin}, which covers every slab in the game.
 	 */
 	@SuppressWarnings("deprecation")
-	private static Block registerSlab(final String name, final Block base) {
-		return MBRegistry.register(
-			name,
-			SlabBlock::new,
-			BlockBehaviour.Properties.ofLegacyCopy(base).isViewBlocking(NEAR_PLANE_INTERSECTS_OUTLINE)
-		);
+	private static Block registerSlab(final String name, final Block base, final boolean glazed) {
+		BlockBehaviour.Properties properties =
+			BlockBehaviour.Properties.ofLegacyCopy(base).isViewBlocking(NEAR_PLANE_INTERSECTS_OUTLINE);
+
+		if (glazed) {
+			return MBRegistry.register(name, MBGlazedSlabBlock::new, properties);
+		}
+
+		return MBRegistry.register(name, SlabBlock::new, properties);
 	}
 }

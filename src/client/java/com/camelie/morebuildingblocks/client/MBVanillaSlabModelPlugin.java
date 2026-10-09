@@ -19,6 +19,7 @@ import net.fabricmc.fabric.api.client.model.loading.v1.ModelLoadingPlugin;
 import com.camelie.morebuildingblocks.MoreBuildingBlocks;
 import com.camelie.morebuildingblocks.block.MBBlockStateProperties;
 import com.camelie.morebuildingblocks.block.VerticalSlab;
+import com.camelie.morebuildingblocks.client.datagen.VanillaSlabTextures;
 
 /**
  * Gives every vanilla slab a model for the upright states the slab mixin adds.
@@ -74,7 +75,9 @@ public class MBVanillaSlabModelPlugin implements ClientModInitializer {
 			SlabType type = state.getValue(SlabBlock.TYPE);
 
 			if (vertical && axis != Direction.Axis.Y && type != SlabType.DOUBLE) {
-				boolean positive = type == SlabType.TOP;
+				// SlabType names a side of the block, not of the axis: upright, "top" is the half
+				// whose visible face points towards the negative end, so it is the negative half.
+				boolean positive = type == VerticalSlab.Fill.positive(axis).type();
 				Variant upright = axis == Direction.Axis.X
 					? (positive ? verticalPositiveX : verticalNegativeX)
 					: (positive ? verticalPositiveZ : verticalNegativeZ);
@@ -107,18 +110,30 @@ public class MBVanillaSlabModelPlugin implements ClientModInitializer {
 	}
 
 	/**
-	 * Vanilla's double-slab model, which is only usually the base block's model.
-	 * Every other slab resolves to {@code block/<id without _slab>}.
+	 * Vanilla's double-slab model, which is the full block's own model and <em>not</em>
+	 * derivable from the slab's id: {@code acacia_slab} draws {@code block/acacia_planks}
+	 * rather than the non-existent {@code block/acacia}, and {@code brick_slab} draws
+	 * {@code block/bricks}.
+	 *
+	 * <p>The full block uses its {@code #side} sprite, so the texture table - which already
+	 * holds the real 26.3 values for all 101 vanilla slabs - names the model directly. Only
+	 * {@code smooth_stone_slab} differs, because its side sprite
+	 * ({@code block/smooth_stone_slab_side}) is not the model vanilla draws when doubled.
 	 */
 	private static Identifier doubleModel(Identifier slabId) {
-		String path = switch (slabId.getPath()) {
-			case "smooth_stone_slab" -> "smooth_stone_slab_double";
-			case "quartz_slab" -> "quartz_block";
-			case "petrified_oak_slab" -> "oak_planks";
-			default -> slabId.getPath().replaceFirst("_slab$", "");
-		};
+		String path = slabId.getPath();
 
-		return slabId.withPath(ignored -> "block/" + path);
+		if (path.equals("smooth_stone_slab")) {
+			return slabId.withPath(ignored -> "block/smooth_stone_slab_double");
+		}
+
+		VanillaSlabTextures.Textures textures = VanillaSlabTextures.bySlab(path);
+
+		if (textures == null) {
+			return slabId.withPath(ignored -> "block/" + path.replaceFirst("_slab$", ""));
+		}
+
+		return slabId.withPath(ignored -> textures.side());
 	}
 
 	private static Variant variant(Identifier model, Quadrant yRotation) {

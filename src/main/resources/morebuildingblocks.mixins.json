@@ -4,7 +4,9 @@
 	"compatibilityLevel": "JAVA_25",
 	"mixins": [
 		"BlockBehaviourMixin",
-		"SlabBlockMixin"
+		"BlockPlaceContextMixin",
+		"SlabBlockMixin",
+		"StairBlockMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

@@ -1,43 +1,51 @@
 package com.camelie.morebuildingblocks.mixin;
 
-import com.camelie.morebuildingblocks.block.FaceFrame;
+import com.camelie.morebuildingblocks.block.GlazedPattern;
 import com.camelie.morebuildingblocks.block.MBBlockStateProperties;
 import com.camelie.morebuildingblocks.block.VerticalSlab;
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import com.llamalad7.mixinextras.injector.ModifyReturnValue;
-import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
-import net.minecraft.world.level.block.Mirror;
-import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.SlabBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.SlabType;
-import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
  * Makes every vanilla slab block placeable upright as a "vertical slab".
  *
- * <p>Two extra state properties are attached to the vanilla {@link SlabBlock} definition: a
- * {@code vertical} flag and the reused vanilla {@code axis} (so no new serialised property name is
- * introduced). The outline shape, the placement rule, the replace rule and the inherited
- * rotate/mirror handlers are redirected for those states. No new block is registered: an upright
- * slab is the same block, and therefore the same item, seen from a different angle.
+ * <p>Two extra state properties are attached to the vanilla {@link SlabBlock} definition - a {@code
+ * vertical} flag and the reused vanilla {@code axis} - and the outline shape, the placement rule and
+ * the replace rule are redirected for those states. No new block is registered: an upright slab is
+ * the same block, and therefore the same item, seen from a different angle.
+ *
+ * <p>The third property, the direction a glazed pattern is turned by, is only declared for the
+ * slabs marked {@link GlazedPattern}, i.e. {@link MBGlazedSlabBlock}: vanilla's hundred slabs and
+ * the sixteen plain terracotta ones keep exactly the states vanilla gives them.
+ *
+ * <p>The declaration happens here rather than in {@code MBGlazedSlabBlock} itself because {@code
+ * createBlockStateDefinition} runs from the {@code Block} constructor: a subclass override would run
+ * its body only after the definition had already been built, and adding a property then is both too
+ * late and a duplicate by name.
  */
 @Mixin(SlabBlock.class)
 public abstract class SlabBlockMixin {
 	@Inject(method = "createBlockStateDefinition", at = @At("TAIL"))
 	private void morebuildingblocks$addVerticalProperties(final StateDefinition.Builder<net.minecraft.world.level.block.Block, BlockState> builder, final CallbackInfo ci) {
 		builder.add(MBBlockStateProperties.VERTICAL, MBBlockStateProperties.AXIS);
+
+		if ((Object) this instanceof GlazedPattern) {
+			builder.add(MBBlockStateProperties.GLAZED_FACING);
+		}
 	}
 
 	/**
@@ -69,7 +77,8 @@ public abstract class SlabBlockMixin {
 	private BlockState morebuildingblocks$flatDefaultState(final BlockState original) {
 		return original
 			.trySetValue(MBBlockStateProperties.VERTICAL, false)
-			.trySetValue(MBBlockStateProperties.AXIS, Direction.Axis.Y);
+			.trySetValue(MBBlockStateProperties.AXIS, Direction.Axis.Y)
+			.trySetValue(MBBlockStateProperties.GLAZED_FACING, Direction.SOUTH);
 	}
 
 	@ModifyReturnValue(method = "getShape", at = @At("RETURN"))
@@ -79,17 +88,12 @@ public abstract class SlabBlockMixin {
 	}
 
 	/**
-	 * Which half of the block the player is pointing at, read off the clicked face.
+	 * Which half of the block the player is pointing at, read off the clicked face, plus the
+	 * direction the player was looking, which a glazed pattern is turned by.
 	 *
-	 * <p>Only the clicked face matters. On that face the corner the frame starts at is the origin,
-	 * the first axis runs from its left edge towards its right one and the second from its bottom
-	 * edge towards its top edge; a click in the middle quarter of both picks the half lying behind
-	 * that face, and a click in one of the four surrounding bands picks the half that band names.
-	 * The middle is tested first, so it wins in the corners where the bands overlap.
-	 *
-	 * <p>The frame itself lives in {@link FaceFrame}, in the block package: a record built inside
-	 * this mixin has its constructed values rewritten along with the mixin, and the table then reads
-	 * back different directions than it was written with.
+	 * <p>The rule itself lives in {@link VerticalSlab#placementFill}, in the block package: a record
+	 * built inside this mixin has its constructed values rewritten along with the mixin, and the
+	 * frame table then reads back different directions than it was written with.
 	 */
 	@ModifyReturnValue(method = "getStateForPlacement", at = @At("RETURN"))
 	private BlockState morebuildingblocks$verticalPlacement(final BlockState original, final BlockPlaceContext context) {
@@ -97,24 +101,14 @@ public abstract class SlabBlockMixin {
 			return original;
 		}
 
-		BlockPos pos = context.getClickedPos();
-		Vec3 hit = context.getClickLocation();
-		Direction face = context.getClickedFace();
-		FaceFrame frame = FaceFrame.of(face);
+		VerticalSlab.Fill fill = VerticalSlab.placementFill(context);
 
-		if (frame == null) {
+		if (fill == null) {
 			return original;
 		}
 
-		// Local coordinates on the clicked face: 0 is its left/bottom edge, 1 its right/top edge.
-		// Both are measured from the corner the frame starts at, which is not the same corner of
-		// the block for every face, so each is offset to that corner before projecting.
-		double u = frame.u(hit, pos);
-		double v = frame.v(hit, pos, face);
-		boolean middle = u > FaceFrame.middleMin() && u < FaceFrame.middleMax()
-			&& v > FaceFrame.middleMin() && v < FaceFrame.middleMax();
-
-		return VerticalSlab.withFill(original, frame.region(face, middle, u, v));
+		return VerticalSlab.withFill(original, fill).trySetValue(
+			MBBlockStateProperties.GLAZED_FACING, context.getHorizontalDirection().getOpposite());
 	}
 
 	@ModifyReturnValue(method = "canBeReplaced", at = @At("RETURN"))
@@ -123,17 +117,10 @@ public abstract class SlabBlockMixin {
 			return original;
 		}
 
-		Direction.Axis axis = VerticalSlab.axis(state);
-		if (axis == Direction.Axis.Y) {
-			return original;
-		}
-
-		// A vertical slab only doubles up when its open face is clicked with the same item; the open
-		// face points away from the filled half.
-		Direction outward = Direction.fromAxisAndDirection(
-			axis,
-			VerticalSlab.isPositiveHalf(state) ? Direction.AxisDirection.POSITIVE : Direction.AxisDirection.NEGATIVE
-		);
-		return context.getClickedFace() == outward && context.getItemInHand().is(state.getBlock().asItem());
+		// A vertical slab doubles up when its open face is clicked with the same item, and is left
+		// alone when the click lands on the face its other half shows through: a click there means
+		// the next block along, which is the one the player is building against.
+		return context.getClickedFace() != VerticalSlab.outward(state)
+			&& context.getItemInHand().is(state.getBlock().asItem());
 	}
 }

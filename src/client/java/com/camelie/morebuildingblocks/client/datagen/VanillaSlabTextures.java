@@ -23,10 +23,16 @@ import java.util.Map;
  * <p>Keys are the slab block's path in the {@code minecraft} namespace; values are
  * texture paths inside that same namespace.
  */
-final class VanillaSlabTextures {
+public final class VanillaSlabTextures {
 
-	/** One slab's texture triple. */
-	record Textures(String bottom, String top, String side) {
+	/**
+	 * One slab's texture triple.
+	 *
+	 * <p>{@link #side} doubles as the slab's double model: vanilla's {@code type=double}
+	 * draws the full block's own texture, which is why {@code brick_slab} becomes
+	 * {@code minecraft:block/bricks} and not {@code minecraft:block/brick}.
+	 */
+	public record Textures(String bottom, String top, String side) {
 	}
 
 	private static final Map<String, Textures> BY_SLAB = Map.ofEntries(
@@ -49,7 +55,7 @@ final class VanillaSlabTextures {
 			slab("polished_deepslate_slab", "block/polished_deepslate"),
 			slab("polished_sulfur_slab", "block/polished_sulfur"),
 			slab("sulfur_slab", "block/sulfur"),
-						slab("cinnabar_brick_slab", "block/cinnabar_bricks"),
+			slab("cinnabar_brick_slab", "block/cinnabar_bricks"),
 			slab("cobbled_deepslate_slab", "block/cobbled_deepslate"),
 			slab("cobblestone_slab", "block/cobblestone"),
 			slab("crimson_slab", "block/crimson_planks"),
@@ -138,7 +144,7 @@ final class VanillaSlabTextures {
 	}
 
 	/** The trio a slab draws with, or {@code null} if the id is not one of the 101. */
-	static Textures bySlab(String slabPath) {
+	public static Textures bySlab(String slabPath) {
 		return BY_SLAB.get(slabPath);
 	}
 

@@ -72,21 +72,47 @@ public record FaceFrame(int cornerX, int cornerY, int cornerZ, Direction.Axis uA
 	 * that was clicked. Each other quarter sits against one edge and takes the half behind that
 	 * edge. The middle is named first, and the caller gives it priority, so it wins in the corners
 	 * where the bands overlap.
+	 *
+	 * <p>{@code beyond} says the new block is not the one the click landed on, which happens when a
+	 * click on an upright slab's outer face is moved out into the next block along. Every band then
+	 * names a half of <em>that</em> block, one block further out: a band against the clicked face
+	 * reaches past the block that was clicked and fills the half of the new one nearest to it, which
+	 * is the opposite side of the new block from the face the click came through.
 	 */
-	public VerticalSlab.Fill region(final Direction face, final boolean middle, final double u, final double v) {
+	public VerticalSlab.Fill region(final Direction face, final boolean middle, final boolean beyond,
+			final double u, final double v) {
 		if (middle) {
-			return fill(face);
+			return beyond ? VerticalSlab.Fill.fillBeyond(face) : fill(face);
 		}
 
 		if (v < MIDDLE_MIN) {
-			return floor(face);
+			return band(face, beyond, floor(face));
 		}
 
 		if (v > MIDDLE_MAX) {
-			return ceiling(face);
+			return band(face, beyond, ceiling(face));
 		}
 
-		return band(u < MIDDLE_MIN);
+		return band(face, beyond, band(u < MIDDLE_MIN));
+	}
+
+	/**
+	 * The half a band fills, seen from the block the click landed on ({@code beyond} false) or from
+	 * the one it was moved out into ({@code beyond} true).
+	 *
+	 * <p>The two agree on every direction but one. A band against the clicked face itself reaches
+	 * past the block that was clicked, so the new block's half on that side is the one <em>opposite</em>
+	 * the side the band named; a band across the face reaches sideways, where the new block's two
+	 * halves line up with the clicked one's, so it names the same side either way.
+	 */
+	private VerticalSlab.Fill band(final Direction face, final boolean beyond, final VerticalSlab.Fill named) {
+		if (!beyond || named.axis() != face.getAxis()) {
+			return named;
+		}
+
+		return named.outward().getAxis() == face.getAxis() && named.outward() == face
+			? VerticalSlab.Fill.fillBeyond(face.getOpposite())
+			: named;
 	}
 
 	/** The half filled by a band along the face's left ({@code true}) or right ({@code false}) edge. */

@@ -1,58 +1,220 @@
 {
   "variants": {
-    "axis=x,type=bottom,vertical=false": {
+    "axis=x,glazed_facing=east,type=bottom,vertical=false": {
+      "model": "morebuildingblocks:block/black_glazed_terracotta_slab_facing3"
+    },
+    "axis=x,glazed_facing=east,type=bottom,vertical=true": {
+      "model": "morebuildingblocks:vertical_slab/black_glazed_terracotta_slab/pos_x_facing3"
+    },
+    "axis=x,glazed_facing=east,type=double,vertical=false": {
+      "model": "minecraft:block/black_glazed_terracotta"
+    },
+    "axis=x,glazed_facing=east,type=double,vertical=true": {
+      "model": "minecraft:block/black_glazed_terracotta"
+    },
+    "axis=x,glazed_facing=east,type=top,vertical=false": {
+      "model": "morebuildingblocks:block/black_glazed_terracotta_slab_top_facing3"
+    },
+    "axis=x,glazed_facing=east,type=top,vertical=true": {
+      "model": "morebuildingblocks:vertical_slab/black_glazed_terracotta_slab/neg_x_facing3"
+    },
+    "axis=x,glazed_facing=north,type=bottom,vertical=false": {
+      "model": "morebuildingblocks:block/black_glazed_terracotta_slab_facing2"
+    },
+    "axis=x,glazed_facing=north,type=bottom,vertical=true": {
+      "model": "morebuildingblocks:vertical_slab/black_glazed_terracotta_slab/pos_x_facing2"
+    },
+    "axis=x,glazed_facing=north,type=double,vertical=false": {
+      "model": "minecraft:block/black_glazed_terracotta"
+    },
+    "axis=x,glazed_facing=north,type=double,vertical=true": {
+      "model": "minecraft:block/black_glazed_terracotta"
+    },
+    "axis=x,glazed_facing=north,type=top,vertical=false": {
+      "model": "morebuildingblocks:block/black_glazed_terracotta_slab_top_facing2"
+    },
+    "axis=x,glazed_facing=north,type=top,vertical=true": {
+      "model": "morebuildingblocks:vertical_slab/black_glazed_terracotta_slab/neg_x_facing2"
+    },
+    "axis=x,glazed_facing=south,type=bottom,vertical=false": {
       "model": "morebuildingblocks:block/black_glazed_terracotta_slab"
     },
-    "axis=x,type=bottom,vertical=true": {
-      "model": "morebuildingblocks:vertical_slab/black_glazed_terracotta_slab/neg_x"
-    },
-    "axis=x,type=double,vertical=false": {
-      "model": "minecraft:block/black_glazed_terracotta"
-    },
-    "axis=x,type=double,vertical=true": {
-      "model": "minecraft:block/black_glazed_terracotta"
-    },
-    "axis=x,type=top,vertical=false": {
-      "model": "morebuildingblocks:block/black_glazed_terracotta_slab_top"
-    },
-    "axis=x,type=top,vertical=true": {
+    "axis=x,glazed_facing=south,type=bottom,vertical=true": {
       "model": "morebuildingblocks:vertical_slab/black_glazed_terracotta_slab/pos_x"
     },
-    "axis=y,type=bottom,vertical=false": {
-      "model": "morebuildingblocks:block/black_glazed_terracotta_slab"
-    },
-    "axis=y,type=bottom,vertical=true": {
-      "model": "morebuildingblocks:block/black_glazed_terracotta_slab"
-    },
-    "axis=y,type=double,vertical=false": {
+    "axis=x,glazed_facing=south,type=double,vertical=false": {
       "model": "minecraft:block/black_glazed_terracotta"
     },
-    "axis=y,type=double,vertical=true": {
+    "axis=x,glazed_facing=south,type=double,vertical=true": {
       "model": "minecraft:block/black_glazed_terracotta"
     },
-    "axis=y,type=top,vertical=false": {
+    "axis=x,glazed_facing=south,type=top,vertical=false": {
       "model": "morebuildingblocks:block/black_glazed_terracotta_slab_top"
     },
-    "axis=y,type=top,vertical=true": {
-      "model": "morebuildingblocks:block/black_glazed_terracotta_slab_top"
+    "axis=x,glazed_facing=south,type=top,vertical=true": {
+      "model": "morebuildingblocks:vertical_slab/black_glazed_terracotta_slab/neg_x"
     },
-    "axis=z,type=bottom,vertical=false": {
+    "axis=x,glazed_facing=west,type=bottom,vertical=false": {
+      "model": "morebuildingblocks:block/black_glazed_terracotta_slab_facing1"
+    },
+    "axis=x,glazed_facing=west,type=bottom,vertical=true": {
+      "model": "morebuildingblocks:vertical_slab/black_glazed_terracotta_slab/pos_x_facing1"
+    },
+    "axis=x,glazed_facing=west,type=double,vertical=false": {
+      "model": "minecraft:block/black_glazed_terracotta"
+    },
+    "axis=x,glazed_facing=west,type=double,vertical=true": {
+      "model": "minecraft:block/black_glazed_terracotta"
+    },
+    "axis=x,glazed_facing=west,type=top,vertical=false": {
+      "model": "morebuildingblocks:block/black_glazed_terracotta_slab_top_facing1"
+    },
+    "axis=x,glazed_facing=west,type=top,vertical=true": {
+      "model": "morebuildingblocks:vertical_slab/black_glazed_terracotta_slab/neg_x_facing1"
+    },
+    "axis=y,glazed_facing=east,type=bottom,vertical=false": {
+      "model": "morebuildingblocks:block/black_glazed_terracotta_slab_facing3"
+    },
+    "axis=y,glazed_facing=east,type=bottom,vertical=true": {
+      "model": "morebuildingblocks:block/black_glazed_terracotta_slab_facing3"
+    },
+    "axis=y,glazed_facing=east,type=double,vertical=false": {
+      "model": "minecraft:block/black_glazed_terracotta"
+    },
+    "axis=y,glazed_facing=east,type=double,vertical=true": {
+      "model": "minecraft:block/black_glazed_terracotta"
+    },
+    "axis=y,glazed_facing=east,type=top,vertical=false": {
+      "model": "morebuildingblocks:block/black_glazed_terracotta_slab_top_facing3"
+    },
+    "axis=y,glazed_facing=east,type=top,vertical=true": {
+      "model": "morebuildingblocks:block/black_glazed_terracotta_slab_top_facing3"
+    },
+    "axis=y,glazed_facing=north,type=bottom,vertical=false": {
+      "model": "morebuildingblocks:block/black_glazed_terracotta_slab_facing2"
+    },
+    "axis=y,glazed_facing=north,type=bottom,vertical=true": {
+      "model": "morebuildingblocks:block/black_glazed_terracotta_slab_facing2"
+    },
+    "axis=y,glazed_facing=north,type=double,vertical=false": {
+      "model": "minecraft:block/black_glazed_terracotta"
+    },
+    "axis=y,glazed_facing=north,type=double,vertical=true": {
+      "model": "minecraft:block/black_glazed_terracotta"
+    },
+    "axis=y,glazed_facing=north,type=top,vertical=false": {
+      "model": "morebuildingblocks:block/black_glazed_terracotta_slab_top_facing2"
+    },
+    "axis=y,glazed_facing=north,type=top,vertical=true": {
+      "model": "morebuildingblocks:block/black_glazed_terracotta_slab_top_facing2"
+    },
+    "axis=y,glazed_facing=south,type=bottom,vertical=false": {
       "model": "morebuildingblocks:block/black_glazed_terracotta_slab"
     },
-    "axis=z,type=bottom,vertical=true": {
+    "axis=y,glazed_facing=south,type=bottom,vertical=true": {
+      "model": "morebuildingblocks:block/black_glazed_terracotta_slab"
+    },
+    "axis=y,glazed_facing=south,type=double,vertical=false": {
+      "model": "minecraft:block/black_glazed_terracotta"
+    },
+    "axis=y,glazed_facing=south,type=double,vertical=true": {
+      "model": "minecraft:block/black_glazed_terracotta"
+    },
+    "axis=y,glazed_facing=south,type=top,vertical=false": {
+      "model": "morebuildingblocks:block/black_glazed_terracotta_slab_top"
+    },
+    "axis=y,glazed_facing=south,type=top,vertical=true": {
+      "model": "morebuildingblocks:block/black_glazed_terracotta_slab_top"
+    },
+    "axis=y,glazed_facing=west,type=bottom,vertical=false": {
+      "model": "morebuildingblocks:block/black_glazed_terracotta_slab_facing1"
+    },
+    "axis=y,glazed_facing=west,type=bottom,vertical=true": {
+      "model": "morebuildingblocks:block/black_glazed_terracotta_slab_facing1"
+    },
+    "axis=y,glazed_facing=west,type=double,vertical=false": {
+      "model": "minecraft:block/black_glazed_terracotta"
+    },
+    "axis=y,glazed_facing=west,type=double,vertical=true": {
+      "model": "minecraft:block/black_glazed_terracotta"
+    },
+    "axis=y,glazed_facing=west,type=top,vertical=false": {
+      "model": "morebuildingblocks:block/black_glazed_terracotta_slab_top_facing1"
+    },
+    "axis=y,glazed_facing=west,type=top,vertical=true": {
+      "model": "morebuildingblocks:block/black_glazed_terracotta_slab_top_facing1"
+    },
+    "axis=z,glazed_facing=east,type=bottom,vertical=false": {
+      "model": "morebuildingblocks:block/black_glazed_terracotta_slab_facing3"
+    },
+    "axis=z,glazed_facing=east,type=bottom,vertical=true": {
+      "model": "morebuildingblocks:vertical_slab/black_glazed_terracotta_slab/pos_z_facing3"
+    },
+    "axis=z,glazed_facing=east,type=double,vertical=false": {
+      "model": "minecraft:block/black_glazed_terracotta"
+    },
+    "axis=z,glazed_facing=east,type=double,vertical=true": {
+      "model": "minecraft:block/black_glazed_terracotta"
+    },
+    "axis=z,glazed_facing=east,type=top,vertical=false": {
+      "model": "morebuildingblocks:block/black_glazed_terracotta_slab_top_facing3"
+    },
+    "axis=z,glazed_facing=east,type=top,vertical=true": {
+      "model": "morebuildingblocks:vertical_slab/black_glazed_terracotta_slab/neg_z_facing3"
+    },
+    "axis=z,glazed_facing=north,type=bottom,vertical=false": {
+      "model": "morebuildingblocks:block/black_glazed_terracotta_slab_facing2"
+    },
+    "axis=z,glazed_facing=north,type=bottom,vertical=true": {
+      "model": "morebuildingblocks:vertical_slab/black_glazed_terracotta_slab/pos_z_facing2"
+    },
+    "axis=z,glazed_facing=north,type=double,vertical=false": {
+      "model": "minecraft:block/black_glazed_terracotta"
+    },
+    "axis=z,glazed_facing=north,type=double,vertical=true": {
+      "model": "minecraft:block/black_glazed_terracotta"
+    },
+    "axis=z,glazed_facing=north,type=top,vertical=false": {
+      "model": "morebuildingblocks:block/black_glazed_terracotta_slab_top_facing2"
+    },
+    "axis=z,glazed_facing=north,type=top,vertical=true": {
+      "model": "morebuildingblocks:vertical_slab/black_glazed_terracotta_slab/neg_z_facing2"
+    },
+    "axis=z,glazed_facing=south,type=bottom,vertical=false": {
+      "model": "morebuildingblocks:block/black_glazed_terracotta_slab"
+    },
+    "axis=z,glazed_facing=south,type=bottom,vertical=true": {
+      "model": "morebuildingblocks:vertical_slab/black_glazed_terracotta_slab/pos_z"
+    },
+    "axis=z,glazed_facing=south,type=double,vertical=false": {
+      "model": "minecraft:block/black_glazed_terracotta"
+    },
+    "axis=z,glazed_facing=south,type=double,vertical=true": {
+      "model": "minecraft:block/black_glazed_terracotta"
+    },
+    "axis=z,glazed_facing=south,type=top,vertical=false": {
+      "model": "morebuildingblocks:block/black_glazed_terracotta_slab_top"
+    },
+    "axis=z,glazed_facing=south,type=top,vertical=true": {
       "model": "morebuildingblocks:vertical_slab/black_glazed_terracotta_slab/neg_z"
     },
-    "axis=z,type=double,vertical=false": {
+    "axis=z,glazed_facing=west,type=bottom,vertical=false": {
+      "model": "morebuildingblocks:block/black_glazed_terracotta_slab_facing1"
+    },
+    "axis=z,glazed_facing=west,type=bottom,vertical=true": {
+      "model": "morebuildingblocks:vertical_slab/black_glazed_terracotta_slab/pos_z_facing1"
+    },
+    "axis=z,glazed_facing=west,type=double,vertical=false": {
       "model": "minecraft:block/black_glazed_terracotta"
     },
-    "axis=z,type=double,vertical=true": {
+    "axis=z,glazed_facing=west,type=double,vertical=true": {
       "model": "minecraft:block/black_glazed_terracotta"
     },
-    "axis=z,type=top,vertical=false": {
-      "model": "morebuildingblocks:block/black_glazed_terracotta_slab_top"
+    "axis=z,glazed_facing=west,type=top,vertical=false": {
+      "model": "morebuildingblocks:block/black_glazed_terracotta_slab_top_facing1"
     },
-    "axis=z,type=top,vertical=true": {
-      "model": "morebuildingblocks:vertical_slab/black_glazed_terracotta_slab/pos_z"
+    "axis=z,glazed_facing=west,type=top,vertical=true": {
+      "model": "morebuildingblocks:vertical_slab/black_glazed_terracotta_slab/neg_z_facing1"
     }
   }
 }
