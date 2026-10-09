@@ -110,81 +110,93 @@ public final class VerticalSlab {
 	/**
 	 * The half of the block a placement fills, or {@code null} for vanilla's own flat slab.
 	 *
-	 * <p>The reference implementation this rule follows ({@code btsdhz/vanilla-refit}) decides the
-	 * same question in its {@code SlabBlockMixin.getStateForPlacement} from a direction derived from
-	 * the click, and only asks for an upright slab when the click landed on the top or the bottom of
-	 * a block. A click on a side face is already real estate the player is standing next to and
-	 * building along, so it always means vanilla's flat slab; that is the
-	 * {@code if (face != Direction.UP && face != Direction.DOWN) return false} the reference draws.
+	 * <p>Every face of a block can make an upright slab, because the half to fill is read off the
+	 * click rather than off the plane it landed on: on a top or bottom face the half is the one
+	 * under the click, and on a side face it is the one the slab has to take to stand against the
+	 * block that was clicked - the half reaching back towards the player, which is a new slab added
+	 * to the end of a wall rather than a flat one laid into the gap. The one click that does not is
+	 * a click on a side face whose far side is already occupied: there the player is building
+	 * <em>against</em> something rather than into open air, and the flat slab vanilla computes for
+	 * them is the block they asked for.
+	 *
+	 * <p>{@code context.getClickedPos()} is the cell the new state is being computed for: the block
+	 * whose face the click landed on for every ordinary click, and the next block along whenever the
+	 * click was moved out. The block the click landed on is one step back from it along the clicked
+	 * face, which is how the rule asks whether an upright slab is standing there - rather than
+	 * reaching for the ray trace's own hit, so that the two stay in step by construction whenever
+	 * the click is moved.
 	 *
 	 * <p>An upright slab reports itself as not replaceable from every face it presents
 	 * ({@link SlabBlock#canBeReplaced}), so a click that lands on one - on the wide face it shows
 	 * the world or on the open half beside it - is always taken into the next cell along before it
 	 * gets here, and the half to fill is the one on the side the clicked face came from. The new
-	 * slab then stands beside the one that was clicked with its two faces flush against it. That is
-	 * the reference's own reading too: it asks the block that was clicked, not the one being built
-	 * in.
-	 *
-	 * <p>{@code context.getClickedPos()} is the cell the new state is being computed for: the block
-	 * whose face the click landed on for every ordinary click, and the next block along whenever the
-	 * click was moved out. The block the click landed on is one step back from it along the clicked
-	 * face, which is what {@code hitPos} undoes - rather than reaching for the ray trace's own hit,
-	 * so that the two stay in step by construction whenever the click is moved.
+	 * slab then stands beside the one that was clicked with its two faces flush against it. The
+	 * reference implementation this rule follows ({@code btsdhz/vanilla-refit}) asks the block that
+	 * was clicked the same way, rather than the one being built in.
 	 */
 	public static Fill placementFill(final BlockPlaceContext context) {
 		Direction face = context.getClickedFace();
-		BlockPos clickedPos = context.getClickedPos();
-		BlockPos hitPos = clickedPos.relative(face.getOpposite());
-		BlockState clicked = context.getLevel().getBlockState(hitPos);
 
-		if (face.getAxis().isHorizontal() && isVertical(clicked)) {
+		if (face.getAxis().isHorizontal()
+			&& isVertical(context.getLevel().getBlockState(context.getClickedPos().relative(face.getOpposite())))) {
 			// The wall the player is pointing at already stands here, so the new slab is built on
 			// the far side of it, filling the half that reaches back towards the click.
 			return Fill.opposite(face);
 		}
 
-		return verticalFromFace(context, face, clickedPos);
+		if (face.getAxis().isHorizontal()) {
+			// A side click only reaches a cell nothing is standing in yet. An empty neighbour is
+			// what a player extending a wall into open air is pointing at; a wall, a floor or a
+			// ceiling already across the gap is the block being built against, and there the click
+			// belongs to the slab the player is holding, exactly as vanilla reads it.
+			BlockState target = context.getLevel().getBlockState(context.getClickedPos());
+
+			if (!target.isAir() && target.getFluidState().isEmpty() && !target.canBeReplaced(context)) {
+				return null;
+			}
+		}
+
+		return fillFromClick(context, face, context.getClickedPos());
 	}
 
 	/**
-	 * How far from the centre of the clicked face a click may land and still pick a half of it: a
-	 * quarter of a block. Inside that radius the click is too close to the middle to be pointing at
-	 * one half rather than the other, and the slab stays flat.
+	 * How far from the centre of the block that was clicked a click may land and still pick a half
+	 * of it: a quarter of a block. Inside that radius the click is too close to the middle to be
+	 * pointing at one half rather than the other, and the slab stays flat.
 	 */
 	private static final double MIDDLE_RADIUS = 0.25;
 
 	/**
-	 * The half to fill when the click landed on the top or the bottom of a block, or {@code null}
-	 * to leave the placement flat.
+	 * The half to fill for a click on a face of the block being built against, or {@code null} to
+	 * leave the placement flat.
 	 *
-	 * <p>Only those two faces can make an upright slab. A side face is not a frame the player can
-	 * aim inside: its width is real estate they are already standing next to, so a click there
-	 * always means vanilla's own flat slab, which is what a player building a wall or a floor is
-	 * pointing at. The reference implementation this rule follows
-	 * ({@code btsdhz/vanilla-refit}'s {@code SlabPlacementRules.wantsVertical}) draws the same
-	 * line: {@code if (face != Direction.UP && face != Direction.DOWN) return false;}.
+	 * <p>{@code placementPos} is the cell the new state is being computed for: the block whose face
+	 * was clicked for every ordinary click, and the next block along whenever the click was moved
+	 * out. The click is read as a position <em>inside the block that was clicked</em> - that cell on
+	 * a top or bottom face, and one step back along the face on a side - which is what makes the
+	 * offsets below the click's own place in that block's 16x16 plan rather than a distance to a
+	 * cell next door.
 	 *
-	 * <p>Which half is then decided by <em>where</em> on that face the click landed, not by which
-	 * way the player is looking. Looking down at a block, the click is somewhere in its 16x16 plan,
-	 * and the new slab fills the half of the plan the click is nearest to: an upright slab's visible
-	 * face looks back along the axis it is thin on, so a click in the eastern half of the top face
-	 * fills the eastern half of the block. Comparing the two offsets from the centre by magnitude
-	 * rather than taking a frame's own left/right and bottom/top bands is what makes the rule
-	 * symmetric under every rotation of the block, and it is the same comparison vanilla-refit uses
+	 * <p>Which half is then decided by <em>where</em> on the face the click landed, not by which way
+	 * the player is looking. On a top or bottom face both offsets already name the half that was
+	 * pointed at. On a side face the same offsets name the half of the clicked block the click was
+	 * nearest, and the cell being filled is the one beyond that face - so they still name the right
+	 * half, read from that cell's own centre: a click on a block's northern face is a click on the
+	 * southern face of the cell north of it, and the slab fills that cell's southern half, flush
+	 * against the block that was clicked. Comparing the two offsets by magnitude rather than taking
+	 * a frame's own left/right and bottom/top bands is what makes the rule symmetric under every
+	 * rotation of the block, and it is the same comparison vanilla-refit uses
 	 * ({@code getHorizontalDirectionFromClick}).
 	 *
-	 * <p>A click within {@link #MIDDLE_RADIUS} of the centre fills nothing: it is too close to the
-	 * middle to point at a half, and leaves the slab flat. The comparison is the reference's own -
-	 * {@code Math.abs(offset) <= half} against a ratio of {@code 0.5}, and the strictly greater
-	 * {@code Math.abs(x) > Math.abs(z)} that answers the exact diagonal with the Z axis - so every
+	 * <p>A click within {@link #MIDDLE_RADIUS} of that block's centre fills nothing: it is too close
+	 * to the middle to point at a half, and leaves the slab flat - the same ratio the reference
+	 * applies ({@code isInCenterSquare}, a side of {@code 0.5}) and the strictly greater
+	 * {@code Math.abs(x) > Math.abs(z)} that answers the exact diagonal with the Z axis, so every
 	 * click, including one on a boundary, lands on the same half here as it does there.
 	 */
-	private static @Nullable Fill verticalFromFace(final BlockPlaceContext context, final Direction face,
-			final BlockPos clickedPos) {
-		if (face.getAxis() != Direction.Axis.Y) {
-			return null;
-		}
-
+	private static @Nullable Fill fillFromClick(final BlockPlaceContext context, final Direction face,
+			final BlockPos placementPos) {
+		BlockPos clickedPos = face.getAxis().isVertical() ? placementPos : placementPos.relative(face.getOpposite());
 		Vec3 hit = context.getClickLocation();
 		double x = hit.x - clickedPos.getX() - 0.5;
 		double z = hit.z - clickedPos.getZ() - 0.5;
@@ -194,8 +206,22 @@ public final class VerticalSlab {
 		}
 
 		return Math.abs(x) > Math.abs(z)
-			? Fill.of(Direction.Axis.X, x > 0.0 ? Direction.AxisDirection.POSITIVE : Direction.AxisDirection.NEGATIVE)
-			: Fill.of(Direction.Axis.Z, z > 0.0 ? Direction.AxisDirection.POSITIVE : Direction.AxisDirection.NEGATIVE);
+			? fillAlong(x, Direction.Axis.X)
+			: fillAlong(z, Direction.Axis.Z);
+	}
+
+	/**
+	 * The half of {@code axis} a click landing {@code offset} from the centre of the block that was
+	 * clicked picks, measured along that axis.
+	 *
+	 * <p>The sign is the whole rule: a click east of that centre fills the eastern half and one to
+	 * the north fills the northern half. On a side face the half that comes back belongs to the cell
+	 * <em>beyond</em> the clicked block, because that is the cell an upright slab is built in, and
+	 * the same sign still puts it where the player pointed: the southern half of the cell north of a
+	 * block is the half flush against that block's northern face.
+	 */
+	private static Fill fillAlong(final double offset, final Direction.Axis axis) {
+		return Fill.of(axis, offset > 0.0 ? Direction.AxisDirection.POSITIVE : Direction.AxisDirection.NEGATIVE);
 	}
 
 	/**

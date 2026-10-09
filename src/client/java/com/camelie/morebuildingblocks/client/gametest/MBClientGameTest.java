@@ -241,6 +241,7 @@ public class MBClientGameTest implements FabricClientGameTest {
 			// screenshots above are the evidence for the checks a log cannot make.
 			verifyShapes(server);
 			verifyPlacement(server, family);
+			verifyOccupiedNeighbour(server);
 			verifyUprightNeighbours(server);
 			verifyDrops(context, server, family);
 			verifyCreativeTab(server);
@@ -374,27 +375,23 @@ public class MBClientGameTest implements FabricClientGameTest {
 	}
 
 	/**
-	 * Places a slab through the real {@link BlockPlaceContext} path and checks that the
-	 * upright rule chose the intended axis and half.
+	 * Places a slab through the real {@link BlockPlaceContext} path and checks that the upright rule
+	 * chose the intended axis and half.
 	 *
-	 * <p>This is the one part of the feature a screenshot cannot prove: a slab whose axis
-	 * is wrong still renders as a plausible thin wall, and the rule reads the click
-	 * position on the clicked face rather than the camera. The clicked face is divided
-	 * into a middle quarter and four bands around it: the middle takes the half behind
-	 * that face, the bottom and top bands the lower and upper halves, and the left and
-	 * right bands the halves named by that face's own left and right edges.
-	 */
-	/**
-	 * The upright half a placement picks, which is read off the top or the bottom face alone.
+	 * <p>This is the one part of the feature a screenshot cannot prove: a slab whose axis is wrong
+	 * still renders as a plausible thin wall, and the rule reads the click position rather than the
+	 * camera. The click is a position inside the block that was clicked, and the two halves of its
+	 * horizontal axes decide the answer: the axis the click is further out on is the axis the
+	 * upright slab is thin along, and the half it fills is the one the click is nearest to.
 	 *
-	 * <p>Each of those two faces is a 16x16 plan, and the click is compared against its centre: the
-	 * nearer half of the plan along whichever horizontal axis the click is further out on is the
-	 * half that gets filled, so a click in the eastern half of the top face fills the eastern half
-	 * of the block. A click within a quarter of a block of the centre picks no half at all and
-	 * leaves the slab flat, which is what a player building a floor means by clicking the middle.
+	 * <p>On a top or bottom face that is a 16x16 plan around the click, so a click in the eastern
+	 * half of the top face fills the eastern half of the block. A click within a quarter of a block
+	 * of the centre picks no half at all and leaves the slab flat, which is what a player building a
+	 * floor means by clicking the middle.
 	 *
-	 * <p>A click on one of the four <em>side</em> faces never makes an upright slab, whichever band
-	 * of that face it lands in: that click means vanilla's own flat slab.
+	 * <p>A click on one of the four <em>side</em> faces reads the same way and lands in the cell in
+	 * front of that face, so the half it fills is the one flush against the block that was clicked -
+	 * the new slab standing at the end of the wall the player is building.
 	 */
 	private static void verifyPlacement(TestServerContext server, List<Block> family) {
 		server.runOnServer(minecraftServer -> {
@@ -434,33 +431,73 @@ public class MBClientGameTest implements FabricClientGameTest {
 			checkPlacement(level, player, slabBlock, pos, new Vec3(0.9, FLOOR_Y + 24.0, 0.5), Direction.DOWN,
 					Fill.positive(Direction.Axis.X), "bottom face east half");
 
-			// Every side face stays flat, in whichever band the click lands.
+			// Every side face points into an empty cell, so a click there adds an upright slab
+			// to the wall: the half filled is the one flush against the block that was clicked,
+			// and the click's height up the face has no say in it at all.
 			checkPlacement(level, player, slabBlock, pos, new Vec3(0.5, FLOOR_Y + 24.5, 0.05), Direction.NORTH,
-					Fill.negative(Direction.Axis.Y), "north face centre");
+					Fill.negative(Direction.Axis.Z), "north face centre");
 			checkPlacement(level, player, slabBlock, pos, new Vec3(0.5, FLOOR_Y + 24.1, 0.05), Direction.NORTH,
-					Fill.negative(Direction.Axis.Y), "north face bottom band");
+					Fill.negative(Direction.Axis.Z), "north face bottom band");
 			checkPlacement(level, player, slabBlock, pos, new Vec3(0.5, FLOOR_Y + 24.9, 0.05), Direction.NORTH,
-					Fill.positive(Direction.Axis.Y), "north face top band");
+					Fill.negative(Direction.Axis.Z), "north face top band");
 			checkPlacement(level, player, slabBlock, pos, new Vec3(0.9, FLOOR_Y + 24.5, 0.05), Direction.NORTH,
-					Fill.negative(Direction.Axis.Y), "north face east band");
+					Fill.negative(Direction.Axis.Z), "north face east band");
 			checkPlacement(level, player, slabBlock, pos, new Vec3(0.1, FLOOR_Y + 24.5, 0.05), Direction.NORTH,
-					Fill.negative(Direction.Axis.Y), "north face west band");
+					Fill.negative(Direction.Axis.Z), "north face west band");
 
+			// A click on a side face lies on that face's plane, so its offset across the face is
+			// always exactly half a block - the largest either axis can reach - and the axis it
+			// wins by is the one perpendicular to the face. The four side faces therefore each
+			// name their own half of the cell beyond them, whatever the click's height or its
+			// place along the face.
 			checkPlacement(level, player, slabBlock, pos, new Vec3(1.0, FLOOR_Y + 24.5, 0.5), Direction.EAST,
-					Fill.negative(Direction.Axis.Y), "east face centre");
+					Fill.positive(Direction.Axis.X), "east face centre");
 			checkPlacement(level, player, slabBlock, pos, new Vec3(1.0, FLOOR_Y + 24.5, 0.1), Direction.EAST,
-					Fill.negative(Direction.Axis.Y), "east face left band");
-			checkPlacement(level, player, slabBlock, pos, new Vec3(1.0, FLOOR_Y + 24.5, 0.9), Direction.EAST,
-					Fill.negative(Direction.Axis.Y), "east face right band");
+					Fill.positive(Direction.Axis.X), "east face north band");
 			checkPlacement(level, player, slabBlock, pos, new Vec3(1.0, FLOOR_Y + 24.1, 0.5), Direction.EAST,
-					Fill.negative(Direction.Axis.Y), "east face bottom band");
-			checkPlacement(level, player, slabBlock, pos, new Vec3(1.0, FLOOR_Y + 24.9, 0.5), Direction.EAST,
-					Fill.positive(Direction.Axis.Y), "east face top band");
-
+					Fill.positive(Direction.Axis.X), "east face bottom band");
 			checkPlacement(level, player, slabBlock, pos, new Vec3(0.05, FLOOR_Y + 24.5, 0.5), Direction.WEST,
-					Fill.negative(Direction.Axis.Y), "west face centre");
-			checkPlacement(level, player, slabBlock, pos, new Vec3(0.05, FLOOR_Y + 24.5, 0.5), Direction.SOUTH,
-					Fill.negative(Direction.Axis.Y), "south face centre");
+					Fill.negative(Direction.Axis.X), "west face centre");
+			checkPlacement(level, player, slabBlock, pos, new Vec3(0.05, FLOOR_Y + 24.5, 0.9), Direction.WEST,
+					Fill.negative(Direction.Axis.X), "west face south band");
+			checkPlacement(level, player, slabBlock, pos, new Vec3(0.5, FLOOR_Y + 24.5, 0.95), Direction.SOUTH,
+					Fill.positive(Direction.Axis.Z), "south face centre");
+			checkPlacement(level, player, slabBlock, pos, new Vec3(0.9, FLOOR_Y + 24.9, 0.95), Direction.SOUTH,
+					Fill.positive(Direction.Axis.Z), "south face east top corner");
+			checkPlacement(level, player, slabBlock, pos, new Vec3(0.5, FLOOR_Y + 24.5, 0.05), Direction.NORTH,
+					Fill.negative(Direction.Axis.Z), "north face centre again");
+		});
+	}
+
+	/**
+	 * Places a slab into a cell that is already occupied, and checks that the rule leaves those
+	 * clicks to vanilla rather than turning the block that is standing there into a wall.
+	 *
+	 * <p>A side click only reaches a cell nothing is standing in yet. A full block across the gap
+	 * is the block being built against, and the click means the flat slab the player is holding.
+	 */
+	private static void verifyOccupiedNeighbour(TestServerContext server) {
+		server.runOnServer(minecraftServer -> {
+			ServerLevel level = minecraftServer.overworld();
+			ServerPlayer player = minecraftServer.getPlayerList().getPlayers().get(0);
+			Block slabBlock = vanillaSlabs().get(0);
+			BlockPos pos = new BlockPos(0, FLOOR_Y + 24, 0);
+			BlockPos north = pos.north();
+
+			level.setBlockAndUpdate(pos.below(), Blocks.STONE.defaultBlockState());
+			level.setBlockAndUpdate(north, Blocks.STONE.defaultBlockState());
+			level.setBlockAndUpdate(pos, Blocks.STONE.defaultBlockState());
+
+			BlockState placed = placement(level, player, slabBlock, pos, new Vec3(0.5, FLOOR_Y + 24.5, 0.05),
+					Direction.NORTH);
+			require(placed != null, "no block state was produced for the side click on a wall");
+			require(!VerticalSlab.isVertical(placed),
+					"a side click on a wall made an upright slab: " + placed);
+			require(Fill.of(placed).equals(Fill.negative(Direction.Axis.Y)),
+					"a side click on a wall filled " + Fill.of(placed) + ", expected " + Fill.negative(Direction.Axis.Y)
+							+ ": " + placed);
+
+			level.setBlockAndUpdate(north, Blocks.AIR.defaultBlockState());
 		});
 	}
 
