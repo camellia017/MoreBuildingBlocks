@@ -4,6 +4,7 @@
     {
       "faces": {
         "down": {
+          "cullface": "down",
           "texture": "#bottom",
           "uv": [
             8,
@@ -23,6 +24,7 @@
           ]
         },
         "north": {
+          "cullface": "north",
           "texture": "#side",
           "uv": [
             8,
@@ -32,15 +34,17 @@
           ]
         },
         "south": {
+          "cullface": "south",
           "texture": "#side",
           "uv": [
-            0,
-            0,
             8,
+            0,
+            16,
             16
           ]
         },
         "up": {
+          "cullface": "up",
           "texture": "#top",
           "uv": [
             8,

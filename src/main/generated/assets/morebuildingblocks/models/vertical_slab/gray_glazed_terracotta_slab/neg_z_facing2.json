@@ -4,6 +4,7 @@
     {
       "faces": {
         "down": {
+          "cullface": "down",
           "texture": "#pattern",
           "uv": [
             0,
@@ -13,11 +14,12 @@
           ]
         },
         "east": {
+          "cullface": "west",
           "texture": "#pattern",
           "uv": [
-            0,
-            0,
             8,
+            0,
+            16,
             16
           ]
         },
@@ -43,6 +45,7 @@
           ]
         },
         "up": {
+          "cullface": "up",
           "texture": "#pattern",
           "uv": [
             0,
@@ -52,6 +55,7 @@
           ]
         },
         "west": {
+          "cullface": "east",
           "rotation": 180,
           "texture": "#pattern",
           "uv": [

@@ -13,6 +13,7 @@
           ]
         },
         "east": {
+          "cullface": "east",
           "rotation": 180,
           "texture": "#pattern",
           "uv": [
@@ -23,6 +24,7 @@
           ]
         },
         "north": {
+          "cullface": "north",
           "rotation": 90,
           "texture": "#pattern",
           "uv": [
@@ -33,6 +35,7 @@
           ]
         },
         "south": {
+          "cullface": "south",
           "rotation": 270,
           "texture": "#pattern",
           "uv": [
@@ -53,6 +56,7 @@
           ]
         },
         "west": {
+          "cullface": "west",
           "texture": "#pattern",
           "uv": [
             0,
