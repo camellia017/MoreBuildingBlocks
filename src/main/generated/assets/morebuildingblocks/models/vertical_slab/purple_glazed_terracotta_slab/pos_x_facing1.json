@@ -5,6 +5,50 @@
       "faces": {
         "down": {
           "cullface": "down",
+          "rotation": 270,
+          "texture": "#pattern",
+          "uv": [
+            0,
+            8,
+            16,
+            16
+          ]
+        },
+        "east": {
+          "cullface": "east",
+          "rotation": 90,
+          "texture": "#pattern",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "north": {
+          "cullface": "north",
+          "texture": "#pattern",
+          "uv": [
+            0,
+            0,
+            8,
+            16
+          ]
+        },
+        "south": {
+          "cullface": "south",
+          "rotation": 180,
+          "texture": "#pattern",
+          "uv": [
+            0,
+            0,
+            8,
+            16
+          ]
+        },
+        "up": {
+          "cullface": "up",
+          "rotation": 90,
           "texture": "#pattern",
           "uv": [
             0,
@@ -13,69 +57,26 @@
             8
           ]
         },
-        "east": {
-          "cullface": "south",
-          "rotation": 270,
-          "texture": "#pattern",
-          "uv": [
-            8,
-            0,
-            16,
-            16
-          ]
-        },
-        "north": {
-          "cullface": "east",
-          "rotation": 270,
-          "texture": "#pattern",
-          "uv": [
-            0,
-            0,
-            16,
-            16
-          ]
-        },
-        "south": {
-          "rotation": 90,
-          "texture": "#pattern",
-          "uv": [
-            0,
-            0,
-            16,
-            16
-          ]
-        },
-        "up": {
-          "cullface": "up",
-          "texture": "#pattern",
-          "uv": [
-            0,
-            8,
-            16,
-            16
-          ]
-        },
         "west": {
-          "cullface": "north",
-          "rotation": 90,
+          "rotation": 270,
           "texture": "#pattern",
           "uv": [
             0,
             0,
-            8,
+            16,
             16
           ]
         }
       },
       "from": [
-        0,
+        8,
         0,
         0
       ],
       "to": [
         16,
         16,
-        8
+        16
       ]
     }
   ],

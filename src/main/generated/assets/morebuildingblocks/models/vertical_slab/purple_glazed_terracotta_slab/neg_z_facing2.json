@@ -5,35 +5,26 @@
       "faces": {
         "down": {
           "cullface": "down",
+          "rotation": 180,
           "texture": "#pattern",
           "uv": [
             0,
-            8,
+            0,
             16,
-            16
+            8
           ]
         },
         "east": {
-          "cullface": "west",
+          "cullface": "east",
           "texture": "#pattern",
           "uv": [
-            0,
-            0,
             8,
+            0,
+            16,
             16
           ]
         },
         "north": {
-          "rotation": 90,
-          "texture": "#pattern",
-          "uv": [
-            0,
-            0,
-            16,
-            16
-          ]
-        },
-        "south": {
           "cullface": "north",
           "rotation": 270,
           "texture": "#pattern",
@@ -44,18 +35,29 @@
             16
           ]
         },
-        "up": {
-          "cullface": "up",
+        "south": {
+          "rotation": 90,
           "texture": "#pattern",
           "uv": [
             0,
             0,
             16,
-            8
+            16
+          ]
+        },
+        "up": {
+          "cullface": "up",
+          "rotation": 180,
+          "texture": "#pattern",
+          "uv": [
+            0,
+            8,
+            16,
+            16
           ]
         },
         "west": {
-          "cullface": "east",
+          "cullface": "west",
           "rotation": 180,
           "texture": "#pattern",
           "uv": [
@@ -69,12 +71,12 @@
       "from": [
         0,
         0,
-        8
+        0
       ],
       "to": [
         16,
         16,
-        16
+        8
       ]
     }
   ],

@@ -8,9 +8,9 @@
           "texture": "#pattern",
           "uv": [
             0,
-            8,
+            0,
             16,
-            16
+            8
           ]
         },
         "east": {
@@ -18,9 +18,9 @@
           "rotation": 180,
           "texture": "#pattern",
           "uv": [
-            0,
-            0,
             8,
+            0,
+            16,
             16
           ]
         },
@@ -50,9 +50,9 @@
           "texture": "#pattern",
           "uv": [
             0,
-            0,
+            8,
             16,
-            8
+            16
           ]
         },
         "west": {

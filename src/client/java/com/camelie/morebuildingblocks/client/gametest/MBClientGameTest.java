@@ -576,9 +576,9 @@ public class MBClientGameTest implements FabricClientGameTest {
 	 * <p>The two placements are compared half by half rather than as whole states, because they are
 	 * different blocks and their states can never be equal as they stand. What has to match is the
 	 * shape: the same half filled, on the same axis, with the same upright flag. The pattern's own
-	 * direction is not part of that comparison but is checked alongside it, against the player's
-	 * own facing rather than a fixed direction: where the player stands may not change the shape,
-	 * and must change the pattern.
+	 * direction is not part of that comparison but is checked alongside it: a slab placed into a
+	 * cell of its own is turned to the player's facing rather than to a fixed direction, while one
+	 * that doubles the slab it landed on keeps the pattern that half was placed with.
 	 */
 	private static void verifyGlazedSlabs(TestServerContext server) {
 		server.runOnServer(minecraftServer -> {
@@ -660,12 +660,20 @@ public class MBClientGameTest implements FabricClientGameTest {
 						+ (VerticalSlab.isVertical(glazedState) ? "up" : "flat") + " where a plain slab went "
 						+ (VerticalSlab.isVertical(plainState) ? "up" : "flat") + ": " + glazedState);
 
-		Direction expected = player.getDirection().getOpposite();
 		Direction turned = glazedState.getValue(MBBlockStateProperties.GLAZED_FACING);
+		// A click that doubles the slab it landed on fills in the rest of that block, so the
+		// pattern stays the one the half already there was placed with; only a slab going into a
+		// cell of its own takes the player's facing.
+		BlockState landedOn = level.getBlockState(glazedPos);
+		Direction expected = glazedState.getValue(SlabBlock.TYPE) == SlabType.DOUBLE && landedOn.is(glazed)
+				? landedOn.getValue(MBBlockStateProperties.GLAZED_FACING)
+				: player.getDirection().getOpposite();
 
 		require(turned == expected,
 				"clicking " + what + " with " + id + " turned the pattern to " + turned + " for a player looking "
-						+ player.getDirection() + ", expected " + expected);
+						+ player.getDirection() + ", expected " + expected + "; a doubled slab keeps the pattern of"
+						+ " the half that was there first, and only a slab placed in a cell of its own takes the"
+						+ " player's facing");
 	}
 
 	/** Clicks one face of both blocks, with the player standing the way {@code facing} says. */

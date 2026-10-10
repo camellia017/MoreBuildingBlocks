@@ -95,27 +95,20 @@ public abstract class SlabBlockMixin {
 	 * built inside this mixin has its constructed values rewritten along with the mixin, and the
 	 * frame table then reads back different directions than it was written with.
 	 *
-	 * <p>Completing an upright slab is a placement of its own rather than a doubling of an existing
-	 * one, so a glazed pattern is turned again here. Vanilla writes the direction once, when the
-	 * slab is placed, and stacking a second slab on the first keeps whatever turn it had; the mod's
-	 * upright slab is completed by a click on its open face instead, and the player making that
-	 * click is placing the rest of the block, so the pattern follows the click. The turn comes from
-	 * {@link GlazedPattern}, so only a block carrying the property is ever asked to hold one.
+	 * <p>A doubled slab is handed back exactly as vanilla built it. Vanilla answers a click on a
+	 * slab with a double state derived from the block that is already there - {@code state.is(this)}
+	 * in {@code SlabBlock#getStateForPlacement} - so the pattern's direction comes along with it,
+	 * and the finished block keeps the turn of the half that was placed first. Turning the pattern
+	 * to the player's current facing instead would swing the whole block away from the upright slab
+	 * it was completed from, which is the one thing a player watching it finish sees. The second
+	 * click fills in the rest of that block; it does not place a new one. That holds for an upright
+	 * slab clicked on its open face and for a flat slab stacked on another alike. The turn comes
+	 * from {@link GlazedPattern}, so only a block carrying the property is ever asked to hold one.
 	 */
 	@ModifyReturnValue(method = "getStateForPlacement", at = @At("RETURN"))
 	private BlockState morebuildingblocks$verticalPlacement(final BlockState original, final BlockPlaceContext context) {
-		if (original == null) {
-			return null;
-		}
-
-		BlockState clicked = context.getLevel().getBlockState(context.getClickedPos());
-		boolean completing = VerticalSlab.isVertical(clicked)
-			&& original.getValue(SlabBlock.TYPE) == SlabType.DOUBLE;
-
-		if (original.getValue(SlabBlock.TYPE) == SlabType.DOUBLE) {
-			return completing
-					? turned(original, context, (Object) this instanceof GlazedPattern)
-					: original;
+		if (original == null || original.getValue(SlabBlock.TYPE) == SlabType.DOUBLE) {
+			return original;
 		}
 
 		VerticalSlab.Fill fill = VerticalSlab.placementFill(context);

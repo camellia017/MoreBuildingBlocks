@@ -19,9 +19,9 @@
           "texture": "#pattern",
           "uv": [
             0,
-            8,
+            0,
             16,
-            16
+            8
           ]
         },
         "north": {
@@ -29,8 +29,8 @@
           "rotation": 90,
           "texture": "#pattern",
           "uv": [
-            0,
             8,
+            0,
             16,
             16
           ]
@@ -41,8 +41,8 @@
           "texture": "#pattern",
           "uv": [
             0,
+            0,
             8,
-            16,
             16
           ]
         },
@@ -94,9 +94,9 @@
           "texture": "#pattern",
           "uv": [
             0,
-            0,
+            8,
             16,
-            8
+            16
           ]
         },
         "north": {
@@ -104,9 +104,9 @@
           "texture": "#pattern",
           "uv": [
             0,
-            0,
             8,
-            8
+            8,
+            16
           ]
         },
         "south": {
@@ -114,9 +114,9 @@
           "texture": "#pattern",
           "uv": [
             8,
-            0,
+            8,
             16,
-            8
+            16
           ]
         },
         "up": {

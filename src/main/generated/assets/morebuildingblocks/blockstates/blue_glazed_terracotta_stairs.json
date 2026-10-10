@@ -2,681 +2,841 @@
   "variants": {
     "facing=east,glazed_facing=east,half=bottom,shape=inner_left": {
       "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing3",
+      "uvlock": true,
       "y": 270
     },
     "facing=east,glazed_facing=east,half=bottom,shape=inner_right": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing3"
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing3",
+      "uvlock": true
     },
     "facing=east,glazed_facing=east,half=bottom,shape=outer_left": {
       "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing3",
+      "uvlock": true,
       "y": 270
     },
     "facing=east,glazed_facing=east,half=bottom,shape=outer_right": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing3"
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing3",
+      "uvlock": true
     },
     "facing=east,glazed_facing=east,half=bottom,shape=straight": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_facing3"
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_facing3",
+      "uvlock": true
     },
     "facing=east,glazed_facing=east,half=top,shape=inner_left": {
       "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing3",
-      "x": 180,
-      "y": 270
+      "uvlock": true,
+      "x": 180
     },
     "facing=east,glazed_facing=east,half=top,shape=inner_right": {
       "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing3",
-      "x": 180
+      "uvlock": true,
+      "x": 180,
+      "y": 90
     },
     "facing=east,glazed_facing=east,half=top,shape=outer_left": {
       "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing3",
-      "x": 180,
-      "y": 270
+      "uvlock": true,
+      "x": 180
     },
     "facing=east,glazed_facing=east,half=top,shape=outer_right": {
       "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing3",
-      "x": 180
+      "uvlock": true,
+      "x": 180,
+      "y": 90
     },
     "facing=east,glazed_facing=east,half=top,shape=straight": {
       "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_facing3",
+      "uvlock": true,
       "x": 180
     },
     "facing=east,glazed_facing=north,half=bottom,shape=inner_left": {
       "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing2",
+      "uvlock": true,
       "y": 270
     },
     "facing=east,glazed_facing=north,half=bottom,shape=inner_right": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing2"
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing2",
+      "uvlock": true
     },
     "facing=east,glazed_facing=north,half=bottom,shape=outer_left": {
       "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing2",
+      "uvlock": true,
       "y": 270
     },
     "facing=east,glazed_facing=north,half=bottom,shape=outer_right": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing2"
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing2",
+      "uvlock": true
     },
     "facing=east,glazed_facing=north,half=bottom,shape=straight": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_facing2"
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_facing2",
+      "uvlock": true
     },
     "facing=east,glazed_facing=north,half=top,shape=inner_left": {
       "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing2",
-      "x": 180,
-      "y": 270
+      "uvlock": true,
+      "x": 180
     },
     "facing=east,glazed_facing=north,half=top,shape=inner_right": {
       "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing2",
-      "x": 180
+      "uvlock": true,
+      "x": 180,
+      "y": 90
     },
     "facing=east,glazed_facing=north,half=top,shape=outer_left": {
       "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing2",
-      "x": 180,
-      "y": 270
+      "uvlock": true,
+      "x": 180
     },
     "facing=east,glazed_facing=north,half=top,shape=outer_right": {
       "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing2",
-      "x": 180
+      "uvlock": true,
+      "x": 180,
+      "y": 90
     },
     "facing=east,glazed_facing=north,half=top,shape=straight": {
       "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_facing2",
+      "uvlock": true,
       "x": 180
     },
     "facing=east,glazed_facing=south,half=bottom,shape=inner_left": {
       "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner",
+      "uvlock": true,
       "y": 270
     },
     "facing=east,glazed_facing=south,half=bottom,shape=inner_right": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner"
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner",
+      "uvlock": true
     },
     "facing=east,glazed_facing=south,half=bottom,shape=outer_left": {
       "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer",
+      "uvlock": true,
       "y": 270
     },
     "facing=east,glazed_facing=south,half=bottom,shape=outer_right": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer"
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer",
+      "uvlock": true
     },
     "facing=east,glazed_facing=south,half=bottom,shape=straight": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs"
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs",
+      "uvlock": true
     },
     "facing=east,glazed_facing=south,half=top,shape=inner_left": {
       "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner",
-      "x": 180,
-      "y": 270
+      "uvlock": true,
+      "x": 180
     },
     "facing=east,glazed_facing=south,half=top,shape=inner_right": {
       "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner",
-      "x": 180
+      "uvlock": true,
+      "x": 180,
+      "y": 90
     },
     "facing=east,glazed_facing=south,half=top,shape=outer_left": {
       "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer",
-      "x": 180,
-      "y": 270
+      "uvlock": true,
+      "x": 180
     },
     "facing=east,glazed_facing=south,half=top,shape=outer_right": {
       "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer",
-      "x": 180
+      "uvlock": true,
+      "x": 180,
+      "y": 90
     },
     "facing=east,glazed_facing=south,half=top,shape=straight": {
       "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs",
+      "uvlock": true,
       "x": 180
     },
     "facing=east,glazed_facing=west,half=bottom,shape=inner_left": {
       "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing1",
+      "uvlock": true,
       "y": 270
     },
     "facing=east,glazed_facing=west,half=bottom,shape=inner_right": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing1"
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing1",
+      "uvlock": true
     },
     "facing=east,glazed_facing=west,half=bottom,shape=outer_left": {
       "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing1",
+      "uvlock": true,
       "y": 270
     },
     "facing=east,glazed_facing=west,half=bottom,shape=outer_right": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing1"
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing1",
+      "uvlock": true
     },
     "facing=east,glazed_facing=west,half=bottom,shape=straight": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_facing1"
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_facing1",
+      "uvlock": true
     },
     "facing=east,glazed_facing=west,half=top,shape=inner_left": {
       "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing1",
-      "x": 180,
-      "y": 270
+      "uvlock": true,
+      "x": 180
     },
     "facing=east,glazed_facing=west,half=top,shape=inner_right": {
       "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing1",
-      "x": 180
+      "uvlock": true,
+      "x": 180,
+      "y": 90
     },
     "facing=east,glazed_facing=west,half=top,shape=outer_left": {
       "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing1",
-      "x": 180,
-      "y": 270
+      "uvlock": true,
+      "x": 180
     },
     "facing=east,glazed_facing=west,half=top,shape=outer_right": {
       "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing1",
-      "x": 180
+      "uvlock": true,
+      "x": 180,
+      "y": 90
     },
     "facing=east,glazed_facing=west,half=top,shape=straight": {
       "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_facing1",
+      "uvlock": true,
       "x": 180
     },
     "facing=north,glazed_facing=east,half=bottom,shape=inner_left": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing3",
+      "uvlock": true,
       "y": 180
     },
     "facing=north,glazed_facing=east,half=bottom,shape=inner_right": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing3",
+      "uvlock": true,
       "y": 270
     },
     "facing=north,glazed_facing=east,half=bottom,shape=outer_left": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing3",
+      "uvlock": true,
       "y": 180
     },
     "facing=north,glazed_facing=east,half=bottom,shape=outer_right": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing3",
+      "uvlock": true,
       "y": 270
     },
     "facing=north,glazed_facing=east,half=bottom,shape=straight": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_facing3",
+      "uvlock": true,
       "y": 270
     },
     "facing=north,glazed_facing=east,half=top,shape=inner_left": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing3",
+      "uvlock": true,
       "x": 180,
-      "y": 180
+      "y": 270
     },
     "facing=north,glazed_facing=east,half=top,shape=inner_right": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner",
-      "x": 180,
-      "y": 270
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing3",
+      "uvlock": true,
+      "x": 180
     },
     "facing=north,glazed_facing=east,half=top,shape=outer_left": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer",
-      "x": 180,
-      "y": 180
-    },
-    "facing=north,glazed_facing=east,half=top,shape=outer_right": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing3",
+      "uvlock": true,
       "x": 180,
       "y": 270
     },
+    "facing=north,glazed_facing=east,half=top,shape=outer_right": {
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing3",
+      "uvlock": true,
+      "x": 180
+    },
     "facing=north,glazed_facing=east,half=top,shape=straight": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_facing3",
+      "uvlock": true,
       "x": 180,
       "y": 270
     },
     "facing=north,glazed_facing=north,half=bottom,shape=inner_left": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing3",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing2",
+      "uvlock": true,
       "y": 180
     },
     "facing=north,glazed_facing=north,half=bottom,shape=inner_right": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing3",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing2",
+      "uvlock": true,
       "y": 270
     },
     "facing=north,glazed_facing=north,half=bottom,shape=outer_left": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing3",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing2",
+      "uvlock": true,
       "y": 180
     },
     "facing=north,glazed_facing=north,half=bottom,shape=outer_right": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing3",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing2",
+      "uvlock": true,
       "y": 270
     },
     "facing=north,glazed_facing=north,half=bottom,shape=straight": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_facing3",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_facing2",
+      "uvlock": true,
       "y": 270
     },
     "facing=north,glazed_facing=north,half=top,shape=inner_left": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing3",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing2",
+      "uvlock": true,
       "x": 180,
-      "y": 180
+      "y": 270
     },
     "facing=north,glazed_facing=north,half=top,shape=inner_right": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing3",
-      "x": 180,
-      "y": 270
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing2",
+      "uvlock": true,
+      "x": 180
     },
     "facing=north,glazed_facing=north,half=top,shape=outer_left": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing3",
-      "x": 180,
-      "y": 180
-    },
-    "facing=north,glazed_facing=north,half=top,shape=outer_right": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing3",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing2",
+      "uvlock": true,
       "x": 180,
       "y": 270
     },
+    "facing=north,glazed_facing=north,half=top,shape=outer_right": {
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing2",
+      "uvlock": true,
+      "x": 180
+    },
     "facing=north,glazed_facing=north,half=top,shape=straight": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_facing3",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_facing2",
+      "uvlock": true,
       "x": 180,
       "y": 270
     },
     "facing=north,glazed_facing=south,half=bottom,shape=inner_left": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing1",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner",
+      "uvlock": true,
       "y": 180
     },
     "facing=north,glazed_facing=south,half=bottom,shape=inner_right": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing1",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner",
+      "uvlock": true,
       "y": 270
     },
     "facing=north,glazed_facing=south,half=bottom,shape=outer_left": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing1",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer",
+      "uvlock": true,
       "y": 180
     },
     "facing=north,glazed_facing=south,half=bottom,shape=outer_right": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing1",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer",
+      "uvlock": true,
       "y": 270
     },
     "facing=north,glazed_facing=south,half=bottom,shape=straight": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_facing1",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs",
+      "uvlock": true,
       "y": 270
     },
     "facing=north,glazed_facing=south,half=top,shape=inner_left": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing1",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner",
+      "uvlock": true,
       "x": 180,
-      "y": 180
+      "y": 270
     },
     "facing=north,glazed_facing=south,half=top,shape=inner_right": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing1",
-      "x": 180,
-      "y": 270
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner",
+      "uvlock": true,
+      "x": 180
     },
     "facing=north,glazed_facing=south,half=top,shape=outer_left": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing1",
-      "x": 180,
-      "y": 180
-    },
-    "facing=north,glazed_facing=south,half=top,shape=outer_right": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing1",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer",
+      "uvlock": true,
       "x": 180,
       "y": 270
     },
+    "facing=north,glazed_facing=south,half=top,shape=outer_right": {
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer",
+      "uvlock": true,
+      "x": 180
+    },
     "facing=north,glazed_facing=south,half=top,shape=straight": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_facing1",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs",
+      "uvlock": true,
       "x": 180,
       "y": 270
     },
     "facing=north,glazed_facing=west,half=bottom,shape=inner_left": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing2",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing1",
+      "uvlock": true,
       "y": 180
     },
     "facing=north,glazed_facing=west,half=bottom,shape=inner_right": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing2",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing1",
+      "uvlock": true,
       "y": 270
     },
     "facing=north,glazed_facing=west,half=bottom,shape=outer_left": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing2",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing1",
+      "uvlock": true,
       "y": 180
     },
     "facing=north,glazed_facing=west,half=bottom,shape=outer_right": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing2",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing1",
+      "uvlock": true,
       "y": 270
     },
     "facing=north,glazed_facing=west,half=bottom,shape=straight": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_facing2",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_facing1",
+      "uvlock": true,
       "y": 270
     },
     "facing=north,glazed_facing=west,half=top,shape=inner_left": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing2",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing1",
+      "uvlock": true,
       "x": 180,
-      "y": 180
+      "y": 270
     },
     "facing=north,glazed_facing=west,half=top,shape=inner_right": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing2",
-      "x": 180,
-      "y": 270
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing1",
+      "uvlock": true,
+      "x": 180
     },
     "facing=north,glazed_facing=west,half=top,shape=outer_left": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing2",
-      "x": 180,
-      "y": 180
-    },
-    "facing=north,glazed_facing=west,half=top,shape=outer_right": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing2",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing1",
+      "uvlock": true,
       "x": 180,
       "y": 270
     },
+    "facing=north,glazed_facing=west,half=top,shape=outer_right": {
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing1",
+      "uvlock": true,
+      "x": 180
+    },
     "facing=north,glazed_facing=west,half=top,shape=straight": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_facing2",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_facing1",
+      "uvlock": true,
       "x": 180,
       "y": 270
     },
     "facing=south,glazed_facing=east,half=bottom,shape=inner_left": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing2"
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing3",
+      "uvlock": true
     },
     "facing=south,glazed_facing=east,half=bottom,shape=inner_right": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing2",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing3",
+      "uvlock": true,
       "y": 90
     },
     "facing=south,glazed_facing=east,half=bottom,shape=outer_left": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing2"
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing3",
+      "uvlock": true
     },
     "facing=south,glazed_facing=east,half=bottom,shape=outer_right": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing2",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing3",
+      "uvlock": true,
       "y": 90
     },
     "facing=south,glazed_facing=east,half=bottom,shape=straight": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_facing2",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_facing3",
+      "uvlock": true,
       "y": 90
     },
     "facing=south,glazed_facing=east,half=top,shape=inner_left": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing2",
-      "x": 180
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing3",
+      "uvlock": true,
+      "x": 180,
+      "y": 90
     },
     "facing=south,glazed_facing=east,half=top,shape=inner_right": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing2",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing3",
+      "uvlock": true,
       "x": 180,
-      "y": 90
+      "y": 180
     },
     "facing=south,glazed_facing=east,half=top,shape=outer_left": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing2",
-      "x": 180
-    },
-    "facing=south,glazed_facing=east,half=top,shape=outer_right": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing2",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing3",
+      "uvlock": true,
       "x": 180,
       "y": 90
     },
+    "facing=south,glazed_facing=east,half=top,shape=outer_right": {
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing3",
+      "uvlock": true,
+      "x": 180,
+      "y": 180
+    },
     "facing=south,glazed_facing=east,half=top,shape=straight": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_facing2",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_facing3",
+      "uvlock": true,
       "x": 180,
       "y": 90
     },
     "facing=south,glazed_facing=north,half=bottom,shape=inner_left": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing1"
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing2",
+      "uvlock": true
     },
     "facing=south,glazed_facing=north,half=bottom,shape=inner_right": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing1",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing2",
+      "uvlock": true,
       "y": 90
     },
     "facing=south,glazed_facing=north,half=bottom,shape=outer_left": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing1"
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing2",
+      "uvlock": true
     },
     "facing=south,glazed_facing=north,half=bottom,shape=outer_right": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing1",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing2",
+      "uvlock": true,
       "y": 90
     },
     "facing=south,glazed_facing=north,half=bottom,shape=straight": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_facing1",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_facing2",
+      "uvlock": true,
       "y": 90
     },
     "facing=south,glazed_facing=north,half=top,shape=inner_left": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing1",
-      "x": 180
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing2",
+      "uvlock": true,
+      "x": 180,
+      "y": 90
     },
     "facing=south,glazed_facing=north,half=top,shape=inner_right": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing1",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing2",
+      "uvlock": true,
       "x": 180,
-      "y": 90
+      "y": 180
     },
     "facing=south,glazed_facing=north,half=top,shape=outer_left": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing1",
-      "x": 180
-    },
-    "facing=south,glazed_facing=north,half=top,shape=outer_right": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing1",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing2",
+      "uvlock": true,
       "x": 180,
       "y": 90
     },
+    "facing=south,glazed_facing=north,half=top,shape=outer_right": {
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing2",
+      "uvlock": true,
+      "x": 180,
+      "y": 180
+    },
     "facing=south,glazed_facing=north,half=top,shape=straight": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_facing1",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_facing2",
+      "uvlock": true,
       "x": 180,
       "y": 90
     },
     "facing=south,glazed_facing=south,half=bottom,shape=inner_left": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing3"
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner",
+      "uvlock": true
     },
     "facing=south,glazed_facing=south,half=bottom,shape=inner_right": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing3",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner",
+      "uvlock": true,
       "y": 90
     },
     "facing=south,glazed_facing=south,half=bottom,shape=outer_left": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing3"
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer",
+      "uvlock": true
     },
     "facing=south,glazed_facing=south,half=bottom,shape=outer_right": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing3",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer",
+      "uvlock": true,
       "y": 90
     },
     "facing=south,glazed_facing=south,half=bottom,shape=straight": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_facing3",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs",
+      "uvlock": true,
       "y": 90
     },
     "facing=south,glazed_facing=south,half=top,shape=inner_left": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing3",
-      "x": 180
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner",
+      "uvlock": true,
+      "x": 180,
+      "y": 90
     },
     "facing=south,glazed_facing=south,half=top,shape=inner_right": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing3",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner",
+      "uvlock": true,
       "x": 180,
-      "y": 90
+      "y": 180
     },
     "facing=south,glazed_facing=south,half=top,shape=outer_left": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing3",
-      "x": 180
-    },
-    "facing=south,glazed_facing=south,half=top,shape=outer_right": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing3",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer",
+      "uvlock": true,
       "x": 180,
       "y": 90
     },
+    "facing=south,glazed_facing=south,half=top,shape=outer_right": {
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer",
+      "uvlock": true,
+      "x": 180,
+      "y": 180
+    },
     "facing=south,glazed_facing=south,half=top,shape=straight": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_facing3",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs",
+      "uvlock": true,
       "x": 180,
       "y": 90
     },
     "facing=south,glazed_facing=west,half=bottom,shape=inner_left": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner"
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing1",
+      "uvlock": true
     },
     "facing=south,glazed_facing=west,half=bottom,shape=inner_right": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing1",
+      "uvlock": true,
       "y": 90
     },
     "facing=south,glazed_facing=west,half=bottom,shape=outer_left": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer"
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing1",
+      "uvlock": true
     },
     "facing=south,glazed_facing=west,half=bottom,shape=outer_right": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing1",
+      "uvlock": true,
       "y": 90
     },
     "facing=south,glazed_facing=west,half=bottom,shape=straight": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_facing1",
+      "uvlock": true,
       "y": 90
     },
     "facing=south,glazed_facing=west,half=top,shape=inner_left": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner",
-      "x": 180
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing1",
+      "uvlock": true,
+      "x": 180,
+      "y": 90
     },
     "facing=south,glazed_facing=west,half=top,shape=inner_right": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing1",
+      "uvlock": true,
       "x": 180,
-      "y": 90
+      "y": 180
     },
     "facing=south,glazed_facing=west,half=top,shape=outer_left": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer",
-      "x": 180
-    },
-    "facing=south,glazed_facing=west,half=top,shape=outer_right": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing1",
+      "uvlock": true,
       "x": 180,
       "y": 90
     },
+    "facing=south,glazed_facing=west,half=top,shape=outer_right": {
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing1",
+      "uvlock": true,
+      "x": 180,
+      "y": 180
+    },
     "facing=south,glazed_facing=west,half=top,shape=straight": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_facing1",
+      "uvlock": true,
       "x": 180,
       "y": 90
     },
     "facing=west,glazed_facing=east,half=bottom,shape=inner_left": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing1",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing3",
+      "uvlock": true,
       "y": 90
     },
     "facing=west,glazed_facing=east,half=bottom,shape=inner_right": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing1",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing3",
+      "uvlock": true,
       "y": 180
     },
     "facing=west,glazed_facing=east,half=bottom,shape=outer_left": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing1",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing3",
+      "uvlock": true,
       "y": 90
     },
     "facing=west,glazed_facing=east,half=bottom,shape=outer_right": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing1",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing3",
+      "uvlock": true,
       "y": 180
     },
     "facing=west,glazed_facing=east,half=bottom,shape=straight": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_facing1",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_facing3",
+      "uvlock": true,
       "y": 180
     },
     "facing=west,glazed_facing=east,half=top,shape=inner_left": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing1",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing3",
+      "uvlock": true,
       "x": 180,
-      "y": 90
+      "y": 180
     },
     "facing=west,glazed_facing=east,half=top,shape=inner_right": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing1",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing3",
+      "uvlock": true,
       "x": 180,
-      "y": 180
+      "y": 270
     },
     "facing=west,glazed_facing=east,half=top,shape=outer_left": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing1",
-      "x": 180,
-      "y": 90
-    },
-    "facing=west,glazed_facing=east,half=top,shape=outer_right": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing1",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing3",
+      "uvlock": true,
       "x": 180,
       "y": 180
     },
+    "facing=west,glazed_facing=east,half=top,shape=outer_right": {
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing3",
+      "uvlock": true,
+      "x": 180,
+      "y": 270
+    },
     "facing=west,glazed_facing=east,half=top,shape=straight": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_facing1",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_facing3",
+      "uvlock": true,
       "x": 180,
       "y": 180
     },
     "facing=west,glazed_facing=north,half=bottom,shape=inner_left": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing2",
+      "uvlock": true,
       "y": 90
     },
     "facing=west,glazed_facing=north,half=bottom,shape=inner_right": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing2",
+      "uvlock": true,
       "y": 180
     },
     "facing=west,glazed_facing=north,half=bottom,shape=outer_left": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing2",
+      "uvlock": true,
       "y": 90
     },
     "facing=west,glazed_facing=north,half=bottom,shape=outer_right": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing2",
+      "uvlock": true,
       "y": 180
     },
     "facing=west,glazed_facing=north,half=bottom,shape=straight": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_facing2",
+      "uvlock": true,
       "y": 180
     },
     "facing=west,glazed_facing=north,half=top,shape=inner_left": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing2",
+      "uvlock": true,
       "x": 180,
-      "y": 90
+      "y": 180
     },
     "facing=west,glazed_facing=north,half=top,shape=inner_right": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing2",
+      "uvlock": true,
       "x": 180,
-      "y": 180
+      "y": 270
     },
     "facing=west,glazed_facing=north,half=top,shape=outer_left": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer",
-      "x": 180,
-      "y": 90
-    },
-    "facing=west,glazed_facing=north,half=top,shape=outer_right": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing2",
+      "uvlock": true,
       "x": 180,
       "y": 180
     },
+    "facing=west,glazed_facing=north,half=top,shape=outer_right": {
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing2",
+      "uvlock": true,
+      "x": 180,
+      "y": 270
+    },
     "facing=west,glazed_facing=north,half=top,shape=straight": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_facing2",
+      "uvlock": true,
       "x": 180,
       "y": 180
     },
     "facing=west,glazed_facing=south,half=bottom,shape=inner_left": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing2",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner",
+      "uvlock": true,
       "y": 90
     },
     "facing=west,glazed_facing=south,half=bottom,shape=inner_right": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing2",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner",
+      "uvlock": true,
       "y": 180
     },
     "facing=west,glazed_facing=south,half=bottom,shape=outer_left": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing2",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer",
+      "uvlock": true,
       "y": 90
     },
     "facing=west,glazed_facing=south,half=bottom,shape=outer_right": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing2",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer",
+      "uvlock": true,
       "y": 180
     },
     "facing=west,glazed_facing=south,half=bottom,shape=straight": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_facing2",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs",
+      "uvlock": true,
       "y": 180
     },
     "facing=west,glazed_facing=south,half=top,shape=inner_left": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing2",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner",
+      "uvlock": true,
       "x": 180,
-      "y": 90
+      "y": 180
     },
     "facing=west,glazed_facing=south,half=top,shape=inner_right": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing2",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner",
+      "uvlock": true,
       "x": 180,
-      "y": 180
+      "y": 270
     },
     "facing=west,glazed_facing=south,half=top,shape=outer_left": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing2",
-      "x": 180,
-      "y": 90
-    },
-    "facing=west,glazed_facing=south,half=top,shape=outer_right": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing2",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer",
+      "uvlock": true,
       "x": 180,
       "y": 180
     },
+    "facing=west,glazed_facing=south,half=top,shape=outer_right": {
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer",
+      "uvlock": true,
+      "x": 180,
+      "y": 270
+    },
     "facing=west,glazed_facing=south,half=top,shape=straight": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_facing2",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs",
+      "uvlock": true,
       "x": 180,
       "y": 180
     },
     "facing=west,glazed_facing=west,half=bottom,shape=inner_left": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing3",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing1",
+      "uvlock": true,
       "y": 90
     },
     "facing=west,glazed_facing=west,half=bottom,shape=inner_right": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing3",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing1",
+      "uvlock": true,
       "y": 180
     },
     "facing=west,glazed_facing=west,half=bottom,shape=outer_left": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing3",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing1",
+      "uvlock": true,
       "y": 90
     },
     "facing=west,glazed_facing=west,half=bottom,shape=outer_right": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing3",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing1",
+      "uvlock": true,
       "y": 180
     },
     "facing=west,glazed_facing=west,half=bottom,shape=straight": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_facing3",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_facing1",
+      "uvlock": true,
       "y": 180
     },
     "facing=west,glazed_facing=west,half=top,shape=inner_left": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing3",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing1",
+      "uvlock": true,
       "x": 180,
-      "y": 90
+      "y": 180
     },
     "facing=west,glazed_facing=west,half=top,shape=inner_right": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing3",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_inner_facing1",
+      "uvlock": true,
       "x": 180,
-      "y": 180
+      "y": 270
     },
     "facing=west,glazed_facing=west,half=top,shape=outer_left": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing3",
-      "x": 180,
-      "y": 90
-    },
-    "facing=west,glazed_facing=west,half=top,shape=outer_right": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing3",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing1",
+      "uvlock": true,
       "x": 180,
       "y": 180
     },
+    "facing=west,glazed_facing=west,half=top,shape=outer_right": {
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_outer_facing1",
+      "uvlock": true,
+      "x": 180,
+      "y": 270
+    },
     "facing=west,glazed_facing=west,half=top,shape=straight": {
-      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_facing3",
+      "model": "morebuildingblocks:block/blue_glazed_terracotta_stairs_facing1",
+      "uvlock": true,
       "x": 180,
       "y": 180
     }
