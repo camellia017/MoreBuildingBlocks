@@ -82,7 +82,7 @@ public class MBLanguageProvider implements DataProvider {
 		name("magenta_glazed_terracotta", "Magenta Glazed Terracotta", "品红色带釉陶瓦");
 		name("pink_glazed_terracotta", "Pink Glazed Terracotta", "粉红色带釉陶瓦");
 
-		// The 96 vanilla materials the eighth blocks are cut from. Vanilla's en_us.json is
+		// The 100 vanilla materials the eighth blocks are cut from. Vanilla's en_us.json is
 		// on the data generator's classpath and is read below, but its zh_cn.json is not:
 		// the 26.3 client jar only ships en_us.json, and the other languages live in the
 		// asset index. The Chinese column is therefore written out here, spelled exactly
@@ -180,6 +180,10 @@ public class MBLanguageProvider implements DataProvider {
 		name("tuff", "Tuff", "凝灰岩");
 		name("tuff_bricks", "Tuff Bricks", "凝灰岩砖");
 		name("warped_planks", "Warped Planks", "诡异木板");
+		name("waxed_cut_copper", "Waxed Cut Copper", "涂蜡的切制铜块");
+		name("waxed_exposed_cut_copper", "Waxed Exposed Cut Copper", "涂蜡的斑驳切制铜块");
+		name("waxed_oxidized_cut_copper", "Waxed Oxidized Cut Copper", "涂蜡的氧化切制铜块");
+		name("waxed_weathered_cut_copper", "Waxed Weathered Cut Copper", "涂蜡的锈蚀切制铜块");
 		name("weathered_cut_copper", "Weathered Cut Copper", "锈蚀的切制铜块");
 		name("white_concrete", "White Concrete", "白色混凝土");
 		name("white_wool", "White Wool", "白色羊毛");

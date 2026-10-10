@@ -1,6 +1,7 @@
 package com.camelie.morebuildingblocks.client.gametest;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -33,6 +34,7 @@ import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.ColorCollection;
 import net.minecraft.world.level.block.CrossCollisionBlock;
 import net.minecraft.world.level.block.IronBarsBlock;
 import net.minecraft.world.level.block.SlabBlock;
@@ -489,9 +491,9 @@ public class MBClientGameTest implements FabricClientGameTest {
 	}
 
 	/**
-	 * Checks where the eighths sit in the game's own two tabs: not between the stairs of their
-	 * colour, but as one run behind all of them, and likewise for the copper ones behind their four
-	 * weatherings.
+	 * Checks where the eighths sit in the game's own two tabs: not inside a material's own run of
+	 * blocks, stairs and slabs, but as one run of their own behind it, colour by colour, behind the
+	 * slabs of the material they are cut from.
 	 *
 	 * <p>This is what the player sees in the creative menu, so it is read from the tabs' own display
 	 * items rather than from the plugin that puts the eighths there.
@@ -507,40 +509,63 @@ public class MBClientGameTest implements FabricClientGameTest {
 					"the game's own tabs list nothing to check: " + coloured.size() + " coloured items, "
 							+ building.size() + " building items");
 
-			Map<Item, DyeColor> colourOf = new HashMap<>();
+			// The colours are read back from the game's own run of wool: DyeColor keeps its constants
+			// in the order the dyes were added, not in the order the tab lists them.
+			List<DyeColor> colours = colourOrder(coloured);
 
-			for (DyeColor colour : DyeColor.values()) {
-				List<Item> ofColour = eighthsOf(Set.of(Blocks.WOOL.pick(colour), Blocks.CONCRETE.pick(colour),
-						Blocks.DYED_TERRACOTTA.pick(colour), Blocks.GLAZED_TERRACOTTA.pick(colour)));
+			require(colours.size() == DyeColor.values().length,
+					"the coloured tab lists " + colours.size() + " colours of wool, expected "
+							+ DyeColor.values().length + ": " + colours);
 
-				require(ofColour.size() == 4,
-						"the mod has " + ofColour.size() + " eighths for colour " + colour + ", expected four");
+			// Wool and concrete: the sixteen eighths of the material, in colour order, as one run
+			// behind the whole run of that material's slabs.
+			assertRunBehind(coloured, dyedEighths(colours, Blocks.WOOL), dyedItems(colours, Blocks.WOOL_SLAB),
+					"the wool eighths");
+			assertRunBehind(coloured, dyedEighths(colours, Blocks.CONCRETE), dyedItems(colours, Blocks.CONCRETE_SLAB),
+					"the concrete eighths");
 
-				for (Item item : ofColour) {
-					colourOf.put(item, colour);
-				}
+			// Terracotta: the game cut no stairs and no slabs from it, so the forms this mod built go
+			// in behind the game's own dyed blocks - the plain family first, then the sixteen dyed.
+			List<Item> terracottaStairs = new ArrayList<>();
+			List<Item> terracottaSlabs = new ArrayList<>();
+			List<Item> terracottaEighths = new ArrayList<>();
+			MBEighths.Material plain = terracottaFamily(Blocks.TERRACOTTA);
+			terracottaStairs.add(plain.stairs().asItem());
+			terracottaSlabs.add(plain.slab().asItem());
+			terracottaEighths.add(plain.eighth().asItem());
 
-				assertBehindAll(coloured, colourForms(colour), ofColour, "colour " + colour);
+			List<Item> glazedStairs = new ArrayList<>();
+			List<Item> glazedSlabs = new ArrayList<>();
+			List<Item> glazedEighths = new ArrayList<>();
+
+			for (DyeColor colour : colours) {
+				MBEighths.Material dyed = terracottaFamily(Blocks.DYED_TERRACOTTA.pick(colour));
+				terracottaStairs.add(dyed.stairs().asItem());
+				terracottaSlabs.add(dyed.slab().asItem());
+				terracottaEighths.add(dyed.eighth().asItem());
+
+				MBEighths.Material glazed = terracottaFamily(Blocks.GLAZED_TERRACOTTA.pick(colour));
+				glazedStairs.add(glazed.stairs().asItem());
+				glazedSlabs.add(glazed.slab().asItem());
+				glazedEighths.add(glazed.eighth().asItem());
 			}
 
-			// Every colour is one run of four that no other colour interrupts: the eighths of a colour
-			// sit together, in whatever order the game lists its own colours.
-			List<DyeColor> runs = new ArrayList<>();
+			List<Item> terracotta = new ArrayList<>(terracottaStairs);
+			terracotta.addAll(terracottaSlabs);
+			terracotta.addAll(terracottaEighths);
 
-			for (Item item : coloured) {
-				DyeColor colour = colourOf.get(item);
+			assertRunBehind(coloured, terracotta, dyedItems(colours, Blocks.DYED_TERRACOTTA),
+					"the terracotta stairs, slabs and eighths of this mod");
 
-				if (colour != null && (runs.isEmpty() || runs.get(runs.size() - 1) != colour)) {
-					require(!runs.contains(colour),
-							"the eighths of colour " + colour + " are split into more than one run: " + runs);
-					runs.add(colour);
-				}
-			}
+			List<Item> glazed = new ArrayList<>(glazedStairs);
+			glazed.addAll(glazedSlabs);
+			glazed.addAll(glazedEighths);
 
-			require(runs.size() == DyeColor.values().length,
-					"the coloured tab lists eighths of " + runs.size() + " colours, expected "
-							+ DyeColor.values().length + ": " + runs);
+			assertRunBehind(coloured, glazed, dyedItems(colours, Blocks.GLAZED_TERRACOTTA),
+					"the glazed terracotta stairs, slabs and eighths of this mod");
 
+			// Copper: the four weatherings this mod cut an eighth from, and then the same four waxed,
+			// which the game lists as a second family of their own.
 			List<Block> copperBases = List.of(Blocks.CUT_COPPER.weathering().unaffected(), Blocks.CUT_COPPER.weathering().exposed(),
 					Blocks.CUT_COPPER.weathering().weathered(), Blocks.CUT_COPPER.weathering().oxidized());
 			List<Item> copper = eighthsOf(Set.copyOf(copperBases));
@@ -548,8 +573,85 @@ public class MBClientGameTest implements FabricClientGameTest {
 			require(copper.equals(copperBases.stream().map(base -> eighthOf(base).asItem()).toList()),
 					"the copper eighths are not declared from the least to the most weathered: " + copper);
 
-			assertBehindAll(building, copperForms(), copper, "copper");
+			assertRunBehind(building, copper, copperForms(), "the copper eighths");
+
+			List<Block> waxedBases = List.of(vanillaBlock("waxed_cut_copper"), vanillaBlock("waxed_exposed_cut_copper"),
+					vanillaBlock("waxed_weathered_cut_copper"), vanillaBlock("waxed_oxidized_cut_copper"));
+			List<Item> waxed = eighthsOf(Set.copyOf(waxedBases));
+
+			require(waxed.equals(waxedBases.stream().map(base -> eighthOf(base).asItem()).toList()),
+					"the waxed copper eighths are not declared from the least to the most weathered: " + waxed);
+
+			assertRunBehind(building, waxed, formsOf("waxed_cut_copper_stairs", "waxed_cut_copper_slab",
+					"waxed_exposed_cut_copper_stairs", "waxed_exposed_cut_copper_slab",
+					"waxed_weathered_cut_copper_stairs", "waxed_weathered_cut_copper_slab",
+					"waxed_oxidized_cut_copper_stairs", "waxed_oxidized_cut_copper_slab"), "the waxed copper eighths");
 		});
+	}
+
+	/** The order the game's own tab lists the dye colours in, read back from its run of wool. */
+	private static List<DyeColor> colourOrder(List<Item> order) {
+		List<DyeColor> colours = new ArrayList<>();
+
+		for (Item item : order) {
+			for (DyeColor colour : DyeColor.values()) {
+				if (!colours.contains(colour) && item == Blocks.WOOL.pick(colour).asItem()) {
+					colours.add(colour);
+					break;
+				}
+			}
+		}
+
+		return colours;
+	}
+
+	/** The eighth block items of one dyed material, in the order the tab lists the colours. */
+	private static List<Item> dyedEighths(List<DyeColor> colours, ColorCollection<Block> blocks) {
+		List<Item> items = new ArrayList<>();
+
+		for (DyeColor colour : colours) {
+			items.add(eighthOf(blocks.pick(colour)).asItem());
+		}
+
+		return items;
+	}
+
+	/** The items of one dyed block - wool, concrete or terracotta - in the order the tab lists them. */
+	private static List<Item> dyedItems(List<DyeColor> colours, ColorCollection<Block> blocks) {
+		List<Item> items = new ArrayList<>();
+
+		for (DyeColor colour : colours) {
+			items.add(blocks.pick(colour).asItem());
+		}
+
+		return items;
+	}
+
+	/** The stairs, the slab and the eighth this mod built for one terracotta family. */
+	private static MBEighths.Material terracottaFamily(Block base) {
+		MBEighths.Material material = MBEighths.byBase(base);
+
+		require(material != null && material.modForms(),
+				"the mod has no own stairs and slab for the terracotta block " + base);
+
+		return material;
+	}
+
+	/** The items of the vanilla blocks with these ids. */
+	private static Set<Item> formsOf(String... paths) {
+		Set<Item> items = new HashSet<>();
+
+		for (String path : paths) {
+			items.add(vanillaBlock(path).asItem());
+		}
+
+		return items;
+	}
+
+	/** The vanilla block with this id, failing the test if the game has none. */
+	private static Block vanillaBlock(String path) {
+		return BuiltInRegistries.BLOCK.getOptional(Identifier.withDefaultNamespace(path))
+				.orElseThrow(() -> new IllegalStateException("vanilla has no block " + path));
 	}
 
 	/** The items of the eighth blocks cut from one of {@code bases}, in the order the mod declares them. */
@@ -563,12 +665,6 @@ public class MBClientGameTest implements FabricClientGameTest {
 		}
 
 		return items;
-	}
-
-	/** The items of the stairs and slabs the game dyed {@code colour}. */
-	private static Set<Item> colourForms(DyeColor colour) {
-		return Set.of(Blocks.WOOL_STAIRS.pick(colour).asItem(), Blocks.WOOL_SLAB.pick(colour).asItem(),
-				Blocks.CONCRETE_STAIRS.pick(colour).asItem(), Blocks.CONCRETE_SLAB.pick(colour).asItem());
 	}
 
 	/** The items of the stairs and slabs of the four cut copper weatherings. */
@@ -586,27 +682,32 @@ public class MBClientGameTest implements FabricClientGameTest {
 	}
 
 	/**
-	 * Requires {@code blocks} to be listed in {@code order} as one run, behind every item of
-	 * {@code forms}: the whole point of leaving the stairs of a colour or a weathering alone.
+	 * Requires {@code run} to be listed in {@code order} as one uninterrupted run, starting behind
+	 * every item of {@code anchors}: the whole point of leaving a material's own run of blocks,
+	 * stairs and slabs alone.
 	 */
-	private static void assertBehindAll(List<Item> order, Set<Item> forms, List<Item> blocks, String what) {
-		int first = order.indexOf(blocks.get(0));
-		int lastForm = -1;
+	private static void assertRunBehind(List<Item> order, List<Item> run, Collection<Item> anchors, String what) {
+		require(!run.isEmpty(), "there is nothing to check for " + what);
 
-		for (Item form : forms) {
-			lastForm = Math.max(lastForm, order.indexOf(form));
+		int first = order.indexOf(run.get(0));
+
+		require(first >= 0, "the tab lists none of " + what);
+
+		for (int index = 0; index < run.size(); index++) {
+			require(order.indexOf(run.get(index)) == first + index,
+					what + " are not listed one after another: " + run);
 		}
 
-		require(lastForm >= 0, "the tab lists none of the stairs or slabs of " + what);
+		int lastAnchor = -1;
 
-		for (int index = 0; index < blocks.size(); index++) {
-			require(order.indexOf(blocks.get(index)) == first + index,
-					"the eighths of " + what + " are not listed one after another: " + blocks);
+		for (Item anchor : anchors) {
+			lastAnchor = Math.max(lastAnchor, order.indexOf(anchor));
 		}
 
-		require(first > lastForm,
-				"an eighth of " + what + " is listed between its own stairs and slabs: it is at " + first
-						+ ", the last stair or slab at " + lastForm);
+		require(lastAnchor >= 0, "the tab lists nothing " + what + " could belong behind");
+		require(first > lastAnchor,
+				what + " cut into the run they belong behind: they start at " + first
+						+ ", the last of the blocks they follow is at " + lastAnchor);
 	}
 
 	/**
@@ -1685,8 +1786,8 @@ public class MBClientGameTest implements FabricClientGameTest {
 			ServerPlayer player = minecraftServer.getPlayerList().getPlayers().get(0);
 			List<MBEighths.Material> materials = MBEighths.materials();
 
-			// The 33 terracotta families of the mod's own and the 96 blocks the game cuts slabs from.
-			require(materials.size() == 129, "found " + materials.size() + " eighth materials, expected 129");
+			// The 33 terracotta families of the mod's own and the 100 blocks the game cuts slabs from.
+			require(materials.size() == 133, "found " + materials.size() + " eighth materials, expected 133");
 
 			for (MBEighths.Material material : materials) {
 				Identifier id = BuiltInRegistries.BLOCK.getKey(material.eighth());

@@ -16,7 +16,7 @@ import java.util.Map;
 
 /**
  * Every eighth block of the mod: one for each material that has something to cut it from, which is
- * every block of the game that is cut into slabs - 96 of them - plus the 33 terracotta families this
+ * every block of the game that is cut into slabs - 100 of them - plus the 33 terracotta families this
  * mod builds its stairs and slabs on, since vanilla cuts no slab or stair out of a terracotta.
  *
  * <p>An eighth block is one cell cut into eight cubes an eighth of a block on a side; which of them
@@ -47,7 +47,7 @@ public final class MBEighths {
 			register(family.base(), family.slab(), family.stairs());
 		}
 
-		// The 96 vanilla blocks that are cut into slabs, in id order. Terracotta is not among them -
+		// The 100 vanilla blocks that are cut into slabs, in id order. Terracotta is not among them -
 		// vanilla cuts no slab from it - which is exactly why the mod builds its own families above.
 		// Planks: the overworld woods, then the nether ones.
 		vanilla("oak_planks", "oak_slab", "oak_stairs");
@@ -148,11 +148,16 @@ public final class MBEighths {
 		vanilla("dark_prismarine", "dark_prismarine_slab", "dark_prismarine_stairs");
 		// Purpur.
 		vanilla("purpur_block", "purpur_slab", "purpur_stairs");
-		// Copper, from the least to the most weathered.
+		// Copper, from the least to the most weathered, and then the same four waxed: wax stops the
+		// block weathering, so both families are cut the same way and both are worth an eighth.
 		vanilla("cut_copper", "cut_copper_slab", "cut_copper_stairs");
 		vanilla("exposed_cut_copper", "exposed_cut_copper_slab", "exposed_cut_copper_stairs");
 		vanilla("weathered_cut_copper", "weathered_cut_copper_slab", "weathered_cut_copper_stairs");
 		vanilla("oxidized_cut_copper", "oxidized_cut_copper_slab", "oxidized_cut_copper_stairs");
+		vanilla("waxed_cut_copper", "waxed_cut_copper_slab", "waxed_cut_copper_stairs");
+		vanilla("waxed_exposed_cut_copper", "waxed_exposed_cut_copper_slab", "waxed_exposed_cut_copper_stairs");
+		vanilla("waxed_weathered_cut_copper", "waxed_weathered_cut_copper_slab", "waxed_weathered_cut_copper_stairs");
+		vanilla("waxed_oxidized_cut_copper", "waxed_oxidized_cut_copper_slab", "waxed_oxidized_cut_copper_stairs");
 		// Cinnabar and sulfur.
 		vanilla("cinnabar", "cinnabar_slab", "cinnabar_stairs");
 		vanilla("polished_cinnabar", "polished_cinnabar_slab", "polished_cinnabar_stairs");
@@ -188,7 +193,7 @@ public final class MBEighths {
 		/**
 		 * @return {@code true} when the stairs and the slab are this mod's own blocks. The 33
 		 *         terracotta families are cut from vanilla base blocks, but the forms the mod built for
-		 *         them are the mod's; the 96 vanilla materials keep the game's own, which is what
+		 *         them are the mod's; the 100 vanilla materials keep the game's own, which is what
 		 *         decides where an eighth block belongs in the creative inventory - next to the game's
 		 *         own slab and stairs, or next to the ones this mod built.
 		 */

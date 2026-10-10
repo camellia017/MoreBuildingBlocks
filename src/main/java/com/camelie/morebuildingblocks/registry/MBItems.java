@@ -46,7 +46,7 @@ public final class MBItems {
 	static {
 		// Every material in order: the forms cut from the block first - the stairs then the slab, as
 		// before - and the eighth block cut from that same block right after them, so that an eighth
-		// block always follows the forms of its parent block in the tab. The 96 vanilla materials
+		// block always follows the forms of its parent block in the tab. The 100 vanilla materials
 		// have no forms of this mod's to list: theirs are the game's own blocks and sit in the game's
 		// own tabs, which is where those eighth blocks are inserted too.
 		for (MBEighths.Material material : MBEighths.materials()) {

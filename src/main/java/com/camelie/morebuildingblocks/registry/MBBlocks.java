@@ -51,7 +51,7 @@ public final class MBBlocks {
 		MoreBuildingBlocks.LOGGER.info("Registered {} stair/slab pairs on top of vanilla terracotta blocks", FAMILIES.size() * 2);
 
 		// The eighth blocks of every material that is worth cutting them from: the 33 families above
-		// and the 96 vanilla blocks the game itself cuts slabs out of.
+		// and the 100 vanilla blocks the game itself cuts slabs out of.
 		MBEighths.bootstrap();
 		MoreBuildingBlocks.LOGGER.info("Registered {} eighth blocks", MBEighths.materials().size());
 	}

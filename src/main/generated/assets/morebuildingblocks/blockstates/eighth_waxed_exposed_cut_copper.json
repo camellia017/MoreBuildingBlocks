@@ -1,0 +1,68 @@
+{
+  "multipart": [
+    {
+      "apply": {
+        "model": "morebuildingblocks:block/eighth_waxed_exposed_cut_copper_lower_north_west"
+      },
+      "when": {
+        "lower_north_west": "true"
+      }
+    },
+    {
+      "apply": {
+        "model": "morebuildingblocks:block/eighth_waxed_exposed_cut_copper_lower_south_west"
+      },
+      "when": {
+        "lower_south_west": "true"
+      }
+    },
+    {
+      "apply": {
+        "model": "morebuildingblocks:block/eighth_waxed_exposed_cut_copper_upper_north_west"
+      },
+      "when": {
+        "upper_north_west": "true"
+      }
+    },
+    {
+      "apply": {
+        "model": "morebuildingblocks:block/eighth_waxed_exposed_cut_copper_upper_south_west"
+      },
+      "when": {
+        "upper_south_west": "true"
+      }
+    },
+    {
+      "apply": {
+        "model": "morebuildingblocks:block/eighth_waxed_exposed_cut_copper_lower_north_east"
+      },
+      "when": {
+        "lower_north_east": "true"
+      }
+    },
+    {
+      "apply": {
+        "model": "morebuildingblocks:block/eighth_waxed_exposed_cut_copper_lower_south_east"
+      },
+      "when": {
+        "lower_south_east": "true"
+      }
+    },
+    {
+      "apply": {
+        "model": "morebuildingblocks:block/eighth_waxed_exposed_cut_copper_upper_north_east"
+      },
+      "when": {
+        "upper_north_east": "true"
+      }
+    },
+    {
+      "apply": {
+        "model": "morebuildingblocks:block/eighth_waxed_exposed_cut_copper_upper_south_east"
+      },
+      "when": {
+        "upper_south_east": "true"
+      }
+    }
+  ]
+}

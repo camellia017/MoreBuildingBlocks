@@ -1,6 +1,7 @@
 package com.camelie.morebuildingblocks.client;
 
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -17,6 +18,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.ColorCollection;
 
 import com.camelie.morebuildingblocks.registry.MBEighths;
 
@@ -25,10 +27,14 @@ import com.camelie.morebuildingblocks.registry.MBEighths;
  * its smaller form in the same place.
  *
  * <p>Most materials are anchored on the block an eighth is cut from: the game's own slab where the
- * game has one, and the base block otherwise. The coloured materials and the copper ones are not,
- * because the game's own tabs walk those families block by block, and an eighth there would cut the
- * stairs in half. They wait instead until every stair of their colour, or of their weathering, has
- * been listed, and only then join the tab one after another.
+ * game has one, and the base block otherwise. The families the game lists as a run - the copper
+ * weatherings, the dyed wool, the dyed concrete and the terracotta - are not, because an eighth
+ * there would cut that run in half. They wait for the whole run instead: the eighths of a material
+ * follow the last stair or slab of that material, in the order the game's own tab lists them.
+ *
+ * <p>The terracotta is the one family in the coloured tab the game cut no stairs and no slabs from:
+ * this mod built them, so behind the game's run of dyed terracotta go the stairs, the slabs and the
+ * eighths of the family - the plain block first, then the sixteen the game dyed.
  *
  * <p>Which tab a material lands in is decided by asking each tab for its items and keeping only the
  * materials whose anchor is really there: inserting behind a missing anchor appends to the end of
@@ -44,18 +50,15 @@ public final class MBEighthTabPlugin {
 	}
 
 	/**
-	 * Building blocks: the copper eighths behind the whole run of copper stairs and slabs, from the
-	 * least to the most weathered, and every other eighth behind the block it is cut from.
+	 * Building blocks: the four eighths of one copper family behind the whole run of that family's
+	 * stairs and slabs - the plain weathering and then the waxed one - and every other eighth behind
+	 * the block it is cut from.
 	 */
 	private static void insertInBuildingBlocks(final FabricCreativeModeTabOutput output) {
 		Set<Item> tab = itemsOf(output);
-		List<MBEighths.Material> copper = materialsIn(material -> isCopper(material.base()));
-		List<ItemStack> eighths = eighthsOf(copper);
-		Set<Item> anchors = gameFormsOf(copper);
 
-		if (!eighths.isEmpty() && hasAnchor(output, anchors)) {
-			output.insertAfter(isIn(anchors), eighths, CreativeModeTab.TabVisibility.PARENT_AND_SEARCH_TABS);
-		}
+		insertCopper(output, false);
+		insertCopper(output, true);
 
 		for (MBEighths.Material material : MBEighths.materials()) {
 			if (!isCopper(material.base())) {
@@ -64,29 +67,88 @@ public final class MBEighthTabPlugin {
 		}
 	}
 
+	/** One copper family, the plain weathering or the waxed one, behind its own stairs and slabs. */
+	private static void insertCopper(final FabricCreativeModeTabOutput output, final boolean waxed) {
+		List<MBEighths.Material> copper =
+			materialsIn(material -> isCopper(material.base()) && isWaxed(material.base()) == waxed);
+
+		insertBehind(output, copper, gameFormsOf(copper));
+	}
+
 	/**
-	 * Coloured blocks: colour by colour, the eighths of that colour behind the whole run of stairs
-	 * and slabs the game dyed that colour.
+	 * Coloured blocks: the game lists the blocks it dyed a colour first and then the shapes it cut
+	 * from them, so the eighths of a material go behind the whole run of that material rather than
+	 * inside it. Every run follows the order the game's own tab lists the colours in, which is read
+	 * back from that tab: it is not the order of {@code DyeColor.values()}.
 	 */
 	private static void insertInColoredBlocks(final FabricCreativeModeTabOutput output) {
 		Set<Item> tab = itemsOf(output);
+		List<DyeColor> colours = colourOrderOf(output);
 
-		for (DyeColor colour : DyeColor.values()) {
-			List<MBEighths.Material> materials = materialsIn(material -> colourOf(material.base()) == colour);
-			List<ItemStack> eighths = eighthsOf(materials);
-			Set<Item> anchors = gameFormsOf(materials);
-
-			if (!eighths.isEmpty() && hasAnchor(output, anchors)) {
-				output.insertAfter(isIn(anchors), eighths, CreativeModeTab.TabVisibility.PARENT_AND_SEARCH_TABS);
-			}
-		}
+		insertBehind(output, materialsOf(colours, Blocks.WOOL), slabsOf(colours, Blocks.WOOL_SLAB));
+		insertBehind(output, materialsOf(colours, Blocks.CONCRETE), slabsOf(colours, Blocks.CONCRETE_SLAB));
+		insertTerracotta(output, colours, false);
+		insertTerracotta(output, colours, true);
 
 		// Whatever the game did not dye keeps the anchor it had: a material whose block happens to
 		// be in this tab as well must not lose its eighth just because it has no colour.
 		for (MBEighths.Material material : MBEighths.materials()) {
-			if (colourOf(material.base()) == null) {
+			if (colourOf(material.base()) == null && !isTerracotta(material.basePath())) {
 				insertBehindOwnBlock(output, tab, material);
 			}
+		}
+	}
+
+	/**
+	 * The terracotta families of one kind - the plain terracotta and the sixteen the game dyed, or
+	 * only the sixteen glazed ones - behind the game's own run of those blocks: first the stairs this
+	 * mod built, then its slabs, then its eighths, each form starting with the plain family where
+	 * there is one and then following the colour order.
+	 */
+	private static void insertTerracotta(final FabricCreativeModeTabOutput output, final List<DyeColor> colours, final boolean glazed) {
+		List<MBEighths.Material> families = new ArrayList<>();
+
+		if (!glazed) {
+			MBEighths.Material plain = MBEighths.byBase(Blocks.TERRACOTTA);
+
+			if (plain != null) {
+				families.add(plain);
+			}
+		}
+
+		families.addAll(materialsOf(colours, glazed ? Blocks.GLAZED_TERRACOTTA : Blocks.DYED_TERRACOTTA));
+
+		Set<Item> anchors = new HashSet<>();
+
+		for (DyeColor colour : colours) {
+			add(anchors, (glazed ? Blocks.GLAZED_TERRACOTTA : Blocks.DYED_TERRACOTTA).pick(colour));
+		}
+
+		List<ItemStack> forms = new ArrayList<>();
+
+		for (MBEighths.Material family : families) {
+			addForm(forms, family.stairs());
+		}
+
+		for (MBEighths.Material family : families) {
+			addForm(forms, family.slab());
+		}
+
+		for (MBEighths.Material family : families) {
+			addForm(forms, family.eighth());
+		}
+
+		if (!forms.isEmpty() && hasAnchor(output, anchors)) {
+			output.insertAfter(isIn(anchors), forms, CreativeModeTab.TabVisibility.PARENT_AND_SEARCH_TABS);
+		}
+	}
+
+	/** The eighths of those materials behind the items their own run of the game's tab ends on. */
+	private static void insertBehind(final FabricCreativeModeTabOutput output, final List<MBEighths.Material> materials, final Set<Item> anchors) {
+		List<ItemStack> eighths = eighthsOf(materials);
+
+		if (!eighths.isEmpty() && hasAnchor(output, anchors)) {
+			output.insertAfter(isIn(anchors), eighths, CreativeModeTab.TabVisibility.PARENT_AND_SEARCH_TABS);
 		}
 	}
 
@@ -115,6 +177,16 @@ public final class MBEighthTabPlugin {
 		return path.equals("cut_copper") || path.endsWith("_cut_copper");
 	}
 
+	/** Whether the game waxed a cut copper block, which stops it from weathering any further. */
+	private static boolean isWaxed(final Block base) {
+		return BuiltInRegistries.BLOCK.getKey(base).getPath().startsWith("waxed_");
+	}
+
+	/** Whether a material is one of the terracotta families, plain, dyed or glazed. */
+	private static boolean isTerracotta(final String basePath) {
+		return basePath.equals("terracotta") || basePath.endsWith("_terracotta");
+	}
+
 	/** The colour the game dyed {@code base}, or {@code null} when the game did not dye it at all. */
 	private static DyeColor colourOf(final Block base) {
 		for (DyeColor colour : DyeColor.values()) {
@@ -125,6 +197,53 @@ public final class MBEighthTabPlugin {
 		}
 
 		return null;
+	}
+
+	/**
+	 * The order the game lists the colours in, read back from its own run of wool: {@code DyeColor}
+	 * keeps its constants in the order the dyes were added, not in the order the tab shows them.
+	 */
+	private static List<DyeColor> colourOrderOf(final FabricCreativeModeTabOutput output) {
+		List<DyeColor> colours = new ArrayList<>();
+		Set<DyeColor> seen = EnumSet.noneOf(DyeColor.class);
+
+		for (ItemStack stack : output.getDisplayStacks()) {
+			for (DyeColor colour : DyeColor.values()) {
+				if (!seen.contains(colour) && stack.getItem() == Item.BY_BLOCK.get(Blocks.WOOL.pick(colour))) {
+					seen.add(colour);
+					colours.add(colour);
+					break;
+				}
+			}
+		}
+
+		return colours;
+	}
+
+	/** The materials cut from one dyed block - wool, concrete or terracotta - in colour order. */
+	private static List<MBEighths.Material> materialsOf(final List<DyeColor> colours, final ColorCollection<Block> blocks) {
+		List<MBEighths.Material> materials = new ArrayList<>();
+
+		for (DyeColor colour : colours) {
+			MBEighths.Material material = MBEighths.byBase(blocks.pick(colour));
+
+			if (material != null) {
+				materials.add(material);
+			}
+		}
+
+		return materials;
+	}
+
+	/** The slab items of one dyed block, i.e. the run of the game's tab a family of eighths ends on. */
+	private static Set<Item> slabsOf(final List<DyeColor> colours, final ColorCollection<Block> slabs) {
+		Set<Item> items = new HashSet<>();
+
+		for (DyeColor colour : colours) {
+			add(items, slabs.pick(colour));
+		}
+
+		return items;
 	}
 
 	/** Those materials of the mod that pass {@code filter}, in the order the mod registered them. */
@@ -170,6 +289,14 @@ public final class MBEighthTabPlugin {
 		}
 
 		return items;
+	}
+
+	private static void addForm(final List<ItemStack> forms, final Block block) {
+		Item item = block == null ? null : Item.BY_BLOCK.get(block);
+
+		if (item != null) {
+			forms.add(new ItemStack(item));
+		}
 	}
 
 	private static void add(final Set<Item> items, final Block block) {
