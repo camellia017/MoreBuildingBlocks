@@ -2,6 +2,7 @@ package com.camelie.morebuildingblocks.client.gametest;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -17,6 +18,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.Bootstrap;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -27,6 +29,8 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.item.CreativeModeTab;
+import net.minecraft.world.item.CreativeModeTabs;
+import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.CrossCollisionBlock;
@@ -258,6 +262,7 @@ public class MBClientGameTest implements FabricClientGameTest {
 			verifyEighths(server);
 			verifyDrops(context, server);
 			verifyCreativeTab(server);
+			verifyVanillaTabs(server);
 		}
 
 		// The singleplayer world has to be closed first: the client can only be in one
@@ -481,6 +486,146 @@ public class MBClientGameTest implements FabricClientGameTest {
 
 		return actual.size() < expected.size() ? "it stops after " + actual.size() + " blocks"
 				: "it lists " + actual.size() + " blocks, expected " + expected.size();
+	}
+
+	/**
+	 * Checks where the eighths sit in the game's own two tabs: not between the stairs of their
+	 * colour, but as one run behind all of them, and likewise for the copper ones behind their four
+	 * weatherings.
+	 *
+	 * <p>This is what the player sees in the creative menu, so it is read from the tabs' own display
+	 * items rather than from the plugin that puts the eighths there.
+	 */
+	private static void verifyVanillaTabs(TestServerContext server) {
+		server.runOnServer(minecraftServer -> {
+			CreativeModeTab.ItemDisplayParameters parameters = new CreativeModeTab.ItemDisplayParameters(
+					minecraftServer.getWorldData().enabledFeatures(), true, minecraftServer.registryAccess());
+			List<Item> coloured = displayedItems(tab(CreativeModeTabs.COLORED_BLOCKS), parameters);
+			List<Item> building = displayedItems(tab(CreativeModeTabs.BUILDING_BLOCKS), parameters);
+
+			require(!coloured.isEmpty() && !building.isEmpty(),
+					"the game's own tabs list nothing to check: " + coloured.size() + " coloured items, "
+							+ building.size() + " building items");
+
+			Map<Item, DyeColor> colourOf = new HashMap<>();
+
+			for (DyeColor colour : DyeColor.values()) {
+				List<Item> ofColour = eighthsOf(Set.of(Blocks.WOOL.pick(colour), Blocks.CONCRETE.pick(colour),
+						Blocks.DYED_TERRACOTTA.pick(colour), Blocks.GLAZED_TERRACOTTA.pick(colour)));
+
+				require(ofColour.size() == 4,
+						"the mod has " + ofColour.size() + " eighths for colour " + colour + ", expected four");
+
+				for (Item item : ofColour) {
+					colourOf.put(item, colour);
+				}
+
+				assertBehindAll(coloured, colourForms(colour), ofColour, "colour " + colour);
+			}
+
+			// Every colour is one run of four that no other colour interrupts: the eighths of a colour
+			// sit together, in whatever order the game lists its own colours.
+			List<DyeColor> runs = new ArrayList<>();
+
+			for (Item item : coloured) {
+				DyeColor colour = colourOf.get(item);
+
+				if (colour != null && (runs.isEmpty() || runs.get(runs.size() - 1) != colour)) {
+					require(!runs.contains(colour),
+							"the eighths of colour " + colour + " are split into more than one run: " + runs);
+					runs.add(colour);
+				}
+			}
+
+			require(runs.size() == DyeColor.values().length,
+					"the coloured tab lists eighths of " + runs.size() + " colours, expected "
+							+ DyeColor.values().length + ": " + runs);
+
+			List<Block> copperBases = List.of(Blocks.CUT_COPPER.weathering().unaffected(), Blocks.CUT_COPPER.weathering().exposed(),
+					Blocks.CUT_COPPER.weathering().weathered(), Blocks.CUT_COPPER.weathering().oxidized());
+			List<Item> copper = eighthsOf(Set.copyOf(copperBases));
+
+			require(copper.equals(copperBases.stream().map(base -> eighthOf(base).asItem()).toList()),
+					"the copper eighths are not declared from the least to the most weathered: " + copper);
+
+			assertBehindAll(building, copperForms(), copper, "copper");
+		});
+	}
+
+	/** The items of the eighth blocks cut from one of {@code bases}, in the order the mod declares them. */
+	private static List<Item> eighthsOf(Set<Block> bases) {
+		List<Item> items = new ArrayList<>();
+
+		for (MBEighths.Material material : MBEighths.materials()) {
+			if (bases.contains(material.base())) {
+				items.add(material.eighth().asItem());
+			}
+		}
+
+		return items;
+	}
+
+	/** The items of the stairs and slabs the game dyed {@code colour}. */
+	private static Set<Item> colourForms(DyeColor colour) {
+		return Set.of(Blocks.WOOL_STAIRS.pick(colour).asItem(), Blocks.WOOL_SLAB.pick(colour).asItem(),
+				Blocks.CONCRETE_STAIRS.pick(colour).asItem(), Blocks.CONCRETE_SLAB.pick(colour).asItem());
+	}
+
+	/** The items of the stairs and slabs of the four cut copper weatherings. */
+	private static Set<Item> copperForms() {
+		Set<Item> items = new HashSet<>();
+
+		for (Block block : List.of(Blocks.CUT_COPPER_STAIRS.weathering().unaffected(), Blocks.CUT_COPPER_STAIRS.weathering().exposed(),
+				Blocks.CUT_COPPER_STAIRS.weathering().weathered(), Blocks.CUT_COPPER_STAIRS.weathering().oxidized(),
+				Blocks.CUT_COPPER_SLAB.weathering().unaffected(), Blocks.CUT_COPPER_SLAB.weathering().exposed(),
+				Blocks.CUT_COPPER_SLAB.weathering().weathered(), Blocks.CUT_COPPER_SLAB.weathering().oxidized())) {
+			items.add(block.asItem());
+		}
+
+		return items;
+	}
+
+	/**
+	 * Requires {@code blocks} to be listed in {@code order} as one run, behind every item of
+	 * {@code forms}: the whole point of leaving the stairs of a colour or a weathering alone.
+	 */
+	private static void assertBehindAll(List<Item> order, Set<Item> forms, List<Item> blocks, String what) {
+		int first = order.indexOf(blocks.get(0));
+		int lastForm = -1;
+
+		for (Item form : forms) {
+			lastForm = Math.max(lastForm, order.indexOf(form));
+		}
+
+		require(lastForm >= 0, "the tab lists none of the stairs or slabs of " + what);
+
+		for (int index = 0; index < blocks.size(); index++) {
+			require(order.indexOf(blocks.get(index)) == first + index,
+					"the eighths of " + what + " are not listed one after another: " + blocks);
+		}
+
+		require(first > lastForm,
+				"an eighth of " + what + " is listed between its own stairs and slabs: it is at " + first
+						+ ", the last stair or slab at " + lastForm);
+	}
+
+	/**
+	 * The items a tab shows, in the order it shows them, after the game has built its contents: a tab
+	 * nobody opened yet lists nothing, and building it is what lets the mod's plugin fill it in.
+	 */
+	private static List<Item> displayedItems(CreativeModeTab tab, CreativeModeTab.ItemDisplayParameters parameters) {
+		tab.buildContents(parameters);
+
+		return tab.getDisplayItems().stream().map(ItemStack::getItem).toList();
+	}
+
+	/** The tab the game registered under {@code key}, failing the test when it has none. */
+	private static CreativeModeTab tab(ResourceKey<CreativeModeTab> key) {
+		CreativeModeTab tab = BuiltInRegistries.CREATIVE_MODE_TAB.getValue(key);
+
+		require(tab != null, "the game has no creative tab " + key.identifier());
+
+		return tab;
 	}
 
 	/**
