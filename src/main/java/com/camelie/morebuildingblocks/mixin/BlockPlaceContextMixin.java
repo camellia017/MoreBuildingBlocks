@@ -27,12 +27,14 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * beyond it. For an upright slab this mod wants the second answer on every face a player can point
  * at, with one exception.
  *
- * <p>The exception is the <em>open</em> face: the cell boundary the filled half reaches towards,
- * {@link VerticalSlab#openFace}. Pointing there means completing this slab, so the click stays in
- * the same block for the placement rule to double up. The two thin sides, half a block wide, mean
- * the opposite - they are the wall seen end on, and a click there carries it into the cell they
- * look at - and the boundary of the half that is <em>not</em> filled continues the wall the same
- * way. Those three all leave the click on the cell beyond the clicked face.
+ * <p>The exception is the <em>open</em> face: the plane closing off the empty half, which is the
+ * one face a player sees the slab as - half a block, with the cell beside it empty - and is
+ * reported by {@link VerticalSlab#openFace}. Pointing there means completing this slab, so the
+ * click stays in the same block for the placement rule to double up. The two thin sides, half a
+ * block wide, mean the opposite - they are the wall seen end on, and a click there carries it into
+ * the cell they look at - and the boundary at the far end of the filled half, which the wall's own
+ * next block would stand against, continues the wall the same way. Those three all leave the click
+ * on the cell beyond the clicked face.
  *
  * <p>That decision is written here rather than filtered out of the vanilla one. The slab answers
  * {@code canBeReplaced} for reasons of its own - a bottom half clicked on a side face above its
@@ -91,8 +93,8 @@ public abstract class BlockPlaceContextMixin implements PlacementClick {
 	}
 
 	/**
-	 * Decides, for every click on an upright slab, that the placement is ignored and lands in the
-	 * slab's own block - and only then.
+	 * Decides, for every click on an upright slab, whether the placement lands in the slab's own
+	 * block - which it does only on the open face.
 	 *
 	 * <p>Replacing the constructor's own {@code canBeReplaced} answer rather than filtering it is
 	 * what makes this work. The vanilla slab refuses a replacement for reasons of its own - a

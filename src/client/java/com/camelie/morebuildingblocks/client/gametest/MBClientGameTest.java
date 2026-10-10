@@ -557,31 +557,31 @@ public class MBClientGameTest implements FabricClientGameTest {
 	}
 
 	/**
-	 * Clicks both broad faces of an upright slab through the real {@link BlockPlaceContext} path
-	 * and checks which block and which half the placement lands in.
+	 * Clicks the two faces of an upright slab that look at the empty half - the open one, and the
+	 * far boundary of the filled one - and checks which block and which half each lands in.
 	 *
 	 * <p>Those two faces are the same plane seen from either side, and the difference between them
 	 * is what the fix is about. The fixture wall is {@code axis=z, type=bottom}, which fills the
 	 * southern half of its cell - an upright {@code bottom} is the half showing its face towards the
-	 * positive end of the axis, unlike a flat slab - so the cell boundary it reaches towards is its
-	 * southern one and the boundary of the free half beside it is its northern one.
+	 * positive end of the axis, unlike a flat slab - so the plane it shows a player is its northern
+	 * face, at the empty half beside it, and the boundary the filled half runs up to is its southern
+	 * one.
 	 *
 	 * <ul>
-	 *   <li>The <em>open</em> face - the boundary the filled half reaches towards, the plane the
-	 *       slab is named after, {@link VerticalSlab#openFace} - is at the south. Pointing at it
-	 *       means the block is only half done: the click stays on the slab so the placement rule
-	 *       sees it, and the answer there is a double slab rather than a second block beside
-	 *       it.</li>
-	 *   <li>The <em>back</em> face - the boundary of the half the slab does not fill, the plane the
-	 *       free half lies behind, and the plane of the block's own interior - is at the north.
-	 *       Pointing at it means "keep this wall going", so the new slab belongs in the
-	 *       neighbouring cell, filling the very half the clicked one fills so the two line up into
-	 *       one plane rather than turning the wall a quarter turn at the joint.</li>
+	 *   <li>The <em>open</em> face - the plane closing off the empty half, the one the slab is seen
+	 *       as, {@link VerticalSlab#openFace} - is at the north. Pointing at it means the block is
+	 *       only half done: the click stays on the slab so the placement rule sees it, and the
+	 *       answer there is a double slab rather than a second block beside it.</li>
+	 *   <li>The far boundary of the filled half - the plane of the block's own interior on the other
+	 *       side, where the next block of this wall would stand - is at the south. Pointing at it
+	 *       means "keep this wall going", so the new slab belongs in the neighbouring cell, filling
+	 *       the very half the clicked one fills so the two line up into one plane rather than
+	 *       turning the wall a quarter turn at the joint.</li>
 	 * </ul>
 	 *
 	 * <p>Both clicks used to be read as if they were the same face: the open one completed the
-	 * block only from the wrong side of it, and a click on the back face stayed in the clicked
-	 * slab's own cell and doubled it up instead of continuing the wall.
+	 * block from the wrong side of it, and a click on the far boundary stayed in the clicked slab's
+	 * own cell and doubled it up instead of continuing the wall.
 	 */
 	private static void verifyUprightStacking(TestServerContext server) {
 		server.runOnServer(minecraftServer -> {
@@ -597,44 +597,44 @@ public class MBClientGameTest implements FabricClientGameTest {
 
 			checkOpenFaceGeometry(wall, open);
 
-			Direction back = open.getOpposite();
-			BlockPos beyond = pos.relative(back);
+			Direction far = open.getOpposite();
+			BlockPos beyond = pos.relative(far);
 			level.setBlockAndUpdate(pos.below(), Blocks.STONE.defaultBlockState());
 			level.setBlockAndUpdate(beyond.below(), Blocks.STONE.defaultBlockState());
 			level.setBlockAndUpdate(pos, wall);
 			level.setBlockAndUpdate(beyond, Blocks.AIR.defaultBlockState());
 
-			// The click has to be taken out of the slab: the back face is a plane of the block's
-			// own interior, so a placement pointed at it continues the wall and getClickedPos()
-			// is the cell beyond. Clicks are written in world coordinates like every other one in
-			// this test, so they are built from the block's own centre rather than assuming the
-			// block sits at the origin. The hit point sits exactly on the boundary between the two
-			// cells, which is where the shared plane is.
+			// The click has to be taken out of the slab: the far boundary of the filled half is a
+			// plane of the block's own interior, so a placement pointed at it continues the wall and
+			// getClickedPos() is the cell beyond. Clicks are written in world coordinates like every
+			// other one in this test, so they are built from the block's own centre rather than
+			// assuming the block sits at the origin. The hit point sits exactly on the boundary
+			// between the two cells, which is where the shared plane is.
 			Vec3 centre = Vec3.atCenterOf(pos);
 
 			BlockPlaceContext continuation = new BlockPlaceContext(player, InteractionHand.MAIN_HAND,
 					new ItemStack(slabBlock.asItem()),
-					new BlockHitResult(centre.add(back.getUnitVec3().scale(0.5)), back, pos, false));
+					new BlockHitResult(centre.add(far.getUnitVec3().scale(0.5)), far, pos, false));
 
 			require(continuation.getClickedPos().equals(beyond),
-					"clicking the back face of an upright slab aimed at " + continuation.getClickedPos()
+					"clicking the far boundary of an upright slab's filled half aimed at " + continuation.getClickedPos()
 							+ ", expected the block beyond it at " + beyond);
 			BlockState continued = slabBlock.getStateForPlacement(continuation);
 
-			require(continued != null, "no block state was produced for a click on an upright slab's back face");
+			require(continued != null, "no block state was produced for a click on an upright slab's far boundary");
 			require(continued.getValue(MBBlockStateProperties.VERTICAL),
-					"the slab placed against the back face of an upright slab came out flat: " + continued);
+					"the slab placed against the far boundary of an upright slab came out flat: " + continued);
 
 			require(Fill.of(continued).equals(Fill.of(wall)),
-					"the slab placed against the back face of a slab filling " + Fill.of(wall) + " filled "
+					"the slab placed against the far boundary of a slab filling " + Fill.of(wall) + " filled "
 							+ Fill.of(continued) + ", expected the clicked slab's own half so the two line up"
 							+ " across the shared plane: " + continued);
 
-			// The open face is the boundary the filled half reaches towards, and pointing at it
-			// means the block is only half done: the click is left on the slab so the placement
-			// rule sees it, and the answer there is a double slab rather than a second block
-			// beside it. This is the one broad face of an upright slab that is left alone; the
-			// back face and both thin sides all hand the click on to the next cell instead.
+			// The open face is the plane closing off the empty half, and pointing at it means the
+			// block is only half done: the click is left on the slab so the placement rule sees it,
+			// and the answer there is a double slab rather than a second block beside it. This is
+			// the one broad face of an upright slab that is left alone; the far boundary and both
+			// thin sides all hand the click on to the next cell instead.
 			BlockPos openSide = pos.relative(open);
 			level.setBlockAndUpdate(openSide, Blocks.AIR.defaultBlockState());
 
@@ -675,9 +675,10 @@ public class MBClientGameTest implements FabricClientGameTest {
 			Block slabBlock = vanillaSlabs().get(0);
 			BlockPos pos = new BlockPos(6, FLOOR_Y + 30, 0);
 
-			// "South-facing": the filled half is the positive half of Z, so its open face - the
-			// boundary it reaches towards, which is the one that completes the block - looks south,
-			// and the boundary of the free half beside it is the north one.
+			// "South-facing": the filled half is the positive half of Z, so the plane the slab shows
+			// a player - the empty half's boundary, the one that completes the block - looks north,
+			// and the boundary the filled half runs up to, the one that carries the wall onward, is
+			// the south one.
 			BlockState wall = vertical(slabBlock, Direction.Axis.Z, SlabType.BOTTOM);
 			level.setBlockAndUpdate(pos, wall);
 
@@ -688,10 +689,10 @@ public class MBClientGameTest implements FabricClientGameTest {
 			checkAgainstWall(level, player, slabBlock, pos, wall, Direction.WEST,
 					new Vec3(pos.getX(), FLOOR_Y + 30.5, pos.getZ() + 0.5), pos.west());
 
-			// The boundary of the free half - the plane of the block's own interior - continues
-			// the wall the same way.
-			checkAgainstWall(level, player, slabBlock, pos, wall, Direction.NORTH,
-					new Vec3(pos.getX() + 0.5, FLOOR_Y + 30.5, pos.getZ()), pos.north());
+			// The boundary the filled half runs up to - the far side of the block's own interior -
+			// continues the wall the same way.
+			checkAgainstWall(level, player, slabBlock, pos, wall, Direction.SOUTH,
+					new Vec3(pos.getX() + 0.5, FLOOR_Y + 30.5, pos.getZ() + 1.0), pos.south());
 
 			// The open face is the one face that finishes the block instead.
 			checkAgainstOpenFace(player, slabBlock, pos, wall);
@@ -702,22 +703,32 @@ public class MBClientGameTest implements FabricClientGameTest {
 
 	/**
 	 * Checks what makes a face the open one against the shape the game itself builds for the state:
-	 * the open face is the cell boundary the filled half reaches, so it is the one face of the block
-	 * the slab covers completely. The other broad face has the free half behind it, so it is only
-	 * half covered, and the two thin sides are only a sliver of it - a single coordinate cannot tell
-	 * them apart, which is why this measures the whole face.
+	 * the open face is the plane closing off the half the slab does not fill, so the slab covers
+	 * exactly half of it - the hollow a player sees, with the empty cell behind. The boundary the
+	 * filled half runs up to is covered completely, and the two thin sides are only a sliver of
+	 * their faces. A single coordinate cannot tell those apart, which is why this measures the whole
+	 * face.
 	 */
 	private static void checkOpenFaceGeometry(BlockState wall, Direction open) {
 		AABB box = wall.getShape(EmptyBlockGetter.INSTANCE, BlockPos.ZERO).bounds();
 		Direction.Axis axis = open.getAxis();
 		Direction.Axis u = axis == Direction.Axis.X ? Direction.Axis.Y : Direction.Axis.X;
 		Direction.Axis v = axis == Direction.Axis.Z ? Direction.Axis.Y : Direction.Axis.Z;
-		double coverage = (box.max(u) - box.min(u)) * (box.max(v) - box.min(v));
 
-		require(coverage == 1.0,
-				"an upright slab built as " + wall + " has its box at " + box + ", so its " + open
-						+ " face is only " + coverage + " covered, yet that is the face it calls open; the open face"
-						+ " is the boundary the filled half reaches and has to be covered completely");
+		// The open face has to be the side the empty half is on: the space between it and the cell
+		// boundary it faces is the half the slab does not fill, and the space on its other side is
+		// the half it does. Measuring the first of those as a volume is what this is for - a plane
+		// in the middle of the cell would leave a quarter of the block empty and fail, and so would
+		// the far boundary of the filled half, which has no empty space behind it at all.
+		double depth = open.getAxisDirection() == Direction.AxisDirection.POSITIVE
+				? 1.0 - box.max(axis)
+				: box.min(axis);
+		double empty = (box.max(u) - box.min(u)) * (box.max(v) - box.min(v)) * depth;
+
+		require(empty == 0.5,
+				"an upright slab built as " + wall + " has its box at " + box + ", so the space behind its " + open
+						+ " face holds " + empty + " of a block, yet that is the face it calls open; the open face is"
+						+ " the plane closing off the half it does not fill, with that half empty behind it");
 	}
 
 	/**
@@ -750,7 +761,10 @@ public class MBClientGameTest implements FabricClientGameTest {
 						+ placed);
 	}
 
-	/** Clicks the open face, which is the one that completes the clicked block and doubles it. */
+	/**
+	 * Clicks the open face - the plane closing off the empty half, which is the one a player sees
+	 * the slab as - and checks that it completes the clicked block and doubles it.
+	 */
 	private static void checkAgainstOpenFace(ServerPlayer player, Block slabBlock, BlockPos pos,
 			BlockState wall) {
 		Direction face = VerticalSlab.openFace(wall);

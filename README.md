@@ -36,14 +36,15 @@
   命中点离方块中轴两轴都在 1/4 格以内就是平放；两轴都超出才是竖放，薄板沿**落点更偏的那个轴**
   竖起，`type` 按竖放语义取（竖放时 `type=top` 是**负半轴**，与平放相反）。
 - **续墙**：已经立起来的竖半砖（`vertical=true` 且非 `double`）另有一套：
-  - 点**开面**（填满那半抵达的格子边界，`VerticalSlab.openFace`）= 这块只做了一半 → 留在原格补成 `double`；
-  - 点**两个薄侧面**或**空半那侧的格子边界** = 墙继续 → 落到相邻格，并填**被点那块自己的半**
+  - 点**开面**（封住空半的那个平面，也就是玩家看到这块半砖的那一面，`VerticalSlab.openFace`）
+    = 这块只做了一半 → 留在原格补成 `double`；
+  - 点**两个薄侧面**或**填满那半远端的格子边界** = 墙继续 → 落到相邻格，并填**被点那块自己的半**
     （不是点击点最近的那半，否则墙会在接缝处转 90°）。
 - **碰撞箱**：8/16 厚度，`getShape` 按 `axis` + `type` 返回对应薄板盒。
 - **旋转与镜像**：`BlockBehaviourMixin` 覆盖 `rotate` / `mirror`，让竖直半砖
   随结构方块旋转/镜像正确改变朝向。
-- **上下颠倒**：竖直形态的 `type` 沿用「立起来的那块板占哪半」的语义——`type=top` 是**负半轴**、
-  `type=bottom` 是**正半轴**（与平放恰好相反）；两种都支持，也是竖半砖能从两水平面各自竖起半格的原因。
+- **上下颠倒**：竖直形态的 `type` 沿用「立起来的那块板占哪半」的语义——`type=bottom` 是**正半轴**、
+  `type=top` 是**负半轴**（与平放恰好相反，见 `VerticalSlab.Fill.positive()`）；两种都支持，也是竖半砖能从两水平面各自竖起半格的原因。
 
 ### 3. 配方（全部由 datagen 生成）
 
@@ -129,8 +130,8 @@ without declaring an explicit or implicit dependency`），因为 `src/main/gene
 |---|---|
 | `verifyShapes` | 101 个原版半砖在 `axis=x` / `axis=z` 下碰撞箱厚度均为 0.5、高度为 1；水平半砖仍是 0～0.5；66 个陶瓦楼梯 `maxY=1.0`、台阶 `maxY=0.5` |
 | `verifyPlacement` | 用真实 `BlockPlaceContext` 放置：点东半边 → 朝东的竖半砖（`axis=x` + `type=top`）；点北半边 → 朝北（`axis=z` + `type=bottom`）；点侧面一律平放；点正中心仍是水平半砖 |
-| `verifyUprightStacking` | 竖半砖的**开面**与它背面（空半那侧的格子边界）各点一次：开面 → 留在原格补成 double，背面 → 越到相邻格并填被点那块自己的半 |
-| `verifyWallContinuation` | 一堵 `axis=z` 的竖半砖墙：两个薄侧面与空半那侧的格子边界都续到相邻格，且新方块填的是**被点那块自己的半**；点开面则留在原格补成 double |
+| `verifyUprightStacking` | 竖半砖的**开面**（封住空半的平面，先按形状验一遍它确实是那一面）与**填满那半远端的格子边界**各点一次：开面 → 留在原格补成 double，远端边界 → 越到相邻格并填被点那块自己的半 |
+| `verifyWallContinuation` | 一堵 `axis=z` 的竖半砖墙：两个薄侧面与填满那半远端的格子边界都续到相邻格，且新方块填的是**被点那块自己的半**；点开面则留在原格补成 double |
 | `verifyDrops` | 破坏楼梯与台阶后各自掉落自身 |
 | `verifyCreativeTab` | 标签页注册在 `morebuildingblocks:main`，且按顺序收录全部 99 个方块，每个都有对应物品 |
 | `verifyDedicatedServer` | 由测试自己拉起专用服务端并连接：服务端注册 66 个楼梯/台阶 + 33 个基础方块，客户端也认得这 99 个物品；服务端放置的方块能同步到客户端 |
