@@ -29,13 +29,21 @@ loom {
 	}
 
 	// Drives the real client from MBClientGameTest and writes screenshots of every
-	// block this mod adds to run/gametest-screenshots. Built on the normal client run
-	// so it keeps Loom's launch plumbing, asset index and natives.
+	// block this mod adds into the run's own screenshots directory. Built on the
+	// normal client run so it keeps Loom's launch plumbing, asset index and natives.
+	//
+	// The run lives in a directory of its own. The framework creates a singleplayer
+	// world for every run and never removes it, so the worlds pile up where the run
+	// happens: twenty runs left twenty worlds under the shared run/ directory, and a
+	// run that starts on a world from a previous one is not the run that was asked
+	// for. Keeping them here leaves run/ itself untouched by the tests, and one task
+	// (cleanGameTestRun, see the bottom of this file) throws the whole pile away.
 	runs {
 		clientGameTest {
 			client()
 			configName = "Minecraft Client Game Test"
 			source sourceSets.client
+			runDir "run/client-gametest"
 			vmArg "-Dfabric.client.gametest"
 			vmArg "-Dfabric.client.gametest.modid=morebuildingblocks"
 		}
@@ -104,5 +112,35 @@ publishing {
 		// Notice: This block does NOT have the same function as the block in the top level.
 		// The repositories here will be used for publishing your artifact, not for
 		// retrieving dependencies.
+	}
+}
+
+// The client game test creates a world per run and never removes one, so the pile in
+// the test's run directory grows for as long as the tests are run. This throws away
+// everything a run leaves behind: worlds, screenshots and logs.
+tasks.register('cleanGameTestRun', Delete) {
+	description = 'Deletes the client game test run directory: worlds, screenshots and logs.'
+	group = 'verification'
+
+	delete layout.projectDirectory.dir('run/client-gametest')
+}
+
+// The dedicated server the tests start reads its consent from the run directory's own
+// eula.txt, and refuses to start without it - which shows up as a timeout in the
+// dedicated server check rather than as anything to do with the EULA. A directory that
+// has been cleaned does not have the file, so it is written before every run. It says
+// the same thing the game writes when a player accepts the EULA:
+// https://aka.ms/MinecraftEULA
+def gameTestEula = layout.projectDirectory.file('run/client-gametest/eula.txt')
+
+tasks.named('runClientGameTest') {
+	doFirst {
+		def eula = gameTestEula.asFile
+
+		if (!eula.exists()) {
+			eula.parentFile.mkdirs()
+			eula.text = '#By changing the setting below to TRUE you are indicating your agreement to our EULA ' +
+				'(https://aka.ms/MinecraftEULA).\neula=true\n'
+		}
 	}
 }

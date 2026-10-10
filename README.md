@@ -143,6 +143,32 @@ without declaring an explicit or implicit dependency`），因为 `src/main/gene
 > 直连专用服务端会在登录阶段卡在 `sessionserver.mojang.com/session/minecraft/join` 后断开。
 > 因此多人验收由上面的 `verifyDedicatedServer` 承担。
 
+测试运行在 `run/client-gametest/` 里，不是 `run/`：测试框架**每跑一次就新建一个世界，且从不删除**，
+所以运行目录会被世界塞满（此前共用 `run/`，累积到 253 个世界、1.5 GB）。截图也同样写在那个目录的
+`screenshots/` 下，与客户端里手按 F2 存到 `run/screenshots/` 的截图互不干扰。
+
+清掉这些残留：
+
+```bash
+./gradlew cleanGameTestRun   # 删除 run/client-gametest/（世界、截图、日志）
+```
+
+该目录里的 `eula.txt`（内容为同意 [Minecraft EULA](https://aka.ms/MinecraftEULA)）由
+`runClientGameTest` 在每次运行前自动补写，所以清理后可以直接重跑，不必手工恢复。
+
+## 改动后验收到哪一步
+
+不必每次都把三件套跑一遍，按改了什么选：
+
+| 改了什么 | 跑什么 |
+|---|---|
+| 任何 Java 代码 | `build` → `runClientGameTest` |
+| 注册表、blockstate、模型、配方或语言 provider（datagen 的输入） | 再加 `runDatagen`，然后确认 `src/main/generated` 无 diff |
+| 只有文档、注释 | `build` 即可 |
+
+`runClientGameTest` 一次跑完 9 项检查、33 秒左右，**检查本身不建议裁**——它覆盖外观、放置、掉落、
+创造模式标签页与专用服务端同步，少一项就有一类问题不再被自动发现。要省时间，省的是「不必要的重复运行」：
+一轮对话里同一份代码没有再次改动，就不必重跑。
 
 ## 已知限制（v0.0.1）
 
