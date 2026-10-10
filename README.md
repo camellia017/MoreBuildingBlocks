@@ -1,193 +1,29 @@
 # MoreBuildingBlocks
 
+<img src="src/main/resources/assets/morebuildingblocks/icon.png" width="128" alt="MoreBuildingBlocks">
+
 为陶瓦家族补上楼梯与台阶，并让**所有原版半砖**都能竖直放置。
 
-- Minecraft **26.3**（Wilderness Bound，2026-09-15 正式版）
-- Fabric Loader 0.19.5 / Fabric API 0.162.0+26.3 / Fabric Loom 1.18.3
-- **Mojang 官方映射（mojmap）**——26.x 起 Fabric 不再提供 Yarn 映射
-- Java 25 / Gradle 9.7.1
+- 适用于 Minecraft **26.3**（Fabric）
+- 需要 Fabric Loader 0.19.5+、[Fabric API](https://modrinth.com/mod/fabric-api)、Java 25
+
+## 下载与安装
+
+1. 到 [Releases](https://github.com/camellia017/MoreBuildingBlocks/releases) 下载 `morebuildingblocks-<版本>.jar`
+2. 装好 Fabric Loader 与 Fabric API，把 jar 放进 `.minecraft/mods/`
+3. Release 页里的 `Source code (zip/tar.gz)` 是源码归档，**不能**直接装进游戏
 
 ## 内容
 
-### 1. 陶瓦家族楼梯与台阶（66 个新方块）
-
-| 基础方块 | 数量 | 新增 |
-|---|---|---|
-| 陶瓦 Terracotta | 1 | 楼梯 + 台阶 |
-| 染色陶瓦 Dyed Terracotta | 16 | 楼梯 + 台阶 |
-| 带釉陶瓦 Glazed Terracotta | 16 | 楼梯 + 台阶 |
-| **合计** | **33** | **66** |
-
-每个新方块都通过 `BlockBehaviour.Properties.ofFullCopy` / `ofLegacyCopy`
-继承对应基础方块的爆炸抗性、硬度、音效组与可燃性，与原版陶瓦一致。
-
-### 2. 竖半砖（不新增方块）
-
-**全部 101 个原版半砖**（含 16 羊毛半砖、16 混凝土半砖、8 铜半砖）都获得了竖直放置形态。
-实现方式不是新增方块，而是用 Mixin 给原版 `SlabBlock` 增加两个状态属性：
-
-- `vertical`（布尔）：是否为竖直形态
-- `axis`（原版 `BlockStateProperties.AXIS`，直接复用）：薄板朝向哪个轴
-
-配合原版自带的 `type`（`bottom` / `top` / `double`）表示「填满哪一半」，
-竖直半砖只用 **2 个新属性**就完整表达了 4 个朝向 × 上下两半的 8 种形态。
-
-- **放置逻辑**：每次点击都按**被点的那个面**来读（`FaceFrame` 把面分成中间三分之一与贴着四条边的带），
-  点击落在哪一块，新半砖就填「那一块背后属于同一个方块的那一半」：
-  - 落在**中间三分之一** → 填**面背后那一半**。点竖着的面（四个侧面）得到**贴着这个面、与它同平面**
-    的竖半砖（墙顺着接下去）；点上/下表面得到平放半砖。
-  - 落在**边上的带** → 填**那条边背后的那一半**。上/下两条边 → 平放半砖（上边给上半、下边给下半，
-    与原版叠放一致）；左/右两条边 → 转 90° 的竖半砖（薄板沿另一条水平轴）。
-  - 新方块建在**被点面的外侧那一格**；`type` 按竖放语义取
-    （竖放时 `type=top` 是**负半轴**、`type=bottom` 是**正半轴**，与平放相反）。
-- **续墙**：已经立起来的竖半砖（`vertical=true` 且非 `double`）另有一套：
-  - 点**开面**（封住空半的那个平面，也就是玩家看到这块半砖的那一面，`VerticalSlab.openFace`）
-    = 这块只做了一半 → 留在原格补成 `double`；
-  - 点**两个薄侧面**、以及**上/下两面**（这堵墙的两端）= 墙继续 → 落到相邻格，并填**被点那块自己的半**
-    （不是点击点最近的那半，否则墙会在接缝处转 90°）；
-  - 点**填满那半远端的格子边界**（这堵墙的侧面，一个完整的 1×1 面）= 按**普通方块的面**读：
-    点击落点所在的区域决定填哪半——中间三分之一贴住这堵墙的那一半（墙保持同一平面与厚度），
-    边上的带则按那条边命名（上下带 → 平放半砖，左右带 → 转 90° 的竖半砖）。
-- **`double` 竖半砖**（整格填满）没有空半，**任何一面**都按普通方块的面读，包括原先的开面那一面：
-  点击一律越到相邻格、在那里建新方块。留在原格会点在一个无法被替换的方块上——
-  同种半砖点上去什么都不会发生，换别的方块点则会替换掉这块 `double`。
-- **碰撞箱**：8/16 厚度，`getShape` 按 `axis` + `type` 返回对应薄板盒。
-- **旋转与镜像**：`BlockBehaviourMixin` 覆盖 `rotate` / `mirror`，让竖直半砖
-  随结构方块旋转/镜像正确改变朝向。
-- **上下颠倒**：竖直形态的 `type` 沿用「立起来的那块板占哪半」的语义——`type=bottom` 是**正半轴**、
-  `type=top` 是**负半轴**（与平放恰好相反，见 `VerticalSlab.Fill.positive()`）；两种都支持，也是竖半砖能从两水平面各自竖起半格的原因。
-
-### 3. 配方（全部由 datagen 生成）
-
-- 工作台：**6 个方块 → 4 个楼梯**、**3 个方块 → 6 个台阶**（标准原版配方，不可逆）
-- 切石机：33 种基础方块全部可切出楼梯（1 个）与台阶（2 个）
-
-### 4. 创造模式物品栏
-
-新增 **MoreBuildingBlocks** 标签页，按「原版陶瓦 → 16 染色陶瓦 → 16 带釉陶瓦 →
-各自楼梯与台阶」的顺序收录全部 99 个物品。
-
-## 纹理与模型
-
-**不新增任何纹理文件**，全部复用原版纹理：
-
-- 普通/染色陶瓦：用原版 `slab` / `stairs` 系列模板，槽位 `#bottom` / `#top` / `#side`
-  直接指向 `minecraft:block/<原名>`。
-- **带釉陶瓦**：图案是有方向的，直接套用平面 UV 会让切角后花纹错位。
-  因此楼梯与台阶的几何由模组按原版 `template_glazed_terracotta` 的
-  **逐面旋转表**（`down 0, up 0, north 90, south 270, west 0, east 180`）自行生成，
-  保证花纹方向与整方块一致。
-- 竖半砖：**每一个半砖都有自己的独立模型**，由 datagen 生成在
-  `assets/morebuildingblocks/models/vertical_slab/<方块名>.json`（101 个原版半砖 + 33 个模组半砖）。
-  模型是朝北、厚度 8/16 的薄板，按 `axis` 绕 Y 轴旋转 90°/270° 得到两个朝向。
-  纹理不是从基础方块猜测的，而是照抄原版 `models/block/<半砖>.json` 的 `bottom` / `top` / `side`
-  三槽（例：`smooth_stone_slab` 的侧面是 `smooth_stone_slab_side`，
-  `sandstone_slab` 的上下分别是 `sandstone_bottom` / `sandstone_top`），
-  因为**从原版半砖的方块状态走到的模型不会继承任何子模型的纹理映射**，
-  `#bottom` / `#top` / `#side` 必须自己写死。
-
-### 26.3 上的 API 差异（与常见 Fabric 教程不同，实现时已按实际情况调整）
-
-| 预期写法 | 26.3 的实际情况 | 本模组的做法 |
-|---|---|---|
-| Fabric datagen 的 `VERTICAL_SLAB` ModelTemplate | **不存在**，Fabric API 0.162.0+26.3 里没有 `ModelTemplate` / `BlockStateModelGenerator` 这两个类 | 自己生成模型 JSON（`ModelInstance` 即 `Supplier<JsonElement>`） |
-| `BlockStateModelGenerator` 生成方块状态 | 26.3 改为原版 `net.minecraft.client.data.models.BlockModelGenerators` + `MultiVariantGenerator` / `PropertyDispatch` | 直接用原版 API，模型 id 与槽位命名与原版模板一致 |
-| 用方块状态 JSON 给原版半砖加竖直形态 | 会覆盖原版命名空间下的 101 个文件 | 改为 `fabric-model-loading-api-v1` 的 `BlockStateResolver`，在运行时提供额外状态 |
-
-## 目录结构
-
-```
-src/main/java/com/camelie/morebuildingblocks/
-├── MoreBuildingBlocks.java          主入口
-├── block/                           方块状态属性与竖半砖状态助手
-├── registry/                        注册体系（方块、物品、家族、创造标签）
-├── mixin/                           竖半砖 Mixin
-└── datagen/                         配方与战利品表（主源集）
-src/client/java/com/camelie/morebuildingblocks/client/
-├── MoreBuildingBlocksClient.java    客户端入口
-├── MBVanillaSlabModelPlugin.java    原版半砖运行时模型解析
-├── datagen/                         模型与方块状态 datagen（客户端源集）
-└── gametest/                        客户端截图测试
-```
-
-注册体系由 `MBRegistry`（底层注册）、`MBBlockFamilies`（楼梯/台阶成对注册）与
-`MBBlocks`（33 个基础方块）三层组成，楼梯、台阶、竖半砖共用同一套注册代码，无重复。
-
-## 构建与运行
-
-```bash
-./gradlew build             # 编译并打包
-./gradlew runClient         # 启动客户端
-./gradlew runServer         # 启动专用服务端
-./gradlew runDatagen        # 重新生成 src/main/generated 下的全部 JSON
-./gradlew runClientGameTest # 自动化验收：截图 + 断言
-```
-
-生成物写在 `src/main/generated/`，**需要一并提交**：执行 `runDatagen` 后
-工作区应当没有 diff，这正是「datagen 可复现」的验收方式
-（内容未变时输出为 `removed stale: 0, written: 0`）。
-
-`build` / `runDatagen` / `runClientGameTest` 请**分开单跑**：一条命令里连跑时
-`:runDatagen` 会被 Gradle 拒绝（`Task ':sourcesJar' uses this output of task ':runDatagen'
-without declaring an explicit or implicit dependency`），因为 `src/main/generated` 被两边同时读写。
-另外本仓库的 `main` 没有设置 upstream tracking，推送要写全 `git push origin main`。
-
-## 自动化验收（`runClientGameTest`）
-
-基于 Fabric 的 `fabric-client-gametest-api-v1`，一次运行覆盖下列检查，
-截图写到 `run/screenshots/`：
-
-| 检查 | 内容 |
+| 新增 | 数量 |
 |---|---|
-| `verifyShapes` | 101 个原版半砖在 `axis=x` / `axis=z` 下碰撞箱厚度均为 0.5、高度为 1；水平半砖仍是 0～0.5；66 个陶瓦楼梯 `maxY=1.0`、台阶 `maxY=0.5` |
-| `verifyPlacement` | 用真实 `BlockPlaceContext` 放置：点**上表面正中心** → 平放下半砖（`axis=y` + `type=bottom`）、四条边上的带 → 各自那条边背后的半（北带 `axis=z` + `type=top`，填北半；东带 `axis=x` + `type=bottom`，填东半）；点**侧面正中心** → 贴着这个面、同平面的竖半砖（北面 → `axis=z` + `type=bottom`、东面 → `axis=x` + `type=top`）；点下表面同样读一遍（`verifyBandSides` 再把六个面的四条带逐一核对，`verifyClickFrame` 核对转角与两条对角线） |
-| `verifyUprightStacking` | 竖半砖的**开面**（封住空半的平面，先按形状验一遍它确实是那一面）与**填满那半远端的格子边界**各点一次：开面 → 留在原格补成 double，远端边界 → 越到相邻格并填**贴着这堵墙的那半**（按点击区域判，不是被点那块自己的半） |
-| `verifyWallContinuation` | 一堵 `axis=z` 的竖半砖墙：两个薄侧面都续到相邻格且填**被点那块自己的半**；填满那半远端的格子边界则按普通方块的面读——中间 → 贴住这堵墙的那半，上带 → 平放上半砖，西带 → 朝西的竖半砖；点开面留在原格补成 double |
-| `verifyDoubleSlabClicks` | 补全后的 `double` 竖半砖：点原开面那一面时，手里的半砖与任何别的方块都落在相邻格、且原格不被替换（`getClickedPos()` 必须是相邻格） |
-| `verifyDrops` | 破坏楼梯与台阶后各自掉落自身 |
-| `verifyGlazedSlabs` | 带釉陶瓦半砖与普通半砖**逐格对照**：对每个带釉半砖，用同一份点击（6 个面 × 4 个朝向点空地、4 种竖放半 × 6 个面点竖半砖）分别打在普通半砖与带釉半砖上，要求 `Fill`、是否竖放完全一致；带釉半砖另外单独验三件事——点竖半砖的**开面**必须留在原格补成 `double`、开面按**自己碰撞箱的空半**复核（这条防的是「开面被读成填满那半的边界」，对照检查看不见这种整体反向）、每次放置的 `GLAZED_FACING` 都等于玩家朝向的反方向 |
-| `verifyCreativeTab` | 标签页注册在 `morebuildingblocks:main`，且按顺序收录全部 99 个方块，每个都有对应物品 |
-| `verifyDedicatedServer` | 由测试自己拉起专用服务端并连接：服务端注册 66 个楼梯/台阶 + 33 个基础方块，客户端也认得这 99 个物品；服务端放置的方块能同步到客户端 |
-| `measureGlazed` | 带釉陶瓦花纹方向的**像素级**对照：把原版整方块与模组楼梯/台阶各按南/西/北/东填满 3×3 补丁、从正上方逐一拍照（12 张 `glazed-measure-*.png`），并把每一格服务端实际持有的状态写进日志（`glazed measurement <标签> held <状态>`）；两张图相减后能让它们一致的那个转角就是花纹的误差 |
-| 截图 | 陶瓦家族全景、带釉陶瓦近景、带釉陶瓦楼梯近景、三段竖半砖长墙（6 张），外加 `measureGlazed` 的 12 张，共 18 张 |
+| 陶瓦、染色陶瓦、带釉陶瓦的楼梯与台阶 | 33 种基础方块 → **66 个方块** |
+| 可以竖直放置的原版半砖（不新增方块） | **101 个**（含羊毛、混凝土、铜半砖） |
+| 创造模式 **MoreBuildingBlocks** 标签页 | **99 个物品** |
 
-> 手工验证多人时请注意：开发环境的客户端没有有效的 Mojang 会话，
-> 直连专用服务端会在登录阶段卡在 `sessionserver.mojang.com/session/minecraft/join` 后断开。
-> 因此多人验收由上面的 `verifyDedicatedServer` 承担。
-
-测试运行在 `run/client-gametest/` 里，不是 `run/`：测试框架**每跑一次就新建一个世界，且从不删除**，
-所以运行目录会被世界塞满（此前共用 `run/`，累积到 253 个世界、1.5 GB）。截图也同样写在那个目录的
-`screenshots/` 下，与客户端里手按 F2 存到 `run/screenshots/` 的截图互不干扰。
-
-清掉这些残留：
-
-```bash
-./gradlew cleanGameTestRun   # 删除 run/client-gametest/（世界、截图、日志）
-```
-
-该目录里的 `eula.txt`（内容为同意 [Minecraft EULA](https://aka.ms/MinecraftEULA)）由
-`runClientGameTest` 在每次运行前自动补写，所以清理后可以直接重跑，不必手工恢复。
-
-## 改动后验收到哪一步
-
-不必每次都把三件套跑一遍，按改了什么选：
-
-| 改了什么 | 跑什么 |
-|---|---|
-| 任何 Java 代码 | `build` → `runClientGameTest` |
-| 注册表、blockstate、模型、配方或语言 provider（datagen 的输入） | 再加 `runDatagen`，然后确认 `src/main/generated` 无 diff |
-| 只有文档、注释 | `build` 即可 |
-
-`runClientGameTest` 一次跑完 9 项检查、33 秒左右，**检查本身不建议裁**——它覆盖外观、放置、掉落、
-创造模式标签页与专用服务端同步，少一项就有一类问题不再被自动发现。要省时间，省的是「不必要的重复运行」：
-一轮对话里同一份代码没有再次改动，就不必重跑。
-
-## 已知限制（v0.0.1）
-
-- **未提供语言文件**（`en_us` / `zh_cn` 均暂缺），方块在游戏中显示为翻译键。后续版本补齐。
-- 仅承诺兼容 Minecraft **26.3**，不保证后续版本。
-- 竖半砖通过 Mixin 扩展原版 `SlabBlock`，与同样改动 `SlabBlock` 状态属性的模组可能冲突。
+- 配方与原版一致：工作台 6 方块 → 4 楼梯、3 方块 → 6 台阶；33 种基础方块都能用切石机切出楼梯与台阶。
+- 不新增纹理文件，全部复用原版纹理；带釉陶瓦的花纹按原版逐面旋转表生成，切角后不会错位。
 
 ## 许可证
 
-MIT
+MIT 许可证，详见 [LICENSE](LICENSE)。

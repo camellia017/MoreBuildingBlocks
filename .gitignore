@@ -39,3 +39,7 @@ hs_err_*.log
 replay_*.log
 *.hprof
 *.jfr
+
+# project logs — kept on the author's machine, never published
+
+项目日志/
