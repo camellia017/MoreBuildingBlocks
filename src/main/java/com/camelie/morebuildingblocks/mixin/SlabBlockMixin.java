@@ -94,11 +94,28 @@ public abstract class SlabBlockMixin {
 	 * <p>The rule itself lives in {@link VerticalSlab#placementFill}, in the block package: a record
 	 * built inside this mixin has its constructed values rewritten along with the mixin, and the
 	 * frame table then reads back different directions than it was written with.
+	 *
+	 * <p>Completing an upright slab is a placement of its own rather than a doubling of an existing
+	 * one, so a glazed pattern is turned again here. Vanilla writes the direction once, when the
+	 * slab is placed, and stacking a second slab on the first keeps whatever turn it had; the mod's
+	 * upright slab is completed by a click on its open face instead, and the player making that
+	 * click is placing the rest of the block, so the pattern follows the click. The turn comes from
+	 * {@link GlazedPattern}, so only a block carrying the property is ever asked to hold one.
 	 */
 	@ModifyReturnValue(method = "getStateForPlacement", at = @At("RETURN"))
 	private BlockState morebuildingblocks$verticalPlacement(final BlockState original, final BlockPlaceContext context) {
-		if (original == null || original.getValue(SlabBlock.TYPE) == SlabType.DOUBLE) {
-			return original;
+		if (original == null) {
+			return null;
+		}
+
+		BlockState clicked = context.getLevel().getBlockState(context.getClickedPos());
+		boolean completing = VerticalSlab.isVertical(clicked)
+			&& original.getValue(SlabBlock.TYPE) == SlabType.DOUBLE;
+
+		if (original.getValue(SlabBlock.TYPE) == SlabType.DOUBLE) {
+			return completing
+					? turned(original, context, (Object) this instanceof GlazedPattern)
+					: original;
 		}
 
 		VerticalSlab.Fill fill = VerticalSlab.placementFill(context);
@@ -107,8 +124,18 @@ public abstract class SlabBlockMixin {
 			return original;
 		}
 
-		return VerticalSlab.withFill(original, fill).trySetValue(
-			MBBlockStateProperties.GLAZED_FACING, context.getHorizontalDirection().getOpposite());
+		return turned(VerticalSlab.withFill(original, fill), context, true);
+	}
+
+	/**
+	 * Holds the direction the pattern is turned by, for a placement that has one.
+	 *
+	 * @param glazed whether the block can hold the property at all, which an ordinary slab cannot
+	 */
+	private static BlockState turned(final BlockState state, final BlockPlaceContext context, final boolean glazed) {
+		return glazed
+				? state.trySetValue(MBBlockStateProperties.GLAZED_FACING, context.getHorizontalDirection().getOpposite())
+				: state;
 	}
 
 	@ModifyReturnValue(method = "canBeReplaced", at = @At("RETURN"))

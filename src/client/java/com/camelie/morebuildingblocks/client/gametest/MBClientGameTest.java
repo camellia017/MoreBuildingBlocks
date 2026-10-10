@@ -244,6 +244,7 @@ public class MBClientGameTest implements FabricClientGameTest {
 			verifyPlacement(server, family);
 			verifyUprightStacking(server);
 			verifyWallContinuation(server);
+			verifyGlazedSlabs(server);
 			verifyDrops(context, server, family);
 			verifyCreativeTab(server);
 		}
@@ -554,6 +555,254 @@ public class MBClientGameTest implements FabricClientGameTest {
 				Direction.UP, Fill.positive(Direction.Axis.Z), "top face north band far from the origin");
 		checkPlacement(level, player, slabBlock, pos, new Vec3(pos.getX() + 0.5, FLOOR_Y + 24.5, pos.getZ()),
 				Direction.NORTH, Fill.positive(Direction.Axis.Z), "north face centre far from the origin");
+	}
+
+	/**
+	 * Places a glazed slab everywhere a plain slab can be placed and checks that every one of them
+	 * comes out the same shape, from the six faces a player can point at and from the four
+	 * directions a player can stand in.
+	 *
+	 * <p>A glazed slab is its own block class, {@link
+	 * com.camelie.morebuildingblocks.block.MBGlazedSlabBlock}, registered by the mod, and every
+	 * other placement check here picks its slab out of the vanilla registry and so skips all
+	 * sixteen of them. They are meant to place exactly as a plain slab does - the upright rule is a
+	 * mixin on {@code SlabBlock} and a glazed slab only adds the property the pattern is turned by
+	 * - so this is where that claim is measured rather than assumed.
+	 *
+	 * <p>It is not enough to click the ground: an upright slab is placed as one block and read as
+	 * another, and a click against a slab that is already standing takes a different branch of the
+	 * rule than a click against an empty cell. So each block is tried twice - once in an empty cell,
+	 * and once as the upright slab itself, with the cell the click aims at cleared first. This
+	 * second half is the one that covers the reported bug: with the two broad faces swapped, a
+	 * straight click on a standing glazed slab goes to the neighbouring cell instead of doubling it
+	 * up, and nothing in the empty-cell half can see that.
+	 *
+	 * <p>The two placements are compared half by half rather than as whole states, because they are
+	 * different blocks and their states can never be equal as they stand. What has to match is the
+	 * shape: the same half filled, on the same axis, with the same upright flag. The pattern's own
+	 * direction is not part of that comparison but is checked alongside it, against the player's
+	 * own facing rather than a fixed direction: where the player stands may not change the shape,
+	 * and must change the pattern.
+	 */
+	private static void verifyGlazedSlabs(TestServerContext server) {
+		server.runOnServer(minecraftServer -> {
+			ServerLevel level = minecraftServer.overworld();
+			ServerPlayer player = minecraftServer.getPlayerList().getPlayers().get(0);
+			Block plain = vanillaSlabs().get(0);
+			BlockPos plainFloor = new BlockPos(2, FLOOR_Y + 33, 2);
+			BlockPos glazedFloor = new BlockPos(2, FLOOR_Y + 33, 8);
+			BlockPos plainWall = new BlockPos(8, FLOOR_Y + 33, 2);
+			BlockPos glazedWall = new BlockPos(8, FLOOR_Y + 33, 8);
+
+			level.setBlockAndUpdate(plainFloor.below(), Blocks.STONE.defaultBlockState());
+			level.setBlockAndUpdate(glazedFloor.below(), Blocks.STONE.defaultBlockState());
+			level.setBlockAndUpdate(plainWall.below(), Blocks.STONE.defaultBlockState());
+			level.setBlockAndUpdate(glazedWall.below(), Blocks.STONE.defaultBlockState());
+
+			for (Block glazed : glazedSlabs()) {
+				Identifier id = BuiltInRegistries.BLOCK.getKey(glazed);
+
+				// Every click this check makes, on the floor and against the standing slab, is the
+				// same click on both blocks, so they are collected once and replayed twice.
+				for (Direction face : Direction.values()) {
+					for (Direction facing : Direction.Plane.HORIZONTAL) {
+						player.setYRot(facing.toYRot());
+
+						compareStates(glazed, level, player, plain, plainFloor, glazedFloor, face, facing);
+					}
+				}
+
+				for (Fill fill : List.of(Fill.negative(Direction.Axis.Z), Fill.positive(Direction.Axis.Z),
+						Fill.negative(Direction.Axis.X), Fill.positive(Direction.Axis.X))) {
+					level.setBlockAndUpdate(plainWall, VerticalSlab.withFill(plain.defaultBlockState(), fill));
+					level.setBlockAndUpdate(glazedWall, VerticalSlab.withFill(glazed.defaultBlockState(), fill));
+
+					String what = fill.axis() + " half " + (fill.positive() ? "positive" : "negative");
+
+					for (Direction face : Direction.values()) {
+						clearAround(level, plainWall);
+						clearAround(level, glazedWall);
+						player.setYRot(0.0F);
+
+						compareStates(glazed, level, player, plain, plainWall, glazedWall, face,
+								"the " + face + " face of an upright slab filling the " + what);
+						checkCompletingIsInPlace(level, player, glazed, glazedWall, face,
+								"the " + face + " face of an upright slab filling the " + what);
+					}
+
+					level.setBlockAndUpdate(plainWall, Blocks.AIR.defaultBlockState());
+					level.setBlockAndUpdate(glazedWall, Blocks.AIR.defaultBlockState());
+				}
+			}
+
+			level.setBlockAndUpdate(plainFloor, Blocks.AIR.defaultBlockState());
+			level.setBlockAndUpdate(glazedFloor, Blocks.AIR.defaultBlockState());
+		});
+	}
+
+	/**
+	 * Clicks one face of both blocks and checks that the glazed slab was placed as the plain one
+	 * was.
+	 *
+	 * @param what what is being clicked, for the failure message
+	 */
+	private static void compareStates(Block glazed, ServerLevel level, ServerPlayer player, Block plain,
+			BlockPos plainPos, BlockPos glazedPos, Direction face, String what) {
+		BlockState plainState = clickBlock(level, player, plain, plainPos, face);
+		BlockState glazedState = clickBlock(level, player, glazed, glazedPos, face);
+		Identifier id = BuiltInRegistries.BLOCK.getKey(glazed);
+
+		require(plainState != null && glazedState != null,
+				"clicking " + what + " with " + id + " produced no state for the plain slab or the glazed one: "
+						+ plainState + " and " + glazedState);
+
+		require(Fill.of(plainState).equals(Fill.of(glazedState)),
+				"clicking " + what + " with " + id + " filled " + Fill.of(glazedState) + ", but the same click on a"
+						+ " plain slab filled " + Fill.of(plainState) + "; a glazed slab carries the pattern's"
+						+ " direction and nothing else, so the two have to fill the same half");
+
+		require(isVertical(plainState) == isVertical(glazedState),
+				"clicking " + what + " with " + id + " stood the glazed slab "
+						+ (isVertical(glazedState) ? "up" : "flat") + " where a plain slab went "
+						+ (isVertical(plainState) ? "up" : "flat") + ": " + glazedState);
+
+		Direction expected = player.getDirection().getOpposite();
+		Direction turned = glazedState.getValue(MBBlockStateProperties.GLAZED_FACING);
+
+		require(turned == expected,
+				"clicking " + what + " with " + id + " turned the pattern to " + turned + " for a player looking "
+						+ player.getDirection() + ", expected " + expected);
+	}
+
+	/** Clicks one face of both blocks, with the player standing the way {@code facing} says. */
+	private static void compareStates(Block glazed, ServerLevel level, ServerPlayer player, Block plain,
+			BlockPos plainPos, BlockPos glazedPos, Direction face, Direction facing) {
+		compareStates(glazed, level, player, plain, plainPos, glazedPos, face,
+				"the " + face + " face of " + BuiltInRegistries.BLOCK.getKey(glazed) + " from " + facing);
+	}
+
+	/**
+	 * Checks the one thing a glazed slab is asked for by itself: that a click on the open face of an
+	 * upright slab completes that slab rather than placing another one beside it.
+	 *
+	 * <p>Every other check in this fixture compares the glazed slab against a plain one, and a
+	 * comparison cannot see a rule that is wrong the same way on both sides - invert which face
+	 * completes an upright slab and both slabs still answer identically, so they agree with each
+	 * other while both are wrong.
+	 *
+	 * <p>Asking one block is not enough on its own either: the face this check picks and the face the
+	 * rule answers with are read from the same method, so a plane that was chosen wrongly still
+	 * agrees with itself. What breaks the circle is the shape. The face is taken from
+	 * {@link VerticalSlab#openFace}, and the half it is supposed to close off is measured off the
+	 * block's own bounds - it has to be the empty half, or the "open" face is really the boundary at
+	 * the far end of the filled one, and the click this check makes is being made on the wrong side
+	 * of the slab. That is a real fault and a silent one: everything in the log looks right, and two
+	 * slabs placed by pointing at the wall come out on opposite sides of it.
+	 */
+	private static void checkCompletingIsInPlace(ServerLevel level, ServerPlayer player, Block glazed, BlockPos pos,
+			Direction face, String what) {
+		BlockState clicked = level.getBlockState(pos);
+
+		if (!VerticalSlab.isVertical(clicked) || VerticalSlab.isDouble(clicked)
+				|| face != VerticalSlab.openFace(clicked)) {
+			return;
+		}
+
+		Identifier id = BuiltInRegistries.BLOCK.getKey(glazed);
+		Direction.Axis axis = clicked.getValue(MBBlockStateProperties.AXIS);
+		AABB box = clicked.getShape(level, pos).bounds();
+		double filled = box.max(axis) - box.min(axis);
+		boolean emptyTowardsFace = face.getAxisDirection() == Direction.AxisDirection.POSITIVE
+				? box.max(axis) < 1.0
+				: box.min(axis) > 0.0;
+
+		require(emptyTowardsFace,
+				"the open face of a vertical slab filling " + axis + " from " + box.min(axis) + " to " + box.max(axis)
+						+ " is read as " + face + ", which is the boundary of the filled half; the open face closes"
+						+ " off the empty half, and a click made on the wrong one of the two planes goes to the"
+						+ " wrong side of the wall");
+
+		BlockPlaceContext context = clickContext(level, player, glazed, pos, face);
+		BlockState placed = glazed.getStateForPlacement(context);
+
+		require(placed != null, "clicking " + what + " with " + id + " placed nothing");
+		require(context.getClickedPos().equals(pos),
+				"clicking " + what + " with " + id + " aimed the placement at " + context.getClickedPos()
+						+ " instead of the slab's own cell at " + pos + "; the open face completes the slab, so"
+						+ " the click belongs to the block that is there");
+		require(placed.getValue(SlabBlock.TYPE) == SlabType.DOUBLE,
+				"clicking " + what + " with " + id + " produced " + placed.getValue(SlabBlock.TYPE)
+						+ " rather than a double slab; a click on the open face fills the empty half of the"
+						+ " slab it is on");
+		require(filled == 0.5,
+				"the slab at " + pos + " fills " + filled + " of its cell rather than half, so its open face has"
+						+ " no empty half to close off");
+	}
+
+	/** Empties the six cells around {@code pos}, so each click is made against the slab alone. */
+	private static void clearAround(ServerLevel level, BlockPos pos) {
+		for (Direction face : Direction.values()) {
+			BlockPos side = pos.relative(face);
+
+			if (!level.getBlockState(side).isAir()) {
+				level.setBlockAndUpdate(side, Blocks.AIR.defaultBlockState());
+			}
+		}
+	}
+
+	/** Every glazed slab the mod registers. */
+	private static List<Block> glazedSlabs() {
+		List<Block> slabs = new ArrayList<>();
+
+		BuiltInRegistries.BLOCK.forEach(block -> {
+			Identifier id = BuiltInRegistries.BLOCK.getKey(block);
+
+			if (block instanceof GlazedPattern && block instanceof SlabBlock
+					&& MoreBuildingBlocks.MOD_ID.equals(id.getNamespace())) {
+				slabs.add(block);
+			}
+		});
+
+		return slabs;
+	}
+
+	/**
+	 * Clicks the centre of one face of {@code pos} with {@code block} in hand and returns the state
+	 * the block would be placed as, or {@code null} when the click places nothing.
+	 *
+	 * <p>The click is put on the real face of whatever is in the cell: the empty cell the tests
+	 * build in has no shape at all, and asking one for its bounds throws, so a cell holding air is
+	 * clicked at the boundary of the block itself - which is where its face is anyway.
+	 */
+	private static BlockState clickBlock(ServerLevel level, ServerPlayer player, Block block, BlockPos pos,
+			Direction face) {
+		return block.getStateForPlacement(clickContext(level, player, block, pos, face));
+	}
+
+	/**
+	 * Builds the click the tests place blocks with, so that a check can ask where the click landed as
+	 * well as what came of it.
+	 *
+	 * <p>The context is the thing the placement rule reads, and it carries the answer to the question
+	 * this fixture exists for: which cell the block is placed into. A state alone cannot say whether
+	 * a click on an upright slab's open face was taken as completing that slab - which replaces the
+	 * block in its own cell - or as an ordinary placement in the cell beyond it, and only the context
+	 * distinguishes the two.
+	 */
+	private static BlockPlaceContext clickContext(ServerLevel level, ServerPlayer player, Block block, BlockPos pos,
+			Direction face) {
+		BlockState clicked = level.getBlockState(pos);
+		double extent = 0.0;
+
+		if (!clicked.isAir()) {
+			AABB box = clicked.getShape(level, pos).bounds();
+			extent = face.getAxis().choose(box.getXsize(), box.getYsize(), box.getZsize()) / 2.0;
+		}
+
+		Vec3 hit = Vec3.atCenterOf(pos).add(face.getUnitVec3().scale(extent));
+
+		return new BlockPlaceContext(player, InteractionHand.MAIN_HAND,
+				new ItemStack(block.asItem()), new BlockHitResult(hit, face, pos, false));
 	}
 
 	/**
