@@ -180,11 +180,13 @@ public class MBModelProvider implements DataProvider {
 	/**
 	 * The eight models, the blockstate and the item model of every eighth block.
 	 *
-	 * <p>An eighth block is one cell cut into eight pieces, so one model per piece is enough: the
-	 * blockstate picks, for every piece and every {@code facing}, the model of the piece that ends
-	 * up there once the cell has been turned the way its first eighth was placed, and turns it by
-	 * the same amount. A {@code y} rotation turns a model's texture with it, which is what vanilla
-	 * relies on for the four {@code facing}s of a glazed block.
+	 * <p>An eighth block is one cell cut into eight pieces, so one model per piece is enough.
+	 * Whether a piece is turned with the cell is decided by the material: a block whose own texture
+	 * is laid out around a facing - in this mod only the glazed terracotta, the way vanilla turns
+	 * its own - gets the four turns, so that the eighths of a cell all follow the pattern direction
+	 * of the first one placed. Every other material shows the piece where it is and keeps the
+	 * texture the way the block it was cut from shows it: turning planks, sandstone or copper
+	 * would turn their grain against the block next to them.
 	 *
 	 * <p>The item is one eighth of the block, not the block it is cut from: the icon is the piece
 	 * in the x-, y- and z- corner, unrotated, so it shows an eighth at its own size with the part
@@ -194,24 +196,39 @@ public class MBModelProvider implements DataProvider {
 	private void generateEighths() {
 		for (MBEighths.Material material : MBEighths.materials()) {
 			Block eighth = material.eighth();
+			boolean pattern = material.slab() instanceof GlazedPattern;
 
 			for (int index = 0; index < MBEighthProperties.BITS.length; index++) {
 				this.models.put(eighthModelId(eighth, index), modelInstance(eighthGeometry(material, index)));
 			}
 
-			this.blockStates.put(eighth, eighthState(eighth));
+			this.blockStates.put(eighth, eighthState(eighth, pattern));
+			this.models.put(eighthIconModelId(eighth), modelInstance(eighthIconGeometry(material)));
 
-			// The icon is the unrotated piece in the x-, y- and z- corner of the block.
-			registerItemModel(Item.BY_BLOCK.get(eighth),
-					eighthModelId(eighth, MBEighthProperties.index(false, false, false)));
+			registerItemModel(Item.BY_BLOCK.get(eighth), eighthIconModelId(eighth));
 		}
 	}
 
-	/** One part of the blockstate for every piece and every facing. */
-	private static MultiPartGenerator eighthState(final Block eighth) {
+	/**
+	 * One part of the blockstate for every piece - and, for a patterned material, every facing.
+	 *
+	 * <p>A plain material shows every piece where it is: a {@code y} rotation would turn its
+	 * texture with it, and vanilla never turns it either. A patterned one does get the four
+	 * turns, so the eighths of a cell follow the pattern direction of the first one placed: for
+	 * every piece and every {@code facing} the part picks the model of the piece that ends up
+	 * there once the cell has been turned that way, and turns it by the same amount.
+	 */
+	private static MultiPartGenerator eighthState(final Block eighth, final boolean pattern) {
 		MultiPartGenerator generator = MultiPartGenerator.multiPart(eighth);
 
 		for (int index = 0; index < MBEighthProperties.BITS.length; index++) {
+			if (!pattern) {
+				generator.with(new ConditionBuilder().term(MBEighthProperties.BITS[index], true),
+						plainVariant(eighthModelId(eighth, index)));
+
+				continue;
+			}
+
 			for (int turn = 0; turn < TURNS; turn++) {
 				int turned = MBEighthProperties.turned(index, (TURNS - turn) % TURNS);
 				ConditionBuilder condition = new ConditionBuilder()
@@ -223,6 +240,36 @@ public class MBModelProvider implements DataProvider {
 		}
 
 		return generator;
+	}
+
+	/** {@code morebuildingblocks:block/eighth_<base>_icon}, the model the item shows. */
+	private static Identifier eighthIconModelId(final Block eighth) {
+		return baseModelId(eighth, "icon");
+	}
+
+	/**
+	 * The item's model: the piece in the x-, y- and z- corner of the block, sprite and all, moved a
+	 * quarter of a block along x and z so that it sits on the middle line of the slot instead of in
+	 * the corner of the block it was cut from.
+	 *
+	 * <p>It is an icon, not a block: it keeps the sprite of that corner piece - the icon of a
+	 * copper or plank eighth may not show a stretched or turned texture - and drops the culling a
+	 * block model puts on the faces that sit on a block boundary.
+	 */
+	private static JsonObject eighthIconGeometry(final MBEighths.Material material) {
+		JsonObject geometry = eighthGeometry(material, MBEighthProperties.index(false, false, false));
+		JsonObject element = geometry.getAsJsonArray("elements").get(0).getAsJsonObject();
+
+		element.add("from", vector(4, 0, 4));
+		element.add("to", vector(12, 8, 12));
+
+		JsonObject faces = element.getAsJsonObject("faces");
+
+		for (String direction : FACE_DIRECTIONS) {
+			faces.getAsJsonObject(direction).remove("cullface");
+		}
+
+		return geometry;
 	}
 
 	/**

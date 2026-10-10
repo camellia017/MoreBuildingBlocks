@@ -25,7 +25,9 @@ import net.minecraft.world.phys.shapes.VoxelShape;
  * eastern one.
  *
  * <p>Every eighth block placed in one cell turns its texture the same way - see {@link #FACING},
- * which is written once, by the piece a cell starts with, and then left alone.
+ * which is written once, by the piece a cell starts with, and then left alone. Only a material
+ * whose own texture is laid out around a direction - the glazed terracotta - is turned at all; a
+ * plank or copper eighth keeps the grain of the block it was cut from, as vanilla keeps it.
  */
 public final class MBEighthProperties {
 	/** The number of quarter turns a texture can be turned by; the values of {@link #FACING}. */
@@ -68,7 +70,7 @@ public final class MBEighthProperties {
 	};
 
 	/**
-	 * The quarter turn every texture in one cell is turned by.
+	 * The quarter turn a patterned texture in one cell is turned by.
 	 *
 	 * <p>A cell's first eighth fixes it - the direction the player who placed it was looking - and
 	 * the pieces added afterwards leave it as they found it, so that a wall of eighths built into one
@@ -76,6 +78,10 @@ public final class MBEighthProperties {
 	 * MBModelProvider} turns the models by, and the same ones {@link
 	 * MBBlockStateProperties#GLAZED_FACING} uses, so that a glazed eighth block reads its texture the
 	 * way a glazed stair or slab does.
+	 *
+	 * <p>Only a material the game itself turns - the glazed terracotta, whose pattern is laid out
+	 * around a facing - has models for the four values. Every other eighth block keeps its own
+	 * grain and draws the same model for all four.
 	 */
 	public static final EnumProperty<Direction> FACING = BlockStateProperties.HORIZONTAL_FACING;
 
