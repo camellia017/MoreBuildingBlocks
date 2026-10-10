@@ -1,7 +1,5 @@
 # MoreBuildingBlocks
 
-<img src="src/main/resources/assets/morebuildingblocks/icon.png" width="128" alt="MoreBuildingBlocks">
-
 为陶瓦家族补上楼梯与台阶，并让**所有原版半砖**都能竖直放置。
 
 - 适用于 Minecraft **26.3**（Fabric）
