@@ -401,21 +401,40 @@ public class MBClientGameTest implements FabricClientGameTest {
 			List<Block> displayOrder = MBItems.displayOrder();
 			List<Block> expected = new ArrayList<>();
 
+			// The order is part of the tab: every mod family is listed as its stairs, its slab
+			// and then its eighth block, and the eighths of the vanilla materials follow in the
+			// order MBEighths declares them - grouped by material and colour, not by name.
 			for (MBBlockFamilies.Family family : MBBlockFamilies.families()) {
 				expected.add(family.stairs());
 				expected.add(family.slab());
+
+				MBEighths.Material material = MBEighths.byBase(family.base());
+
+				if (material != null) {
+					expected.add(material.eighth());
+				}
 			}
 
-			// Every family is followed by its eighth blocks, and the materials vanilla has no
-			// stairs for contribute one as well.
 			for (MBEighths.Material material : MBEighths.materials()) {
-				expected.add(material.eighth());
+				if (!material.modForms()) {
+					expected.add(material.eighth());
+				}
 			}
 
 			require(displayOrder.size() == expected.size(),
 					"the tab lists " + displayOrder.size() + " blocks, expected " + expected.size());
-			require(displayOrder.containsAll(expected),
-					"the tab is missing " + expected.stream().filter(b -> !displayOrder.contains(b)).toList());
+			require(displayOrder.equals(expected),
+					"the tab is listed in the wrong order: " + describeFirstMismatch(displayOrder, expected));
+
+			// Spot checks that read the order the way the player does, so that a table sorted by
+			// name again would fail here even if the list above were sorted with it.
+			assertFollowed(displayOrder, eighthOf(Blocks.OAK_PLANKS), eighthOf(Blocks.SPRUCE_PLANKS));
+			assertFollowed(displayOrder, eighthOf(Blocks.WOOL.white()), eighthOf(Blocks.WOOL.orange()));
+			assertFollowed(displayOrder, eighthOf(Blocks.WOOL.black()), eighthOf(Blocks.CONCRETE.white()));
+			assertFollowed(displayOrder, eighthOf(Blocks.STONE), eighthOf(Blocks.STONE_BRICKS));
+			require(displayOrder.indexOf(eighthOf(Blocks.OAK_PLANKS))
+					< displayOrder.indexOf(eighthOf(Blocks.ACACIA_PLANKS)),
+					"the eighths are still listed in name order, not in material order");
 
 			Identifier tabId = BuiltInRegistries.CREATIVE_MODE_TAB.getKey(tab);
 			require(MoreBuildingBlocks.MOD_ID.equals(tabId.getNamespace()),
@@ -430,6 +449,38 @@ public class MBClientGameTest implements FabricClientGameTest {
 				require(Item.BY_BLOCK.get(block) != null, "no item for " + id);
 			}
 		});
+	}
+
+	/** The eighth block of a vanilla base block, failing the test if it has none. */
+	private static Block eighthOf(Block base) {
+		MBEighths.Material material = MBEighths.byBase(base);
+
+		require(material != null, "no eighth block for " + BuiltInRegistries.BLOCK.getKey(base));
+
+		return material.eighth();
+	}
+
+	/** Requires {@code next} to be listed directly after {@code previous} in the creative tab. */
+	private static void assertFollowed(List<Block> order, Block previous, Block next) {
+		int index = order.indexOf(previous);
+
+		require(index >= 0, "the tab does not list " + BuiltInRegistries.BLOCK.getKey(previous));
+		require(index + 1 < order.size() && order.get(index + 1) == next,
+				"the tab does not list " + BuiltInRegistries.BLOCK.getKey(next) + " after "
+						+ BuiltInRegistries.BLOCK.getKey(previous));
+	}
+
+	/** Names the first block the tab lists somewhere else than expected, for a readable failure. */
+	private static String describeFirstMismatch(List<Block> actual, List<Block> expected) {
+		for (int index = 0; index < Math.min(actual.size(), expected.size()); index++) {
+			if (actual.get(index) != expected.get(index)) {
+				return "index " + index + " is " + BuiltInRegistries.BLOCK.getKey(actual.get(index))
+						+ " where " + BuiltInRegistries.BLOCK.getKey(expected.get(index)) + " belongs";
+			}
+		}
+
+		return actual.size() < expected.size() ? "it stops after " + actual.size() + " blocks"
+				: "it lists " + actual.size() + " blocks, expected " + expected.size();
 	}
 
 	/**

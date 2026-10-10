@@ -49,102 +49,117 @@ public final class MBEighths {
 
 		// The 96 vanilla blocks that are cut into slabs, in id order. Terracotta is not among them -
 		// vanilla cuts no slab from it - which is exactly why the mod builds its own families above.
-		vanilla("acacia_planks", "acacia_slab", "acacia_stairs");
-		vanilla("andesite", "andesite_slab", "andesite_stairs");
-		vanilla("bamboo_mosaic", "bamboo_mosaic_slab", "bamboo_mosaic_stairs");
-		vanilla("bamboo_planks", "bamboo_slab", "bamboo_stairs");
-		vanilla("birch_planks", "birch_slab", "birch_stairs");
-		vanilla("black_concrete", "black_concrete_slab", "black_concrete_stairs");
-		vanilla("black_wool", "black_wool_slab", "black_wool_stairs");
-		vanilla("blackstone", "blackstone_slab", null);
-		vanilla("blue_concrete", "blue_concrete_slab", "blue_concrete_stairs");
-		vanilla("blue_wool", "blue_wool_slab", "blue_wool_stairs");
-		vanilla("bricks", "brick_slab", "brick_stairs");
-		vanilla("brown_concrete", "brown_concrete_slab", "brown_concrete_stairs");
-		vanilla("brown_wool", "brown_wool_slab", "brown_wool_stairs");
-		vanilla("cherry_planks", "cherry_slab", "cherry_stairs");
-		vanilla("cinnabar", "cinnabar_slab", "cinnabar_stairs");
-		vanilla("cinnabar_bricks", "cinnabar_brick_slab", "cinnabar_brick_stairs");
-		vanilla("cobbled_deepslate", "cobbled_deepslate_slab", "cobbled_deepslate_stairs");
-		vanilla("cobblestone", "cobblestone_slab", "cobblestone_stairs");
-		vanilla("crimson_planks", "crimson_slab", "crimson_stairs");
-		vanilla("cut_copper", "cut_copper_slab", "cut_copper_stairs");
-		vanilla("cut_red_sandstone", "cut_red_sandstone_slab", null);
-		vanilla("cut_sandstone", "cut_sandstone_slab", null);
-		vanilla("cyan_concrete", "cyan_concrete_slab", "cyan_concrete_stairs");
-		vanilla("cyan_wool", "cyan_wool_slab", "cyan_wool_stairs");
-		vanilla("dark_oak_planks", "dark_oak_slab", "dark_oak_stairs");
-		vanilla("dark_prismarine", "dark_prismarine_slab", "dark_prismarine_stairs");
-		vanilla("deepslate_bricks", "deepslate_brick_slab", "deepslate_brick_stairs");
-		vanilla("deepslate_tiles", "deepslate_tile_slab", "deepslate_tile_stairs");
-		vanilla("diorite", "diorite_slab", "diorite_stairs");
-		vanilla("end_stone_bricks", "end_stone_brick_slab", "end_stone_brick_stairs");
-		vanilla("exposed_cut_copper", "exposed_cut_copper_slab", "exposed_cut_copper_stairs");
-		vanilla("granite", "granite_slab", "granite_stairs");
-		vanilla("gray_concrete", "gray_concrete_slab", "gray_concrete_stairs");
-		vanilla("gray_wool", "gray_wool_slab", "gray_wool_stairs");
-		vanilla("green_concrete", "green_concrete_slab", "green_concrete_stairs");
-		vanilla("green_wool", "green_wool_slab", "green_wool_stairs");
-		vanilla("jungle_planks", "jungle_slab", "jungle_stairs");
-		vanilla("light_blue_concrete", "light_blue_concrete_slab", "light_blue_concrete_stairs");
-		vanilla("light_blue_wool", "light_blue_wool_slab", "light_blue_wool_stairs");
-		vanilla("light_gray_concrete", "light_gray_concrete_slab", "light_gray_concrete_stairs");
-		vanilla("light_gray_wool", "light_gray_wool_slab", "light_gray_wool_stairs");
-		vanilla("lime_concrete", "lime_concrete_slab", "lime_concrete_stairs");
-		vanilla("lime_wool", "lime_wool_slab", "lime_wool_stairs");
-		vanilla("magenta_concrete", "magenta_concrete_slab", "magenta_concrete_stairs");
-		vanilla("magenta_wool", "magenta_wool_slab", "magenta_wool_stairs");
-		vanilla("mangrove_planks", "mangrove_slab", "mangrove_stairs");
-		vanilla("mossy_cobblestone", "mossy_cobblestone_slab", "mossy_cobblestone_stairs");
-		vanilla("mossy_stone_bricks", "mossy_stone_brick_slab", "mossy_stone_brick_stairs");
-		vanilla("mud_bricks", "mud_brick_slab", "mud_brick_stairs");
-		vanilla("nether_bricks", "nether_brick_slab", "nether_brick_stairs");
+		// Planks: the overworld woods, then the nether ones.
 		vanilla("oak_planks", "oak_slab", "oak_stairs");
-		vanilla("orange_concrete", "orange_concrete_slab", "orange_concrete_stairs");
-		vanilla("orange_wool", "orange_wool_slab", "orange_wool_stairs");
-		vanilla("oxidized_cut_copper", "oxidized_cut_copper_slab", "oxidized_cut_copper_stairs");
-		vanilla("pale_oak_planks", "pale_oak_slab", "pale_oak_stairs");
-		vanilla("pink_concrete", "pink_concrete_slab", "pink_concrete_stairs");
-		vanilla("pink_wool", "pink_wool_slab", "pink_wool_stairs");
-		vanilla("polished_andesite", "polished_andesite_slab", "polished_andesite_stairs");
-		vanilla("polished_blackstone", "polished_blackstone_slab", "polished_blackstone_stairs");
-		vanilla("polished_blackstone_bricks", "polished_blackstone_brick_slab", "polished_blackstone_brick_stairs");
-		vanilla("polished_cinnabar", "polished_cinnabar_slab", "polished_cinnabar_stairs");
-		vanilla("polished_deepslate", "polished_deepslate_slab", "polished_deepslate_stairs");
-		vanilla("polished_diorite", "polished_diorite_slab", "polished_diorite_stairs");
-		vanilla("polished_granite", "polished_granite_slab", "polished_granite_stairs");
-		vanilla("polished_sulfur", "polished_sulfur_slab", "polished_sulfur_stairs");
-		vanilla("polished_tuff", "polished_tuff_slab", "polished_tuff_stairs");
-		vanilla("poplar_planks", "poplar_slab", "poplar_stairs");
-		vanilla("prismarine", "prismarine_slab", "prismarine_stairs");
-		vanilla("prismarine_bricks", "prismarine_brick_slab", "prismarine_brick_stairs");
-		vanilla("purple_concrete", "purple_concrete_slab", "purple_concrete_stairs");
-		vanilla("purple_wool", "purple_wool_slab", "purple_wool_stairs");
-		vanilla("purpur_block", "purpur_slab", "purpur_stairs");
-		vanilla("quartz_block", "quartz_slab", null);
-		vanilla("red_concrete", "red_concrete_slab", "red_concrete_stairs");
-		vanilla("red_nether_bricks", "red_nether_brick_slab", "red_nether_brick_stairs");
-		vanilla("red_sandstone", "red_sandstone_slab", null);
-		vanilla("red_wool", "red_wool_slab", "red_wool_stairs");
-		vanilla("resin_bricks", "resin_brick_slab", "resin_brick_stairs");
-		vanilla("sandstone", "sandstone_slab", null);
-		vanilla("smooth_quartz", "smooth_quartz_slab", null);
-		vanilla("smooth_red_sandstone", "smooth_red_sandstone_slab", null);
-		vanilla("smooth_sandstone", "smooth_sandstone_slab", null);
-		vanilla("smooth_stone", "smooth_stone_slab", null);
 		vanilla("spruce_planks", "spruce_slab", "spruce_stairs");
+		vanilla("birch_planks", "birch_slab", "birch_stairs");
+		vanilla("jungle_planks", "jungle_slab", "jungle_stairs");
+		vanilla("acacia_planks", "acacia_slab", "acacia_stairs");
+		vanilla("dark_oak_planks", "dark_oak_slab", "dark_oak_stairs");
+		vanilla("mangrove_planks", "mangrove_slab", "mangrove_stairs");
+		vanilla("cherry_planks", "cherry_slab", "cherry_stairs");
+		vanilla("pale_oak_planks", "pale_oak_slab", "pale_oak_stairs");
+		vanilla("poplar_planks", "poplar_slab", "poplar_stairs");
+		vanilla("bamboo_planks", "bamboo_slab", "bamboo_stairs");
+		vanilla("bamboo_mosaic", "bamboo_mosaic_slab", "bamboo_mosaic_stairs");
+		vanilla("crimson_planks", "crimson_slab", "crimson_stairs");
+		vanilla("warped_planks", "warped_slab", "warped_stairs");
+		// Wool and concrete, in the order of the dye colours.
+		vanilla("white_wool", "white_wool_slab", "white_wool_stairs");
+		vanilla("orange_wool", "orange_wool_slab", "orange_wool_stairs");
+		vanilla("magenta_wool", "magenta_wool_slab", "magenta_wool_stairs");
+		vanilla("light_blue_wool", "light_blue_wool_slab", "light_blue_wool_stairs");
+		vanilla("yellow_wool", "yellow_wool_slab", "yellow_wool_stairs");
+		vanilla("lime_wool", "lime_wool_slab", "lime_wool_stairs");
+		vanilla("pink_wool", "pink_wool_slab", "pink_wool_stairs");
+		vanilla("gray_wool", "gray_wool_slab", "gray_wool_stairs");
+		vanilla("light_gray_wool", "light_gray_wool_slab", "light_gray_wool_stairs");
+		vanilla("cyan_wool", "cyan_wool_slab", "cyan_wool_stairs");
+		vanilla("purple_wool", "purple_wool_slab", "purple_wool_stairs");
+		vanilla("blue_wool", "blue_wool_slab", "blue_wool_stairs");
+		vanilla("brown_wool", "brown_wool_slab", "brown_wool_stairs");
+		vanilla("green_wool", "green_wool_slab", "green_wool_stairs");
+		vanilla("red_wool", "red_wool_slab", "red_wool_stairs");
+		vanilla("black_wool", "black_wool_slab", "black_wool_stairs");
+		vanilla("white_concrete", "white_concrete_slab", "white_concrete_stairs");
+		vanilla("orange_concrete", "orange_concrete_slab", "orange_concrete_stairs");
+		vanilla("magenta_concrete", "magenta_concrete_slab", "magenta_concrete_stairs");
+		vanilla("light_blue_concrete", "light_blue_concrete_slab", "light_blue_concrete_stairs");
+		vanilla("yellow_concrete", "yellow_concrete_slab", "yellow_concrete_stairs");
+		vanilla("lime_concrete", "lime_concrete_slab", "lime_concrete_stairs");
+		vanilla("pink_concrete", "pink_concrete_slab", "pink_concrete_stairs");
+		vanilla("gray_concrete", "gray_concrete_slab", "gray_concrete_stairs");
+		vanilla("light_gray_concrete", "light_gray_concrete_slab", "light_gray_concrete_stairs");
+		vanilla("cyan_concrete", "cyan_concrete_slab", "cyan_concrete_stairs");
+		vanilla("purple_concrete", "purple_concrete_slab", "purple_concrete_stairs");
+		vanilla("blue_concrete", "blue_concrete_slab", "blue_concrete_stairs");
+		vanilla("brown_concrete", "brown_concrete_slab", "brown_concrete_stairs");
+		vanilla("green_concrete", "green_concrete_slab", "green_concrete_stairs");
+		vanilla("red_concrete", "red_concrete_slab", "red_concrete_stairs");
+		vanilla("black_concrete", "black_concrete_slab", "black_concrete_stairs");
+		// Stone and its bricks.
 		vanilla("stone", "stone_slab", "stone_stairs");
 		vanilla("stone_bricks", "stone_brick_slab", "stone_brick_stairs");
-		vanilla("sulfur", "sulfur_slab", "sulfur_stairs");
-		vanilla("sulfur_bricks", "sulfur_brick_slab", "sulfur_brick_stairs");
+		vanilla("mossy_stone_bricks", "mossy_stone_brick_slab", "mossy_stone_brick_stairs");
+		vanilla("smooth_stone", "smooth_stone_slab", null);
+		vanilla("cobblestone", "cobblestone_slab", "cobblestone_stairs");
+		vanilla("mossy_cobblestone", "mossy_cobblestone_slab", "mossy_cobblestone_stairs");
+		// Andesite, diorite and granite, each with its polished form.
+		vanilla("andesite", "andesite_slab", "andesite_stairs");
+		vanilla("polished_andesite", "polished_andesite_slab", "polished_andesite_stairs");
+		vanilla("diorite", "diorite_slab", "diorite_stairs");
+		vanilla("polished_diorite", "polished_diorite_slab", "polished_diorite_stairs");
+		vanilla("granite", "granite_slab", "granite_stairs");
+		vanilla("polished_granite", "polished_granite_slab", "polished_granite_stairs");
+		// Deepslate.
+		vanilla("cobbled_deepslate", "cobbled_deepslate_slab", "cobbled_deepslate_stairs");
+		vanilla("polished_deepslate", "polished_deepslate_slab", "polished_deepslate_stairs");
+		vanilla("deepslate_bricks", "deepslate_brick_slab", "deepslate_brick_stairs");
+		vanilla("deepslate_tiles", "deepslate_tile_slab", "deepslate_tile_stairs");
+		// Tuff.
 		vanilla("tuff", "tuff_slab", "tuff_stairs");
+		vanilla("polished_tuff", "polished_tuff_slab", "polished_tuff_stairs");
 		vanilla("tuff_bricks", "tuff_brick_slab", "tuff_brick_stairs");
-		vanilla("warped_planks", "warped_slab", "warped_stairs");
+		// Blackstone.
+		vanilla("blackstone", "blackstone_slab", null);
+		vanilla("polished_blackstone", "polished_blackstone_slab", "polished_blackstone_stairs");
+		vanilla("polished_blackstone_bricks", "polished_blackstone_brick_slab", "polished_blackstone_brick_stairs");
+		// Nether bricks.
+		vanilla("nether_bricks", "nether_brick_slab", "nether_brick_stairs");
+		vanilla("red_nether_bricks", "red_nether_brick_slab", "red_nether_brick_stairs");
+		// Bricks, and the other brick families.
+		vanilla("bricks", "brick_slab", "brick_stairs");
+		vanilla("end_stone_bricks", "end_stone_brick_slab", "end_stone_brick_stairs");
+		vanilla("mud_bricks", "mud_brick_slab", "mud_brick_stairs");
+		vanilla("resin_bricks", "resin_brick_slab", "resin_brick_stairs");
+		// Sandstone.
+		vanilla("sandstone", "sandstone_slab", null);
+		vanilla("cut_sandstone", "cut_sandstone_slab", null);
+		vanilla("smooth_sandstone", "smooth_sandstone_slab", null);
+		vanilla("red_sandstone", "red_sandstone_slab", null);
+		vanilla("cut_red_sandstone", "cut_red_sandstone_slab", null);
+		vanilla("smooth_red_sandstone", "smooth_red_sandstone_slab", null);
+		// Quartz.
+		vanilla("quartz_block", "quartz_slab", null);
+		vanilla("smooth_quartz", "smooth_quartz_slab", null);
+		// Prismarine.
+		vanilla("prismarine", "prismarine_slab", "prismarine_stairs");
+		vanilla("prismarine_bricks", "prismarine_brick_slab", "prismarine_brick_stairs");
+		vanilla("dark_prismarine", "dark_prismarine_slab", "dark_prismarine_stairs");
+		// Purpur.
+		vanilla("purpur_block", "purpur_slab", "purpur_stairs");
+		// Copper, from the least to the most weathered.
+		vanilla("cut_copper", "cut_copper_slab", "cut_copper_stairs");
+		vanilla("exposed_cut_copper", "exposed_cut_copper_slab", "exposed_cut_copper_stairs");
 		vanilla("weathered_cut_copper", "weathered_cut_copper_slab", "weathered_cut_copper_stairs");
-		vanilla("white_concrete", "white_concrete_slab", "white_concrete_stairs");
-		vanilla("white_wool", "white_wool_slab", "white_wool_stairs");
-		vanilla("yellow_concrete", "yellow_concrete_slab", "yellow_concrete_stairs");
-		vanilla("yellow_wool", "yellow_wool_slab", "yellow_wool_stairs");
+		vanilla("oxidized_cut_copper", "oxidized_cut_copper_slab", "oxidized_cut_copper_stairs");
+		// Cinnabar and sulfur.
+		vanilla("cinnabar", "cinnabar_slab", "cinnabar_stairs");
+		vanilla("polished_cinnabar", "polished_cinnabar_slab", "polished_cinnabar_stairs");
+		vanilla("cinnabar_bricks", "cinnabar_brick_slab", "cinnabar_brick_stairs");
+		vanilla("sulfur", "sulfur_slab", "sulfur_stairs");
+		vanilla("polished_sulfur", "polished_sulfur_slab", "polished_sulfur_stairs");
+		vanilla("sulfur_bricks", "sulfur_brick_slab", "sulfur_brick_stairs");
 	}
 
 	private MBEighths() {

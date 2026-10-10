@@ -252,16 +252,28 @@ public class MBModelProvider implements DataProvider {
 	 * quarter of a block along x and z so that it sits on the middle line of the slot instead of in
 	 * the corner of the block it was cut from.
 	 *
+	 * <p>The icon is drawn a fifth larger than the piece it shows and lifted a little, because an
+	 * eighth is small enough to be mistaken for a full block in a full tab. Both are done to the
+	 * geometry rather than to the GUI transform: the model is an icon and nothing else, so it can
+	 * carry a size of its own without touching the display transforms the item inherits - the ones
+	 * that decide how it is held, shown in a frame and dropped.
+	 *
 	 * <p>It is an icon, not a block: it keeps the sprite of that corner piece - the icon of a
 	 * copper or plank eighth may not show a stretched or turned texture - and drops the culling a
 	 * block model puts on the faces that sit on a block boundary.
 	 */
 	private static JsonObject eighthIconGeometry(final MBEighths.Material material) {
+		final double scale = 1.2;
+		final double lift = 3.0;
+		double half = 4 * scale;
+		double bottom = 4 - half + lift;
+		double top = 4 + half + lift;
+
 		JsonObject geometry = eighthGeometry(material, MBEighthProperties.index(false, false, false));
 		JsonObject element = geometry.getAsJsonArray("elements").get(0).getAsJsonObject();
 
-		element.add("from", vector(4, 0, 4));
-		element.add("to", vector(12, 8, 12));
+		element.add("from", vector(8 - half, bottom, 8 - half));
+		element.add("to", vector(8 + half, top, 8 + half));
 
 		JsonObject faces = element.getAsJsonObject("faces");
 
@@ -1180,6 +1192,15 @@ public class MBModelProvider implements DataProvider {
 	}
 
 	private static JsonArray vector(int x, int y, int z) {
+		JsonArray array = new JsonArray();
+		array.add(x);
+		array.add(y);
+		array.add(z);
+		return array;
+	}
+
+	/** A corner that does not land on a sixteenth of the block, such as an icon's. */
+	private static JsonArray vector(double x, double y, double z) {
 		JsonArray array = new JsonArray();
 		array.add(x);
 		array.add(y);
