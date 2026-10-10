@@ -166,7 +166,7 @@ public class MBModelProvider implements DataProvider {
 			Block slab = family.slab();
 
 			if (family.glazed()) {
-				generateGlazed(generators, base, stairs, slab);
+				generateGlazed(base, stairs, slab);
 			} else {
 				generatePlain(generators, base, stairs, slab);
 			}
@@ -184,7 +184,7 @@ public class MBModelProvider implements DataProvider {
 		Identifier outer = templateModel(generators, ModelTemplates.STAIRS_OUTER, stairs, "outer", mapping);
 
 		writeVerticalModels(slab, plainVerticalSlab(base, null));
-		generateModSlabState(slab, slabBottom, slabTop, baseBlockModelId(base));
+		generateModSlabState(slab, slabBottom, slabTop, baseBlockModelId(base), false);
 		this.blockStates.put(stairs, BlockModelGenerators.createStairs(stairs,
 				plainVariant(inner), plainVariant(straight), plainVariant(outer)));
 	}
@@ -203,9 +203,8 @@ public class MBModelProvider implements DataProvider {
 	 * <p>Every face takes the sprite of the <em>same world direction</em> of the full glazed block,
 	 * rotated exactly as vanilla rotates it on that face, and then turned with the rest of the model.
 	 */
-	private void generateGlazed(BlockModelGenerators generators, Block base, Block stairs, Block slab) {
+	private void generateGlazed(Block base, Block stairs, Block slab) {
 		Material pattern = vanillaTexture(base);
-		Material[] all = { pattern, pattern, pattern, pattern, pattern, pattern };
 
 		// Element for element, box for box, the geometry vanilla's slab, stairs, inner_stairs and
 		// outer_stairs templates lay down. Only the face rotations differ, so the pattern keeps
@@ -217,15 +216,15 @@ public class MBModelProvider implements DataProvider {
 			// the block's own model id. baseModelId would append "_" and emit a model named
 			// "…_stairs_" that nothing - least of all the item definition - ever asks for.
 			this.models.put(formModelId(slab, suffix("", turn)),
-				modelInstance(turned(glazedCubeGeometry(all, SLAB_BOX), turn)));
+				modelInstance(turned(glazedCubeGeometry(pattern, SLAB_BOX), turn)));
 			this.models.put(formModelId(slab, suffix("top", turn)),
-				modelInstance(turned(glazedCubeGeometry(all, TOP_SLAB_BOX), turn)));
+				modelInstance(turned(glazedCubeGeometry(pattern, TOP_SLAB_BOX), turn)));
 			this.models.put(formModelId(stairs, suffix("", turn)),
-				modelInstance(turned(glazedCubeGeometry(all, SLAB_BOX, STAIR_BOX), turn)));
+				modelInstance(turned(glazedCubeGeometry(pattern, SLAB_BOX, STAIR_BOX), turn)));
 			this.models.put(formModelId(stairs, suffix("inner", turn)),
-				modelInstance(turned(glazedCubeGeometry(all, SLAB_BOX, STAIR_BOX, INNER_BOX), turn)));
+				modelInstance(turned(glazedCubeGeometry(pattern, SLAB_BOX, STAIR_BOX, INNER_BOX), turn)));
 			this.models.put(formModelId(stairs, suffix("outer", turn)),
-				modelInstance(turned(glazedCubeGeometry(all, SLAB_BOX, OUTER_BOX), turn)));
+				modelInstance(turned(glazedCubeGeometry(pattern, SLAB_BOX, OUTER_BOX), turn)));
 
 			writeVerticalModels(slab, upright, turn);
 		}
@@ -258,10 +257,6 @@ public class MBModelProvider implements DataProvider {
 	 *               and therefore needs one model per quarter turn. Only a glazed slab declares the
 	 *               property that holds it, so the table has to be built two ways.
 	 */
-	private void generateModSlabState(Block slab, Identifier bottomModel, Identifier topModel, Identifier fullModel) {
-		generateModSlabState(slab, bottomModel, topModel, fullModel, false);
-	}
-
 	private void generateModSlabState(Block slab, Identifier bottomModel, Identifier topModel, Identifier fullModel,
 			final boolean glazed) {
 		MultiVariant full = plainVariant(fullModel);
@@ -471,10 +466,10 @@ public class MBModelProvider implements DataProvider {
 		Material side = textures != null ? vanillaTexture(textures.side()) : vanillaTexture(base);
 
 		Map<String, JsonObject> geometries = new LinkedHashMap<>(4);
-		geometries.put(FILL_NEGATIVE_X, geometry(bottom, top, side, side, side, side, NEGATIVE_X_BOX));
-		geometries.put(FILL_POSITIVE_X, geometry(bottom, top, side, side, side, side, POSITIVE_X_BOX));
-		geometries.put(FILL_NEGATIVE_Z, geometry(bottom, top, side, side, side, side, NEGATIVE_Z_BOX));
-		geometries.put(FILL_POSITIVE_Z, geometry(bottom, top, side, side, side, side, POSITIVE_Z_BOX));
+		geometries.put(FILL_NEGATIVE_X, geometry(bottom, top, side, NEGATIVE_X_BOX));
+		geometries.put(FILL_POSITIVE_X, geometry(bottom, top, side, POSITIVE_X_BOX));
+		geometries.put(FILL_NEGATIVE_Z, geometry(bottom, top, side, NEGATIVE_Z_BOX));
+		geometries.put(FILL_POSITIVE_Z, geometry(bottom, top, side, POSITIVE_Z_BOX));
 		return geometries;
 	}
 
@@ -487,13 +482,12 @@ public class MBModelProvider implements DataProvider {
 	 */
 	private static Map<String, JsonObject> glazedVerticalSlab(Block base) {
 		Material pattern = vanillaTexture(base);
-		Material[] all = { pattern, pattern, pattern, pattern, pattern, pattern };
 
 		Map<String, JsonObject> geometries = new LinkedHashMap<>(4);
-		geometries.put(FILL_NEGATIVE_X, glazedCubeGeometry(all, NEGATIVE_X_BOX));
-		geometries.put(FILL_POSITIVE_X, glazedCubeGeometry(all, POSITIVE_X_BOX));
-		geometries.put(FILL_NEGATIVE_Z, glazedCubeGeometry(all, NEGATIVE_Z_BOX));
-		geometries.put(FILL_POSITIVE_Z, glazedCubeGeometry(all, POSITIVE_Z_BOX));
+		geometries.put(FILL_NEGATIVE_X, glazedCubeGeometry(pattern, NEGATIVE_X_BOX));
+		geometries.put(FILL_POSITIVE_X, glazedCubeGeometry(pattern, POSITIVE_X_BOX));
+		geometries.put(FILL_NEGATIVE_Z, glazedCubeGeometry(pattern, NEGATIVE_Z_BOX));
+		geometries.put(FILL_POSITIVE_Z, glazedCubeGeometry(pattern, POSITIVE_Z_BOX));
 		return geometries;
 	}
 
@@ -571,8 +565,7 @@ public class MBModelProvider implements DataProvider {
 	 * A plain model: vanilla's block parent for the display transforms, one box, one sprite per
 	 * texture slot.
 	 */
-	private static JsonObject geometry(Material bottom, Material top, Material side, Material side2,
-			Material side3, Material side4, Box box) {
+	private static JsonObject geometry(Material bottom, Material top, Material side, Box box) {
 		JsonObject root = new JsonObject();
 		root.addProperty("parent", BLOCK_PARENT.toString());
 
@@ -772,7 +765,7 @@ public class MBModelProvider implements DataProvider {
 	 * One glazed box: the pattern's rotation is written onto every face, so the motif on a cut
 	 * shape continues to point the way it does on the full block.
 	 */
-	private static JsonObject glazedCubeGeometry(final Material[] materials, final Box... boxes) {
+	private static JsonObject glazedCubeGeometry(final Material pattern, final Box... boxes) {
 		JsonObject root = new JsonObject();
 		root.addProperty("parent", BLOCK_PARENT.toString());
 
@@ -780,8 +773,8 @@ public class MBModelProvider implements DataProvider {
 		// template_glazed_terracotta only names "particle" because it inherits the rest from the
 		// per-block model that parents it; these models have no such parent.
 		JsonObject textures = new JsonObject();
-		textures.addProperty("pattern", materials[0].sprite().toString());
-		textures.addProperty("particle", materials[0].sprite().toString());
+		textures.addProperty("pattern", pattern.sprite().toString());
+		textures.addProperty("particle", pattern.sprite().toString());
 		root.add("textures", textures);
 
 		JsonArray elements = new JsonArray();

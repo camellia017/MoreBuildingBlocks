@@ -2,8 +2,6 @@ package com.camelie.morebuildingblocks.client;
 
 import java.util.Map;
 
-import com.mojang.math.Quadrant;
-
 import net.minecraft.client.renderer.block.dispatch.SingleVariant;
 import net.minecraft.client.renderer.block.dispatch.Variant;
 import net.minecraft.core.Direction;
@@ -79,13 +77,13 @@ public class MBVanillaSlabModelPlugin implements ClientModInitializer {
 		Block block = context.block();
 		Identifier id = BuiltInRegistries.BLOCK.getKey(block);
 
-		Variant bottom = variant(flatModel(id, ""), null);
-		Variant top = variant(flatModel(id, "_top"), null);
-		Variant full = variant(doubleModel(id), null);
-		Variant verticalNegativeX = variant(verticalModel(id, "neg_x"), null);
-		Variant verticalPositiveX = variant(verticalModel(id, "pos_x"), null);
-		Variant verticalNegativeZ = variant(verticalModel(id, "neg_z"), null);
-		Variant verticalPositiveZ = variant(verticalModel(id, "pos_z"), null);
+		Variant bottom = new Variant(flatModel(id, ""));
+		Variant top = new Variant(flatModel(id, "_top"));
+		Variant full = new Variant(doubleModel(id));
+		Variant verticalNegativeX = new Variant(verticalModel(id, "neg_x"));
+		Variant verticalPositiveX = new Variant(verticalModel(id, "pos_x"));
+		Variant verticalNegativeZ = new Variant(verticalModel(id, "neg_z"));
+		Variant verticalPositiveZ = new Variant(verticalModel(id, "pos_z"));
 
 		for (BlockState state : block.getStateDefinition().getPossibleStates()) {
 			boolean vertical = state.getValue(MBBlockStateProperties.VERTICAL);
@@ -165,13 +163,5 @@ public class MBVanillaSlabModelPlugin implements ClientModInitializer {
 		}
 
 		return slabId.withPath(ignored -> textures.side());
-	}
-
-	private static Variant variant(Identifier model, Quadrant yRotation) {
-		if (yRotation == null) {
-			return new Variant(model);
-		}
-
-		return new Variant(model, new Variant.SimpleModelState(Quadrant.R0, yRotation, Quadrant.R0, false));
 	}
 }

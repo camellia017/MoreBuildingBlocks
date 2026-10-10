@@ -13,13 +13,9 @@ import net.fabricmc.fabric.api.client.gametest.v1.context.TestDedicatedServerCon
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestServerConnection;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestServerContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.Bootstrap;
 import net.minecraft.server.level.ServerLevel;
@@ -39,7 +35,6 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.Half;
 import net.minecraft.world.level.block.state.properties.SlabType;
-import net.minecraft.world.level.block.state.properties.StairsShape;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
@@ -241,12 +236,12 @@ public class MBClientGameTest implements FabricClientGameTest {
 			// Geometry and loot come last: a failed assertion aborts the run, and the
 			// screenshots above are the evidence for the checks a log cannot make.
 			verifyShapes(server);
-			verifyPlacement(server, family);
+			verifyPlacement(server);
 			verifyUprightStacking(server);
 			verifyWallContinuation(server);
 			verifyDoubleSlabClicks(server);
 			verifyGlazedSlabs(server);
-			verifyDrops(context, server, family);
+			verifyDrops(context, server);
 			verifyCreativeTab(server);
 		}
 
@@ -256,8 +251,8 @@ public class MBClientGameTest implements FabricClientGameTest {
 	}
 
 	/**
-	 * Checks that the mod's creative tab exists and holds every block the mod adds, in
-	 * the order the tab is built from.
+	 * Checks that the mod's creative tab exists and holds every block the mod adds, each
+	 * one exactly once. The order the tab lists them in is not asserted here.
 	 *
 	 * <p>Registering the tab a second time is safe: {@code MBItems.register()} is guarded,
 	 * so this also proves the guard works from a second call site.
@@ -389,7 +384,7 @@ public class MBClientGameTest implements FabricClientGameTest {
 	 * a click at a face's own eastern edge fills the eastern half, and a click at the
 	 * northern edge of a top face the northern half.
 	 */
-	private static void verifyPlacement(TestServerContext server, List<Block> family) {
+	private static void verifyPlacement(TestServerContext server) {
 		server.runOnServer(minecraftServer -> {
 			ServerLevel level = minecraftServer.overworld();
 			ServerPlayer player = minecraftServer.getPlayerList().getPlayers().get(0);
@@ -401,57 +396,57 @@ public class MBClientGameTest implements FabricClientGameTest {
 			// The top face is read with east to the right and north upwards, so each band fills the
 			// half on its own side of the block: north band the northern half, south band the
 			// southern, west band the western half and east band the eastern one.
-			checkPlacement(level, player, slabBlock, pos, new Vec3(0.5, FLOOR_Y + 25.0, 0.5), Direction.UP,
+			checkPlacement(player, slabBlock, pos, new Vec3(0.5, FLOOR_Y + 25.0, 0.5), Direction.UP,
 					Fill.negative(Direction.Axis.Y), "top face centre");
-			checkPlacement(level, player, slabBlock, pos, new Vec3(0.5, FLOOR_Y + 25.0, 0.1), Direction.UP,
+			checkPlacement(player, slabBlock, pos, new Vec3(0.5, FLOOR_Y + 25.0, 0.1), Direction.UP,
 					Fill.negative(Direction.Axis.Z), "top face north band");
-			checkPlacement(level, player, slabBlock, pos, new Vec3(0.5, FLOOR_Y + 25.0, 0.9), Direction.UP,
+			checkPlacement(player, slabBlock, pos, new Vec3(0.5, FLOOR_Y + 25.0, 0.9), Direction.UP,
 					Fill.positive(Direction.Axis.Z), "top face south band");
-			checkPlacement(level, player, slabBlock, pos, new Vec3(0.1, FLOOR_Y + 25.0, 0.5), Direction.UP,
+			checkPlacement(player, slabBlock, pos, new Vec3(0.1, FLOOR_Y + 25.0, 0.5), Direction.UP,
 					Fill.negative(Direction.Axis.X), "top face west band");
-			checkPlacement(level, player, slabBlock, pos, new Vec3(0.9, FLOOR_Y + 25.0, 0.5), Direction.UP,
+			checkPlacement(player, slabBlock, pos, new Vec3(0.9, FLOOR_Y + 25.0, 0.5), Direction.UP,
 					Fill.positive(Direction.Axis.X), "top face east band");
 
 			// A side face that looks north carries the same two axes: east to the right and down the
 			// face, so its bands name the same halves as the top face's do. The centre fills the half
 			// behind the face - the southern half - which carries a wall on straight.
-			checkPlacement(level, player, slabBlock, pos, new Vec3(0.5, FLOOR_Y + 24.5, 0.05), Direction.NORTH,
+			checkPlacement(player, slabBlock, pos, new Vec3(0.5, FLOOR_Y + 24.5, 0.05), Direction.NORTH,
 					Fill.positive(Direction.Axis.Z), "north face centre");
-			checkPlacement(level, player, slabBlock, pos, new Vec3(0.5, FLOOR_Y + 24.1, 0.05), Direction.NORTH,
+			checkPlacement(player, slabBlock, pos, new Vec3(0.5, FLOOR_Y + 24.1, 0.05), Direction.NORTH,
 					Fill.negative(Direction.Axis.Y), "north face bottom band");
-			checkPlacement(level, player, slabBlock, pos, new Vec3(0.5, FLOOR_Y + 24.9, 0.05), Direction.NORTH,
+			checkPlacement(player, slabBlock, pos, new Vec3(0.5, FLOOR_Y + 24.9, 0.05), Direction.NORTH,
 					Fill.positive(Direction.Axis.Y), "north face top band");
-			checkPlacement(level, player, slabBlock, pos, new Vec3(0.9, FLOOR_Y + 24.5, 0.05), Direction.NORTH,
+			checkPlacement(player, slabBlock, pos, new Vec3(0.9, FLOOR_Y + 24.5, 0.05), Direction.NORTH,
 					Fill.positive(Direction.Axis.X), "north face east band");
-			checkPlacement(level, player, slabBlock, pos, new Vec3(0.1, FLOOR_Y + 24.5, 0.05), Direction.NORTH,
+			checkPlacement(player, slabBlock, pos, new Vec3(0.1, FLOOR_Y + 24.5, 0.05), Direction.NORTH,
 					Fill.negative(Direction.Axis.X), "north face west band");
 
 			// A face that looks east is read with south to the right and down the face, so its north
 			// band fills the northern half and its south band the southern one. Its right band fills
 			// the southern half as well, both being the half on the side those two edges sit on.
-			checkPlacement(level, player, slabBlock, pos, new Vec3(1.0, FLOOR_Y + 24.5, 0.5), Direction.EAST,
+			checkPlacement(player, slabBlock, pos, new Vec3(1.0, FLOOR_Y + 24.5, 0.5), Direction.EAST,
 					Fill.negative(Direction.Axis.X), "east face centre");
-			checkPlacement(level, player, slabBlock, pos, new Vec3(1.0, FLOOR_Y + 24.5, 0.1), Direction.EAST,
+			checkPlacement(player, slabBlock, pos, new Vec3(1.0, FLOOR_Y + 24.5, 0.1), Direction.EAST,
 					Fill.negative(Direction.Axis.Z), "east face north band");
-			checkPlacement(level, player, slabBlock, pos, new Vec3(1.0, FLOOR_Y + 24.5, 0.9), Direction.EAST,
+			checkPlacement(player, slabBlock, pos, new Vec3(1.0, FLOOR_Y + 24.5, 0.9), Direction.EAST,
 					Fill.positive(Direction.Axis.Z), "east face south band");
-			checkPlacement(level, player, slabBlock, pos, new Vec3(1.0, FLOOR_Y + 24.1, 0.5), Direction.EAST,
+			checkPlacement(player, slabBlock, pos, new Vec3(1.0, FLOOR_Y + 24.1, 0.5), Direction.EAST,
 					Fill.negative(Direction.Axis.Y), "east face bottom band");
-			checkPlacement(level, player, slabBlock, pos, new Vec3(1.0, FLOOR_Y + 24.9, 0.5), Direction.EAST,
+			checkPlacement(player, slabBlock, pos, new Vec3(1.0, FLOOR_Y + 24.9, 0.5), Direction.EAST,
 					Fill.positive(Direction.Axis.Y), "east face top band");
 
 			// The bottom face is read the same way as the top one, mirrored: east is still to the
 			// right, but its second axis runs north as well, so the band against its northern edge
 			// fills the northern half all the same.
-			checkPlacement(level, player, slabBlock, pos, new Vec3(0.5, FLOOR_Y + 24.0, 0.5), Direction.DOWN,
+			checkPlacement(player, slabBlock, pos, new Vec3(0.5, FLOOR_Y + 24.0, 0.5), Direction.DOWN,
 					Fill.positive(Direction.Axis.Y), "bottom face centre");
-			checkPlacement(level, player, slabBlock, pos, new Vec3(0.5, FLOOR_Y + 24.0, 0.1), Direction.DOWN,
+			checkPlacement(player, slabBlock, pos, new Vec3(0.5, FLOOR_Y + 24.0, 0.1), Direction.DOWN,
 					Fill.negative(Direction.Axis.Z), "bottom face north band");
-			checkPlacement(level, player, slabBlock, pos, new Vec3(0.5, FLOOR_Y + 24.0, 0.9), Direction.DOWN,
+			checkPlacement(player, slabBlock, pos, new Vec3(0.5, FLOOR_Y + 24.0, 0.9), Direction.DOWN,
 					Fill.positive(Direction.Axis.Z), "bottom face south band");
-			checkPlacement(level, player, slabBlock, pos, new Vec3(0.1, FLOOR_Y + 24.0, 0.5), Direction.DOWN,
+			checkPlacement(player, slabBlock, pos, new Vec3(0.1, FLOOR_Y + 24.0, 0.5), Direction.DOWN,
 					Fill.negative(Direction.Axis.X), "bottom face west band");
-			checkPlacement(level, player, slabBlock, pos, new Vec3(0.9, FLOOR_Y + 24.0, 0.5), Direction.DOWN,
+			checkPlacement(player, slabBlock, pos, new Vec3(0.9, FLOOR_Y + 24.0, 0.5), Direction.DOWN,
 					Fill.positive(Direction.Axis.X), "bottom face east band");
 
 			verifyClickFrame(level, player, slabBlock);
@@ -529,7 +524,7 @@ public class MBClientGameTest implements FabricClientGameTest {
 							Fill.negative(Direction.Axis.Z), "bottom face south band"),
 					new Band(Direction.DOWN, pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.9,
 							Fill.positive(Direction.Axis.Z), "bottom face north band"))) {
-				checkPlacement(level, player, slabBlock, pos, new Vec3(band.x(), band.y(), band.z()), band.face(),
+				checkPlacement(player, slabBlock, pos, new Vec3(band.x(), band.y(), band.z()), band.face(),
 						band.half(), band.what());
 			}
 		});
@@ -550,11 +545,11 @@ public class MBClientGameTest implements FabricClientGameTest {
 		BlockPos pos = new BlockPos(11, FLOOR_Y + 24, -7);
 		level.setBlockAndUpdate(pos.below(), Blocks.STONE.defaultBlockState());
 
-		checkPlacement(level, player, slabBlock, pos, new Vec3(pos.getX() + 0.5, FLOOR_Y + 25.0, pos.getZ() + 0.5),
+		checkPlacement(player, slabBlock, pos, new Vec3(pos.getX() + 0.5, FLOOR_Y + 25.0, pos.getZ() + 0.5),
 				Direction.UP, Fill.negative(Direction.Axis.Y), "top face centre far from the origin");
-		checkPlacement(level, player, slabBlock, pos, new Vec3(pos.getX() + 0.5, FLOOR_Y + 25.0, pos.getZ() + 0.9),
+		checkPlacement(player, slabBlock, pos, new Vec3(pos.getX() + 0.5, FLOOR_Y + 25.0, pos.getZ() + 0.9),
 				Direction.UP, Fill.positive(Direction.Axis.Z), "top face north band far from the origin");
-		checkPlacement(level, player, slabBlock, pos, new Vec3(pos.getX() + 0.5, FLOOR_Y + 24.5, pos.getZ()),
+		checkPlacement(player, slabBlock, pos, new Vec3(pos.getX() + 0.5, FLOOR_Y + 24.5, pos.getZ()),
 				Direction.NORTH, Fill.positive(Direction.Axis.Z), "north face centre far from the origin");
 	}
 
@@ -601,8 +596,6 @@ public class MBClientGameTest implements FabricClientGameTest {
 			level.setBlockAndUpdate(glazedWall.below(), Blocks.STONE.defaultBlockState());
 
 			for (Block glazed : glazedSlabs()) {
-				Identifier id = BuiltInRegistries.BLOCK.getKey(glazed);
-
 				// Every click this check makes, on the floor and against the standing slab, is the
 				// same click on both blocks, so they are collected once and replayed twice.
 				for (Direction face : Direction.values()) {
@@ -662,10 +655,10 @@ public class MBClientGameTest implements FabricClientGameTest {
 						+ " plain slab filled " + Fill.of(plainState) + "; a glazed slab carries the pattern's"
 						+ " direction and nothing else, so the two have to fill the same half");
 
-		require(isVertical(plainState) == isVertical(glazedState),
+		require(VerticalSlab.isVertical(plainState) == VerticalSlab.isVertical(glazedState),
 				"clicking " + what + " with " + id + " stood the glazed slab "
-						+ (isVertical(glazedState) ? "up" : "flat") + " where a plain slab went "
-						+ (isVertical(plainState) ? "up" : "flat") + ": " + glazedState);
+						+ (VerticalSlab.isVertical(glazedState) ? "up" : "flat") + " where a plain slab went "
+						+ (VerticalSlab.isVertical(plainState) ? "up" : "flat") + ": " + glazedState);
 
 		Direction expected = player.getDirection().getOpposite();
 		Direction turned = glazedState.getValue(MBBlockStateProperties.GLAZED_FACING);
@@ -891,19 +884,7 @@ public class MBClientGameTest implements FabricClientGameTest {
 			BlockPos openSide = pos.relative(open);
 			level.setBlockAndUpdate(openSide, Blocks.AIR.defaultBlockState());
 
-			BlockPlaceContext completion = new BlockPlaceContext(player, InteractionHand.MAIN_HAND,
-					new ItemStack(slabBlock.asItem()),
-					new BlockHitResult(centre.add(open.getUnitVec3().scale(0.5)), open, pos, false));
-
-			require(completion.getClickedPos().equals(pos),
-					"clicking the open face of an upright slab aimed at " + completion.getClickedPos()
-							+ ", expected the clicked block itself at " + pos);
-			BlockState completed = slabBlock.getStateForPlacement(completion);
-
-			require(completed != null, "no block state was produced for a click on an upright slab's open face");
-			require(SlabType.DOUBLE == completed.getValue(SlabBlock.TYPE),
-					"the click on the open face of an upright slab produced " + completed
-							+ ", expected a double slab completing the same block");
+			checkAgainstOpenFace(player, slabBlock, pos, wall);
 
 			level.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
 			level.setBlockAndUpdate(beyond, Blocks.AIR.defaultBlockState());
@@ -943,9 +924,9 @@ public class MBClientGameTest implements FabricClientGameTest {
 
 			// Both thin sides are the wall seen end on, and both carry it into the cell they look
 			// at, filled with the clicked slab's own half so the wall keeps its plane and thickness.
-			checkAgainstWall(level, player, slabBlock, pos, wall, Direction.EAST,
+			checkAgainstWall(player, slabBlock, pos, wall, Direction.EAST,
 					new Vec3(pos.getX() + 1.0, FLOOR_Y + 30.5, pos.getZ() + 0.5), pos.east());
-			checkAgainstWall(level, player, slabBlock, pos, wall, Direction.WEST,
+			checkAgainstWall(player, slabBlock, pos, wall, Direction.WEST,
 					new Vec3(pos.getX(), FLOOR_Y + 30.5, pos.getZ() + 0.5), pos.west());
 
 			// The boundary the filled half runs up to - the far side of the block's own interior - is
@@ -953,13 +934,13 @@ public class MBClientGameTest implements FabricClientGameTest {
 			// so the click is read by its position instead of being handed the clicked slab's half.
 			// At the centre the region names the half lying against this wall, which carries the wall
 			// on in its own plane; a band names the half its own edge sits on instead.
-			checkAgainstBoundary(level, player, slabBlock, pos, Direction.SOUTH,
+			checkAgainstBoundary(player, slabBlock, pos, Direction.SOUTH,
 					new Vec3(pos.getX() + 0.5, FLOOR_Y + 30.5, pos.getZ() + 1.0),
 					Fill.opposite(Direction.SOUTH), "centre of the far boundary");
-			checkAgainstBoundary(level, player, slabBlock, pos, Direction.SOUTH,
+			checkAgainstBoundary(player, slabBlock, pos, Direction.SOUTH,
 					new Vec3(pos.getX() + 0.5, FLOOR_Y + 30.8, pos.getZ() + 1.0),
 					Fill.positive(Direction.Axis.Y), "top band of the far boundary");
-			checkAgainstBoundary(level, player, slabBlock, pos, Direction.SOUTH,
+			checkAgainstBoundary(player, slabBlock, pos, Direction.SOUTH,
 					new Vec3(pos.getX() + 0.1, FLOOR_Y + 30.5, pos.getZ() + 1.0),
 					Fill.negative(Direction.Axis.X), "west band of the far boundary");
 
@@ -1081,7 +1062,7 @@ public class MBClientGameTest implements FabricClientGameTest {
 	 * instead would fill the half nearest the click every time, and since the two thin sides are
 	 * opposite faces of the same wall, one of them would come out at the wrong thickness.
 	 */
-	private static void checkAgainstWall(ServerLevel level, ServerPlayer player, Block slabBlock, BlockPos pos,
+	private static void checkAgainstWall(ServerPlayer player, Block slabBlock, BlockPos pos,
 			BlockState wall, Direction face, Vec3 hit, BlockPos expectedPos) {
 		BlockPlaceContext context = new BlockPlaceContext(player, InteractionHand.MAIN_HAND,
 				new ItemStack(slabBlock.asItem()), new BlockHitResult(hit, face, pos, false));
@@ -1112,7 +1093,7 @@ public class MBClientGameTest implements FabricClientGameTest {
 	 * any plain block's face is: a click at its centre carries the wall on in the same plane, and a
 	 * click in one of its bands names the half that band's own edge sits on.
 	 */
-	private static void checkAgainstBoundary(ServerLevel level, ServerPlayer player, Block slabBlock, BlockPos pos,
+	private static void checkAgainstBoundary(ServerPlayer player, Block slabBlock, BlockPos pos,
 			Direction face, Vec3 hit, Fill expected, String what) {
 		BlockPlaceContext context = new BlockPlaceContext(player, InteractionHand.MAIN_HAND,
 				new ItemStack(slabBlock.asItem()), new BlockHitResult(hit, face, pos, false));
@@ -1154,9 +1135,9 @@ public class MBClientGameTest implements FabricClientGameTest {
 						+ ", expected a double slab completing the same block");
 	}
 
-	private static void checkPlacement(ServerLevel level, ServerPlayer player, Block slabBlock, BlockPos pos,
+	private static void checkPlacement(ServerPlayer player, Block slabBlock, BlockPos pos,
 			Vec3 hit, Direction face, Fill expected, String what) {
-		BlockState placed = placement(level, player, slabBlock, pos, hit, face);
+		BlockState placed = placement(player, slabBlock, pos, hit, face);
 
 		require(placed != null, "no block state was produced for the " + what + " placement");
 		require(SlabType.DOUBLE != placed.getValue(SlabBlock.TYPE),
@@ -1166,7 +1147,7 @@ public class MBClientGameTest implements FabricClientGameTest {
 						+ " (clicked " + face + " at " + hit + "): " + placed);
 	}
 
-	private static BlockState placement(ServerLevel level, ServerPlayer player, Block slabBlock, BlockPos pos,
+	private static BlockState placement(ServerPlayer player, Block slabBlock, BlockPos pos,
 			Vec3 hit, Direction face) {
 		ItemStack stack = new ItemStack(slabBlock.asItem());
 		BlockPlaceContext context = new BlockPlaceContext(player, InteractionHand.MAIN_HAND, stack,
@@ -1236,7 +1217,7 @@ public class MBClientGameTest implements FabricClientGameTest {
 	 * ordering, and the drop is waited for instead of sampled immediately: destroying a block
 	 * spawns its loot as an entity on the <em>next</em> tick.
 	 */
-	private static void verifyDrops(ClientGameTestContext context, TestServerContext server, List<Block> family) {
+	private static void verifyDrops(ClientGameTestContext context, TestServerContext server) {
 		BlockPos stairsPos = new BlockPos(COLUMN_X0, FIRST_ROW_Y + 2, WALL_Z);
 		BlockPos slabPos = new BlockPos(COLUMN_X0 + 1, FIRST_ROW_Y + 1, WALL_Z);
 
@@ -1282,30 +1263,6 @@ public class MBClientGameTest implements FabricClientGameTest {
 	}
 
 	/**
-	 * Puts the camera {@code distance} blocks south of the wall at {@code z}, looking
-	 * north at it. Every staircase is built facing north, so looking north puts the
-	 * cut corner of each one on the camera's left and lights the whole row the same
-	 * way.
-	 *
-	 * <p>The move is issued on the SERVER, not on the client. Snapping the client
-	 * player only sends a movement packet the server rejects with
-	 * {@code "moved wrongly!"} and rubber-bands straight back to spawn, which is how
-	 * the first few runs ended up photographing the world's own terrain.
-	 *
-	 * <p>The eye is placed on a level with the wall's middle at {@link #VIEW_DISTANCE}.
-	 * Pitch is positive downwards in Minecraft, so the angle is the plain arctangent:
-	 * negating it points the camera above the wall and into the sky, which is what the
-	 * first composed run photographed. The yaw has to be 180 as well, because the camera
-	 * stands at {@code z + VIEW_DISTANCE} to look back at a wall built along {@code -Z},
-	 * and a yaw of zero faces the other way.
-	 *
-	 * <p>The camera is aimed at {@code aimY} from a distance rather than parked at it:
-	 * at exactly floor height the eye sits inside the stone platform the showcase is
-	 * built on and the near half of the frame fills with that platform's own blocks.
-	 * The eye is lifted {@code eyeOffset} above {@code aimY} and the pitch is computed
-	 * to point straight back at it, so the target always lands on the crosshair.
-	 */
-	/**
 	 * Photographs the mod's glazed forms against vanilla's own block, turned the way a
 	 * player placing them would turn them, with every square's position on screen found by
 	 * ray casting so the comparison knows exactly which pixels to compare.
@@ -1321,7 +1278,6 @@ public class MBClientGameTest implements FabricClientGameTest {
 	private static void measureGlazed(ClientGameTestContext context, TestServerContext server) {
 		Block base = Blocks.GLAZED_TERRACOTTA.white();
 		Block slab = blockWithPath("white_glazed_terracotta_slab");
-		Block stairs = blockWithPath("white_glazed_terracotta_stairs");
 
 		record Placed(String label, BlockState state) {
 		}
@@ -1441,16 +1397,30 @@ public class MBClientGameTest implements FabricClientGameTest {
 		return glazedFacing(VerticalSlab.withFill(block.defaultBlockState(), fill), facing);
 	}
 
-	private static void look(ClientGameTestContext context, TestServerContext server, double x, double aimY,
-			double z) {
-		look(context, server, x, aimY, z, VIEW_DISTANCE, 0.5);
-	}
-
-	private static void look(ClientGameTestContext context, TestServerContext server, double x, double aimY,
-			double z, double distance) {
-		look(context, server, x, aimY, z, distance, 0.5);
-	}
-
+	/**
+	 * Puts the camera {@code distance} blocks south of the wall at {@code z}, looking
+	 * north at it. Every staircase is built facing north, so looking north puts the
+	 * cut corner of each one on the camera's left and lights the whole row the same
+	 * way.
+	 *
+	 * <p>The move is issued on the SERVER, not on the client. Snapping the client
+	 * player only sends a movement packet the server rejects with
+	 * {@code "moved wrongly!"} and rubber-bands straight back to spawn, which is how
+	 * the first few runs ended up photographing the world's own terrain.
+	 *
+	 * <p>The eye is placed on a level with the wall's middle at {@link #VIEW_DISTANCE}.
+	 * Pitch is positive downwards in Minecraft, so the angle is the plain arctangent:
+	 * negating it points the camera above the wall and into the sky, which is what the
+	 * first composed run photographed. The yaw has to be 180 as well, because the camera
+	 * stands at {@code z + VIEW_DISTANCE} to look back at a wall built along {@code -Z},
+	 * and a yaw of zero faces the other way.
+	 *
+	 * <p>The camera is aimed at {@code aimY} from a distance rather than parked at it:
+	 * at exactly floor height the eye sits inside the stone platform the showcase is
+	 * built on and the near half of the frame fills with that platform's own blocks.
+	 * The eye is lifted {@code eyeOffset} above {@code aimY} and the pitch is computed
+	 * to point straight back at it, so the target always lands on the crosshair.
+	 */
 	private static void look(ClientGameTestContext context, TestServerContext server, double x, double aimY,
 			double z, double distance, double eyeOffset) {
 		// The teleport argument is the player's FEET; the eye sits a bit above it. Aiming
@@ -1578,11 +1548,5 @@ public class MBClientGameTest implements FabricClientGameTest {
 	private static Block blockWithPath(String path) {
 		return BuiltInRegistries.BLOCK.getOptional(Identifier.fromNamespaceAndPath(MoreBuildingBlocks.MOD_ID, path))
 				.orElse(Blocks.AIR);
-	}
-
-	/** Keeps the imported property reference honest if the mixin renames it. */
-	@SuppressWarnings("unused")
-	private static boolean isVertical(BlockState state) {
-		return state.hasProperty(MBBlockStateProperties.VERTICAL) && state.getValue(MBBlockStateProperties.VERTICAL);
 	}
 }

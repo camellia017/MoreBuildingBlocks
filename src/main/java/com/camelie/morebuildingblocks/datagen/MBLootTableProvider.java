@@ -23,11 +23,6 @@ public class MBLootTableProvider extends FabricBlockLootSubProvider {
 
 	@Override
 	public void generate() {
-		this.dropSelf(com.camelie.morebuildingblocks.registry.MBBlocks.TERRACOTTA);
-
-		com.camelie.morebuildingblocks.registry.MBBlocks.DYED_TERRACOTTA.forEach(this::dropSelf);
-		com.camelie.morebuildingblocks.registry.MBBlocks.GLAZED_TERRACOTTA.forEach(this::dropSelf);
-
 		for (MBBlockFamilies.Family family : MBBlockFamilies.families()) {
 			Block stairs = family.stairs();
 			Block slab = family.slab();

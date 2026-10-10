@@ -1,6 +1,5 @@
 package com.camelie.morebuildingblocks.registry;
 
-import com.camelie.morebuildingblocks.MoreBuildingBlocks;
 import com.camelie.morebuildingblocks.block.MBGlazedSlabBlock;
 import com.camelie.morebuildingblocks.block.MBGlazedStairsBlock;
 import net.minecraft.world.level.block.Block;

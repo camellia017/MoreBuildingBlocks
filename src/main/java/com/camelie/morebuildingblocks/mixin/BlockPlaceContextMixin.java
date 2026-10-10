@@ -3,7 +3,6 @@ package com.camelie.morebuildingblocks.mixin;
 import com.camelie.morebuildingblocks.block.PlacementClick;
 import com.camelie.morebuildingblocks.block.VerticalSlab;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
