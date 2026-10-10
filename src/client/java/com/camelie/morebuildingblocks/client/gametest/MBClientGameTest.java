@@ -312,14 +312,15 @@ public class MBClientGameTest implements FabricClientGameTest {
 	/**
 	 * Checks that the twelve pieces add up to the shapes they should.
 	 *
-	 * <p>A pane always keeps its post. A connection boolean is the lower half of an arm and the
-	 * mod's {@code *_up} flag is its upper half, so a state with both halves set is the vanilla arm
-	 * and a state with only the lower half set is half an arm - the pieces only become the vanilla
-	 * pane again once the connection rules have run over a block.
+	 * <p>The stick - the post and its faces - is what the models draw while every flag is false, so
+	 * only an untouched pane is the vanilla post. A connection boolean is the lower half of an arm
+	 * and the mod's {@code *_up} flag is its upper half, so a state with both halves set is the
+	 * vanilla arm on its own and a state with only the lower half set is half an arm.
 	 *
-	 * <p>The last four checks cover the reason the mod answers {@code skipRendering} itself: two
-	 * panes hide the face between them only where the pieces on either side of that face meet, so a
-	 * half arm facing air stays visible.
+	 * <p>The rest cover the reason the mod answers {@code skipRendering} itself: two panes hide the
+	 * face between them only where the pieces on either side of that face meet, so a half arm facing
+	 * air stays visible, and a corner - which sits at mid height - keeps its up and down faces even
+	 * when a pane without an arm stands above it.
 	 */
 	private static void verifyPaneShapes(TestServerContext server) {
 		server.runOnServer(minecraftServer -> {
@@ -332,14 +333,19 @@ public class MBClientGameTest implements FabricClientGameTest {
 					.setValue(CrossCollisionBlock.SOUTH, true)
 					.setValue(MBPaneProperties.SOUTH_UP, true);
 			BlockState corner = plain.setValue(MBPaneProperties.CORNER_NORTH_EAST, true);
+			// The north arm with the corner east of it: it lines up with the pane above and with the
+			// mirrored arm to the north, and its corner must survive the first of those two
+			BlockState armWithCorner = arm.setValue(MBPaneProperties.CORNER_NORTH_EAST, true);
+			BlockState mirroredEastCorner = mirrored.setValue(MBPaneProperties.CORNER_SOUTH_EAST, true);
+			BlockState mirroredWestCorner = mirrored.setValue(MBPaneProperties.CORNER_SOUTH_WEST, true);
 
 			require(sameShape(shapeOf(plain, level), post),
 					"a pane with no pieces set is not the vanilla post");
-			require(sameShape(shapeOf(arm, level), Shapes.or(post, Block.box(7.0, 0.0, 0.0, 9.0, 16.0, 8.0))),
-					"an arm with both halves set is not the vanilla arm");
-			require(sameShape(shapeOf(lower, level), Shapes.or(post, Block.box(7.0, 0.0, 0.0, 9.0, 8.0, 8.0))),
+			require(sameShape(shapeOf(arm, level), Block.box(7.0, 0.0, 0.0, 9.0, 16.0, 8.0)),
+					"an arm with both halves set is not the vanilla arm on its own");
+			require(sameShape(shapeOf(lower, level), Block.box(7.0, 0.0, 0.0, 9.0, 8.0, 8.0)),
 					"an arm with only its lower half set is not half an arm");
-			require(sameShape(shapeOf(corner, level), Shapes.or(post, Block.box(8.0, 7.0, 0.0, 16.0, 9.0, 8.0))),
+			require(sameShape(shapeOf(corner, level), Block.box(8.0, 7.0, 0.0, 16.0, 9.0, 8.0)),
 					"a corner piece is not the quadrant it sits in");
 			require(sameShape(arm.getCollisionShape(level, BlockPos.ZERO), shapeOf(arm, level)),
 					"a pane collides with something other than its outline");
@@ -348,10 +354,16 @@ public class MBClientGameTest implements FabricClientGameTest {
 					"a full arm no longer hides against the lower half above it");
 			require(!MBPaneShapes.hides(lower, arm, Direction.UP),
 					"a lower half hides against the air above it");
+			require(!MBPaneShapes.hides(armWithCorner, lower, Direction.UP),
+					"a corner hides its up face between stacked panes");
 			require(MBPaneShapes.hides(arm, mirrored, Direction.NORTH),
 					"two matching arms no longer hide the face between them");
 			require(!MBPaneShapes.hides(arm, plain, Direction.NORTH),
 					"an arm hides its face against a pane carrying no arm");
+			require(MBPaneShapes.hides(armWithCorner, mirroredEastCorner, Direction.NORTH),
+					"two corners facing each other no longer hide the face between them");
+			require(!MBPaneShapes.hides(armWithCorner, mirroredWestCorner, Direction.NORTH),
+					"a corner hides its face against a corner across the block");
 		});
 	}
 

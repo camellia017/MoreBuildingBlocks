@@ -3,27 +3,33 @@ package com.camelie.morebuildingblocks.block;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import net.minecraft.core.Direction;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.IronBarsBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.shapes.BooleanOp;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
 /**
  * The twelve pieces a pane is made of, and the shapes they add up to.
  *
- * <p>A pane keeps its post - the two pixel column through the middle of the block - and gains up
- * to twelve pieces around it: eight upright halves, two per horizontal direction (the lower half
- * is the vanilla connection boolean, the upper one is this mod's {@code *_up} flag), and four
- * horizontal corners at mid height, one per quadrant. A piece is two pixels thick, so the outline
- * and the collision box are the same shape.
+ * <p>A pane gains up to twelve pieces: eight upright halves, two per horizontal direction (the
+ * lower half is the vanilla connection boolean, the upper one is this mod's {@code *_up} flag),
+ * and four horizontal corners at mid height, one per quadrant. A piece is two pixels thick, so
+ * the outline and the collision box are the same shape.
  *
- * <p>With none of the eight flags set the pieces are exactly the vanilla post and arms - the
- * lower half stands for the arm itself - so an untouched pane keeps the shape it always had.
+ * <p>The stick - the two pixel column through the middle plus the post faces - stands for a pane
+ * that connects to nothing, and the models only draw it while all twelve flags are false. The
+ * shapes follow: with none of them set the vanilla shape stays untouched, and as soon as one is
+ * set the shape is the pieces alone, which is what the models then draw.
+ *
+ * <p>Vanilla asks {@code skipRendering} whether a whole face may be skipped, not whether the
+ * pieces on either side of it meet. Two questions have to be answered here: a pane's middle
+ * height corners stay visible between stacked panes even though vanilla hides that face outright,
+ * and a piece facing air has to be drawn even when the neighbour carries an arm.
  */
 public final class MBPaneShapes {
-	/** The post: a two pixel column through the middle of the block. */
-	private static final VoxelShape POST = Block.box(7.0, 0.0, 7.0, 9.0, 16.0, 9.0);
 	private static final VoxelShape NORTH_LOWER = Block.box(7.0, 0.0, 0.0, 9.0, 8.0, 8.0);
 	private static final VoxelShape NORTH_UPPER = Block.box(7.0, 8.0, 0.0, 9.0, 16.0, 8.0);
 	private static final VoxelShape EAST_LOWER = Block.box(8.0, 0.0, 7.0, 16.0, 8.0, 9.0);
@@ -37,53 +43,87 @@ public final class MBPaneShapes {
 	private static final VoxelShape CORNER_SOUTH_WEST = Block.box(0.0, 7.0, 8.0, 8.0, 9.0, 16.0);
 	private static final VoxelShape CORNER_NORTH_WEST = Block.box(0.0, 7.0, 0.0, 8.0, 9.0, 8.0);
 
-	private static final Map<BlockState, VoxelShape> SHAPES = new ConcurrentHashMap<>();
+	/**
+	 * The piece shapes depend on the state alone, so they are cached. An empty shape means the
+	 * state has no piece turned on and keeps the shape it already had.
+	 */
+	private static final Map<BlockState, VoxelShape> PIECE_SHAPES = new ConcurrentHashMap<>();
 
 	private MBPaneShapes() {
 	}
 
-	/** Whether this mod's pieces are in play for this state. */
+	/**
+	 * Whether this mod's pieces are in play for this state.
+	 *
+	 * <p>Panes and iron bars share {@link IronBarsBlock} and the same post and arm sizes, so they
+	 * share the twelve pieces, the shapes and the connection rules. Panes from other mods are left
+	 * alone: their textures may not follow vanilla's naming, and only the {@code minecraft}
+	 * blockstates are overridden, so pieces there would be collision boxes without models.
+	 */
 	public static boolean isPane(final BlockState state) {
-		return state.getBlock() instanceof IronBarsBlock && state.hasProperty(MBPaneProperties.NORTH_UP);
+		return state.getBlock() instanceof IronBarsBlock
+			&& state.hasProperty(MBPaneProperties.NORTH_UP)
+			&& BuiltInRegistries.BLOCK.getKey(state.getBlock()).getNamespace().equals("minecraft");
 	}
 
-	/** The shape of the post and every piece the state turns on. */
-	public static VoxelShape shape(final BlockState state) {
-		return SHAPES.computeIfAbsent(state, MBPaneShapes::build);
-	}
-
-	private static VoxelShape build(final BlockState state) {
-		VoxelShape shape = POST;
-
-		for (Direction direction : Direction.Plane.HORIZONTAL) {
-			if (lower(state, direction)) {
-				shape = Shapes.or(shape, lowerShape(direction));
-			}
-
-			if (upper(state, direction)) {
-				shape = Shapes.or(shape, upperShape(direction));
-			}
+	/** Whether any of the four corners is on. */
+	public static boolean hasCorner(final BlockState state) {
+		if (!isPane(state)) {
+			return false;
 		}
 
 		for (Direction[] pair : CORNERS) {
 			if (corner(state, pair[0], pair[1])) {
-				shape = Shapes.or(shape, cornerShape(pair[0], pair[1]));
+				return true;
 			}
 		}
 
-		return shape;
+		return false;
+	}
+
+	/**
+	 * The outline or the collision box of a pane.
+	 *
+	 * <p>With every flag false the shape stays as it was, so an untouched pane keeps the shape it
+	 * always had. With a piece turned on the shape becomes the pieces alone, which is what the
+	 * models draw from then on.
+	 *
+	 * @param currentShape the shape vanilla came up with, possibly already widened by other code
+	 * @param vanillaShape the same shape without those additions, used to tell them apart
+	 */
+	public static VoxelShape adjustShape(final VoxelShape currentShape, final VoxelShape vanillaShape,
+			final BlockState state) {
+		VoxelShape pieces = PIECE_SHAPES.computeIfAbsent(state, MBPaneShapes::build);
+
+		if (pieces.isEmpty()) {
+			return currentShape;
+		}
+
+		if (currentShape != vanillaShape) {
+			// Something else widened the shape - keep that part, or the crosshair skips it
+			pieces = Shapes.or(pieces, Shapes.join(currentShape, vanillaShape, BooleanOp.ONLY_FIRST));
+		}
+
+		return pieces;
 	}
 
 	/**
 	 * Whether the neighbour hides the state's face on this side.
 	 *
-	 * <p>Vanilla hides a whole face between two panes as soon as both sides have an arm, which
-	 * blanks pieces that stand alone: the upper half of one pane faces the air when the pane above
-	 * carries no arm there. This asks instead whether the pieces on either side of the shared plane
-	 * line up, and only then hides the face.
+	 * <p>Vanilla hides a whole face between two panes as soon as both sides have an arm, and hides
+	 * every face between two stacked panes outright. Both were written for a pane that is a post
+	 * with full height arms. They blank pieces that stand alone - the upper half of one pane faces
+	 * the air when the pane above carries no arm there - and they blank the up and down faces of a
+	 * corner, which sits at mid height and stays visible between stacked panes. This asks instead
+	 * whether the pieces on either side of the shared plane line up, and only then hides the face.
 	 */
 	public static boolean hides(final BlockState state, final BlockState neighbour, final Direction direction) {
 		if (direction.getAxis().isVertical()) {
+			// A corner's up and down faces are exposed whatever the pane above or below carries
+			if (hasCorner(state)) {
+				return false;
+			}
+
 			boolean upwards = direction == Direction.UP;
 
 			for (Direction arm : Direction.Plane.HORIZONTAL) {
@@ -104,8 +144,8 @@ public final class MBPaneShapes {
 
 		return lower(state, direction) == lower(neighbour, opposite)
 			&& upper(state, direction) == upper(neighbour, opposite)
-			&& corner(state, left, direction) == corner(neighbour, right, opposite)
-			&& corner(state, right, direction) == corner(neighbour, left, opposite);
+			&& corner(state, left, direction) == corner(neighbour, left, opposite)
+			&& corner(state, right, direction) == corner(neighbour, right, opposite);
 	}
 
 	/** The vanilla connection boolean of this arm, which is also its lower half. */
@@ -139,6 +179,33 @@ public final class MBPaneShapes {
 		{Direction.SOUTH, Direction.WEST},
 		{Direction.NORTH, Direction.WEST}
 	};
+
+	/** Every piece the state turns on, or an empty shape when it turns on none. */
+	private static VoxelShape build(final BlockState state) {
+		if (!isPane(state)) {
+			return Shapes.empty();
+		}
+
+		VoxelShape shape = Shapes.empty();
+
+		for (Direction direction : Direction.Plane.HORIZONTAL) {
+			if (lower(state, direction)) {
+				shape = Shapes.or(shape, lowerShape(direction));
+			}
+
+			if (upper(state, direction)) {
+				shape = Shapes.or(shape, upperShape(direction));
+			}
+		}
+
+		for (Direction[] pair : CORNERS) {
+			if (corner(state, pair[0], pair[1])) {
+				shape = Shapes.or(shape, cornerShape(pair[0], pair[1]));
+			}
+		}
+
+		return shape;
+	}
 
 	private static VoxelShape lowerShape(final Direction direction) {
 		return switch (direction) {
