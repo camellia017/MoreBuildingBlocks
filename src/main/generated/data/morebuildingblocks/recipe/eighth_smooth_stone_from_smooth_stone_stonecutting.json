@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:stonecutting",
+  "ingredient": "minecraft:smooth_stone",
+  "result": {
+    "count": 8,
+    "id": "morebuildingblocks:eighth_smooth_stone"
+  }
+}

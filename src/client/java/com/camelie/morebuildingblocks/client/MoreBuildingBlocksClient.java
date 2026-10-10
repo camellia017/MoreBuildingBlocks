@@ -8,5 +8,8 @@ public class MoreBuildingBlocksClient implements ClientModInitializer {
 		// The upright slab states of vanilla slabs are not in vanilla's blockstate
 		// files, so they are resolved at load time instead of rewritten into them.
 		new MBVanillaSlabModelPlugin().onInitializeClient();
+
+		// Eighth blocks also show up in vanilla's building blocks and coloured blocks tabs.
+		MBEighthTabPlugin.onInitializeClient();
 	}
 }

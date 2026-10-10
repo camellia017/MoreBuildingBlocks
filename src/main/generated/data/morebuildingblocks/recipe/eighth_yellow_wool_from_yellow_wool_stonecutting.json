@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:stonecutting",
+  "ingredient": "minecraft:yellow_wool",
+  "result": {
+    "count": 8,
+    "id": "morebuildingblocks:eighth_yellow_wool"
+  }
+}

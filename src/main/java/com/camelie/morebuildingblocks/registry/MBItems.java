@@ -15,6 +15,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ItemLike;
 import net.minecraft.world.level.block.Block;
 
+import org.jspecify.annotations.Nullable;
+
 import net.fabricmc.fabric.api.creativetab.v1.FabricCreativeModeTab;
 
 import com.camelie.morebuildingblocks.MoreBuildingBlocks;
@@ -42,11 +44,27 @@ public final class MBItems {
 	private static CreativeModeTab mainTab;
 
 	static {
-		// Every family in order: the stairs then the slab made from each terracotta block.
-		// The base blocks themselves are vanilla's, so they are not this mod's to list.
-		for (MBBlockFamilies.Family family : MBBlockFamilies.families()) {
-			DISPLAY_ORDER.add(family.stairs());
-			DISPLAY_ORDER.add(family.slab());
+		// Every material in order: the forms cut from the block first - the stairs then the slab, as
+		// before - and the eighth block cut from that same block right after them, so that an eighth
+		// block always follows the forms of its parent block in the tab. The 96 vanilla materials
+		// have no forms of this mod's to list: theirs are the game's own blocks and sit in the game's
+		// own tabs, which is where those eighth blocks are inserted too.
+		for (MBEighths.Material material : MBEighths.materials()) {
+			if (!material.modForms()) {
+				DISPLAY_ORDER.add(material.eighth());
+				continue;
+			}
+
+			add(material.stairs());
+			add(material.slab());
+			DISPLAY_ORDER.add(material.eighth());
+		}
+	}
+
+	/** Adds a form of a material to the display order, skipping the ones the game does not have. */
+	private static void add(final @Nullable Block block) {
+		if (block != null) {
+			DISPLAY_ORDER.add(block);
 		}
 	}
 

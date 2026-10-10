@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:stonecutting",
+  "ingredient": "minecraft:lime_concrete",
+  "result": {
+    "count": 8,
+    "id": "morebuildingblocks:eighth_lime_concrete"
+  }
+}

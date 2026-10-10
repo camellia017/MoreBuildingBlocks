@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:stonecutting",
+  "ingredient": "minecraft:mossy_stone_bricks",
+  "result": {
+    "count": 8,
+    "id": "morebuildingblocks:eighth_mossy_stone_bricks"
+  }
+}

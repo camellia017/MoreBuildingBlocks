@@ -1,0 +1,316 @@
+{
+  "multipart": [
+    {
+      "apply": {
+        "model": "morebuildingblocks:block/eighth_oxidized_cut_copper_lower_north_west"
+      },
+      "when": {
+        "facing": "south",
+        "lower_north_west": "true"
+      }
+    },
+    {
+      "apply": {
+        "model": "morebuildingblocks:block/eighth_oxidized_cut_copper_lower_south_west",
+        "y": 90
+      },
+      "when": {
+        "facing": "west",
+        "lower_north_west": "true"
+      }
+    },
+    {
+      "apply": {
+        "model": "morebuildingblocks:block/eighth_oxidized_cut_copper_lower_south_east",
+        "y": 180
+      },
+      "when": {
+        "facing": "north",
+        "lower_north_west": "true"
+      }
+    },
+    {
+      "apply": {
+        "model": "morebuildingblocks:block/eighth_oxidized_cut_copper_lower_north_east",
+        "y": 270
+      },
+      "when": {
+        "facing": "east",
+        "lower_north_west": "true"
+      }
+    },
+    {
+      "apply": {
+        "model": "morebuildingblocks:block/eighth_oxidized_cut_copper_lower_south_west"
+      },
+      "when": {
+        "facing": "south",
+        "lower_south_west": "true"
+      }
+    },
+    {
+      "apply": {
+        "model": "morebuildingblocks:block/eighth_oxidized_cut_copper_lower_south_east",
+        "y": 90
+      },
+      "when": {
+        "facing": "west",
+        "lower_south_west": "true"
+      }
+    },
+    {
+      "apply": {
+        "model": "morebuildingblocks:block/eighth_oxidized_cut_copper_lower_north_east",
+        "y": 180
+      },
+      "when": {
+        "facing": "north",
+        "lower_south_west": "true"
+      }
+    },
+    {
+      "apply": {
+        "model": "morebuildingblocks:block/eighth_oxidized_cut_copper_lower_north_west",
+        "y": 270
+      },
+      "when": {
+        "facing": "east",
+        "lower_south_west": "true"
+      }
+    },
+    {
+      "apply": {
+        "model": "morebuildingblocks:block/eighth_oxidized_cut_copper_upper_north_west"
+      },
+      "when": {
+        "facing": "south",
+        "upper_north_west": "true"
+      }
+    },
+    {
+      "apply": {
+        "model": "morebuildingblocks:block/eighth_oxidized_cut_copper_upper_south_west",
+        "y": 90
+      },
+      "when": {
+        "facing": "west",
+        "upper_north_west": "true"
+      }
+    },
+    {
+      "apply": {
+        "model": "morebuildingblocks:block/eighth_oxidized_cut_copper_upper_south_east",
+        "y": 180
+      },
+      "when": {
+        "facing": "north",
+        "upper_north_west": "true"
+      }
+    },
+    {
+      "apply": {
+        "model": "morebuildingblocks:block/eighth_oxidized_cut_copper_upper_north_east",
+        "y": 270
+      },
+      "when": {
+        "facing": "east",
+        "upper_north_west": "true"
+      }
+    },
+    {
+      "apply": {
+        "model": "morebuildingblocks:block/eighth_oxidized_cut_copper_upper_south_west"
+      },
+      "when": {
+        "facing": "south",
+        "upper_south_west": "true"
+      }
+    },
+    {
+      "apply": {
+        "model": "morebuildingblocks:block/eighth_oxidized_cut_copper_upper_south_east",
+        "y": 90
+      },
+      "when": {
+        "facing": "west",
+        "upper_south_west": "true"
+      }
+    },
+    {
+      "apply": {
+        "model": "morebuildingblocks:block/eighth_oxidized_cut_copper_upper_north_east",
+        "y": 180
+      },
+      "when": {
+        "facing": "north",
+        "upper_south_west": "true"
+      }
+    },
+    {
+      "apply": {
+        "model": "morebuildingblocks:block/eighth_oxidized_cut_copper_upper_north_west",
+        "y": 270
+      },
+      "when": {
+        "facing": "east",
+        "upper_south_west": "true"
+      }
+    },
+    {
+      "apply": {
+        "model": "morebuildingblocks:block/eighth_oxidized_cut_copper_lower_north_east"
+      },
+      "when": {
+        "facing": "south",
+        "lower_north_east": "true"
+      }
+    },
+    {
+      "apply": {
+        "model": "morebuildingblocks:block/eighth_oxidized_cut_copper_lower_north_west",
+        "y": 90
+      },
+      "when": {
+        "facing": "west",
+        "lower_north_east": "true"
+      }
+    },
+    {
+      "apply": {
+        "model": "morebuildingblocks:block/eighth_oxidized_cut_copper_lower_south_west",
+        "y": 180
+      },
+      "when": {
+        "facing": "north",
+        "lower_north_east": "true"
+      }
+    },
+    {
+      "apply": {
+        "model": "morebuildingblocks:block/eighth_oxidized_cut_copper_lower_south_east",
+        "y": 270
+      },
+      "when": {
+        "facing": "east",
+        "lower_north_east": "true"
+      }
+    },
+    {
+      "apply": {
+        "model": "morebuildingblocks:block/eighth_oxidized_cut_copper_lower_south_east"
+      },
+      "when": {
+        "facing": "south",
+        "lower_south_east": "true"
+      }
+    },
+    {
+      "apply": {
+        "model": "morebuildingblocks:block/eighth_oxidized_cut_copper_lower_north_east",
+        "y": 90
+      },
+      "when": {
+        "facing": "west",
+        "lower_south_east": "true"
+      }
+    },
+    {
+      "apply": {
+        "model": "morebuildingblocks:block/eighth_oxidized_cut_copper_lower_north_west",
+        "y": 180
+      },
+      "when": {
+        "facing": "north",
+        "lower_south_east": "true"
+      }
+    },
+    {
+      "apply": {
+        "model": "morebuildingblocks:block/eighth_oxidized_cut_copper_lower_south_west",
+        "y": 270
+      },
+      "when": {
+        "facing": "east",
+        "lower_south_east": "true"
+      }
+    },
+    {
+      "apply": {
+        "model": "morebuildingblocks:block/eighth_oxidized_cut_copper_upper_north_east"
+      },
+      "when": {
+        "facing": "south",
+        "upper_north_east": "true"
+      }
+    },
+    {
+      "apply": {
+        "model": "morebuildingblocks:block/eighth_oxidized_cut_copper_upper_north_west",
+        "y": 90
+      },
+      "when": {
+        "facing": "west",
+        "upper_north_east": "true"
+      }
+    },
+    {
+      "apply": {
+        "model": "morebuildingblocks:block/eighth_oxidized_cut_copper_upper_south_west",
+        "y": 180
+      },
+      "when": {
+        "facing": "north",
+        "upper_north_east": "true"
+      }
+    },
+    {
+      "apply": {
+        "model": "morebuildingblocks:block/eighth_oxidized_cut_copper_upper_south_east",
+        "y": 270
+      },
+      "when": {
+        "facing": "east",
+        "upper_north_east": "true"
+      }
+    },
+    {
+      "apply": {
+        "model": "morebuildingblocks:block/eighth_oxidized_cut_copper_upper_south_east"
+      },
+      "when": {
+        "facing": "south",
+        "upper_south_east": "true"
+      }
+    },
+    {
+      "apply": {
+        "model": "morebuildingblocks:block/eighth_oxidized_cut_copper_upper_north_east",
+        "y": 90
+      },
+      "when": {
+        "facing": "west",
+        "upper_south_east": "true"
+      }
+    },
+    {
+      "apply": {
+        "model": "morebuildingblocks:block/eighth_oxidized_cut_copper_upper_north_west",
+        "y": 180
+      },
+      "when": {
+        "facing": "north",
+        "upper_south_east": "true"
+      }
+    },
+    {
+      "apply": {
+        "model": "morebuildingblocks:block/eighth_oxidized_cut_copper_upper_south_west",
+        "y": 270
+      },
+      "when": {
+        "facing": "east",
+        "upper_south_east": "true"
+      }
+    }
+  ]
+}

@@ -20,9 +20,14 @@ import net.fabricmc.fabric.api.datagen.v1.FabricPackOutput;
 import net.fabricmc.fabric.api.datagen.v1.provider.FabricRecipeProvider;
 
 import com.camelie.morebuildingblocks.registry.MBBlockFamilies;
+import com.camelie.morebuildingblocks.registry.MBEighths;
 
 /**
- * Crafting table and stonecutter recipes for every terracotta stairs and slab.
+ * Crafting table and stonecutter recipes for every terracotta stairs and slab, and the stonecutter
+ * recipe of every eighth block.
+ *
+ * <p>A stair and a slab can be assembled at a crafting table; an eighth block cannot. It is one
+ * eighth of a block, so the only way to get one is to cut a block into eight of them.
  *
  * <p>Recipe ids are rewritten to the {@code morebuildingblocks} namespace by
  * Fabric's datagen mixins, so a builder saved through {@code save(this.output)}
@@ -82,6 +87,12 @@ public class MBRecipeProvider extends FabricRecipeProvider {
 
 				// Stonecutter: 1 block -> 2 slabs, matching the vanilla yield.
 				this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, slab, base, 2);
+			}
+
+			for (MBEighths.Material material : MBEighths.materials()) {
+				// Stonecutter: 1 block -> 8 eighth blocks. One cut, eight pieces, and no crafting
+				// table recipe: a block is cut into eighths, never assembled out of them.
+				this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, material.eighth(), material.base(), 8);
 			}
 		}
 	}

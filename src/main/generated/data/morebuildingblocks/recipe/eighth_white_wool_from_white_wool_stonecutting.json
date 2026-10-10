@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:stonecutting",
+  "ingredient": "minecraft:white_wool",
+  "result": {
+    "count": 8,
+    "id": "morebuildingblocks:eighth_white_wool"
+  }
+}

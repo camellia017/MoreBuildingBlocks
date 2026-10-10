@@ -27,9 +27,10 @@ public final class MBBlockFamilies {
 
 	/**
 	 * Vanilla declares this predicate privately in {@code Blocks}; it is re-declared here so copied
-	 * blocks keep vanilla's near-plane view blocking test.
+	 * blocks keep vanilla's near-plane view blocking test. Every partial block the mod derives from a
+	 * base block - the two forms built here and the eight pieces of {@link MBEighths} - shares it.
 	 */
-	private static final BlockBehaviour.StateArgumentPredicate<AABB> NEAR_PLANE_INTERSECTS_OUTLINE = (state, level, pos, nearPlaneBox) -> {
+	static final BlockBehaviour.StateArgumentPredicate<AABB> NEAR_PLANE_INTERSECTS_OUTLINE = (state, level, pos, nearPlaneBox) -> {
 		for (AABB outlineBox : state.getOcclusionShape().toAabbs()) {
 			if (outlineBox.move(pos).intersects(nearPlaneBox)) {
 				return true;

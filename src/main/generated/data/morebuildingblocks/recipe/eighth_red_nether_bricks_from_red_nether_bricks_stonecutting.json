@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:stonecutting",
+  "ingredient": "minecraft:red_nether_bricks",
+  "result": {
+    "count": 8,
+    "id": "morebuildingblocks:eighth_red_nether_bricks"
+  }
+}

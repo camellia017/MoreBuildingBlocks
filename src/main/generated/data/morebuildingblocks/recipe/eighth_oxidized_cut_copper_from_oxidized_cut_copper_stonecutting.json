@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:stonecutting",
+  "ingredient": "minecraft:oxidized_cut_copper",
+  "result": {
+    "count": 8,
+    "id": "morebuildingblocks:eighth_oxidized_cut_copper"
+  }
+}

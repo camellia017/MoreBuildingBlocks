@@ -42,6 +42,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.level.EmptyBlockGetter;
+import net.minecraft.world.level.storage.loot.LootParams;
 import net.minecraft.world.phys.shapes.BooleanOp;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
@@ -49,11 +50,14 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 import com.camelie.morebuildingblocks.MoreBuildingBlocks;
 import com.camelie.morebuildingblocks.block.GlazedPattern;
 import com.camelie.morebuildingblocks.block.MBBlockStateProperties;
+import com.camelie.morebuildingblocks.block.MBEighthBlock;
+import com.camelie.morebuildingblocks.block.MBEighthProperties;
 import com.camelie.morebuildingblocks.block.MBPaneProperties;
 import com.camelie.morebuildingblocks.block.MBPaneShapes;
 import com.camelie.morebuildingblocks.block.VerticalSlab;
 import com.camelie.morebuildingblocks.block.VerticalSlab.Fill;
 import com.camelie.morebuildingblocks.registry.MBBlockFamilies;
+import com.camelie.morebuildingblocks.registry.MBEighths;
 import com.camelie.morebuildingblocks.registry.MBItems;
 
 /**
@@ -251,6 +255,7 @@ public class MBClientGameTest implements FabricClientGameTest {
 			verifyFlatContinuation(server);
 			verifyDoubleSlabClicks(server);
 			verifyGlazedSlabs(server);
+			verifyEighths(server);
 			verifyDrops(context, server);
 			verifyCreativeTab(server);
 		}
@@ -401,6 +406,12 @@ public class MBClientGameTest implements FabricClientGameTest {
 				expected.add(family.slab());
 			}
 
+			// Every family is followed by its eighth blocks, and the materials vanilla has no
+			// stairs for contribute one as well.
+			for (MBEighths.Material material : MBEighths.materials()) {
+				expected.add(material.eighth());
+			}
+
 			require(displayOrder.size() == expected.size(),
 					"the tab lists " + displayOrder.size() + " blocks, expected " + expected.size());
 			require(displayOrder.containsAll(expected),
@@ -435,18 +446,22 @@ public class MBClientGameTest implements FabricClientGameTest {
 			connection.waitForChunksRender();
 
 			BlockPos pos = new BlockPos(1, -60, 1);
+			BlockPos eighthPos = new BlockPos(2, -60, 1);
 
 			dedicatedServer.runOnServer(minecraftServer -> {
 				Bootstrap.validate();
 				ServerLevel level = minecraftServer.overworld();
 
 				int serverBlocks = 0;
+				int serverEighths = 0;
 				Map<Identifier, Block> serverById = new HashMap<>();
 
 				for (Block block : MBItems.displayOrder()) {
 					if (block instanceof StairBlock || block instanceof SlabBlock) {
 						serverById.put(BuiltInRegistries.BLOCK.getKey(block), block);
 						serverBlocks++;
+					} else if (block instanceof MBEighthBlock) {
+						serverEighths++;
 					}
 				}
 
@@ -454,6 +469,9 @@ public class MBClientGameTest implements FabricClientGameTest {
 				// cut from are vanilla's own and are not registered by this mod.
 				require(serverBlocks == 66, "the dedicated server registered " + serverBlocks
 						+ " stair/slab blocks, expected 66");
+				require(serverEighths == MBEighths.materials().size(),
+						"the dedicated server registered " + serverEighths + " eighth blocks, expected "
+								+ MBEighths.materials().size());
 				require(serverById.containsKey(Identifier.fromNamespaceAndPath(MoreBuildingBlocks.MOD_ID, "terracotta_slab")),
 						"the dedicated server is missing morebuildingblocks:terracotta_slab");
 				// Registry#getValue answers with the registry's default entry (air) for an
@@ -465,6 +483,19 @@ public class MBClientGameTest implements FabricClientGameTest {
 				level.setBlockAndUpdate(pos, serverById
 						.get(Identifier.fromNamespaceAndPath(MoreBuildingBlocks.MOD_ID, "terracotta_slab"))
 						.defaultBlockState());
+
+				// An eighth block has eight booleans plus a facing, so its state ids are the real
+				// test of the wire format: a cell with one piece taken out has to arrive with that
+				// piece still missing.
+				MBEighths.Material stoneEighths = MBEighths.byBase(Blocks.STONE);
+
+				if (stoneEighths == null) {
+					throw new AssertionError("stone has no eighth block");
+				}
+
+				BlockState holed = stoneEighths.eighth().defaultBlockState();
+				holed = holed.setValue(MBEighthProperties.bit(3), false);
+				level.setBlockAndUpdate(eighthPos, holed);
 			});
 
 			// The change has to survive the round trip, which also exercises the mod's
@@ -488,14 +519,22 @@ public class MBClientGameTest implements FabricClientGameTest {
 					}
 				}
 
-				require(clientById.size() == 66,
-						"the client knows " + clientById.size() + " mod items, expected 66");
+				int expectedItems = 66 + MBEighths.materials().size();
+
+				require(clientById.size() == expectedItems,
+						"the client knows " + clientById.size() + " mod items, expected " + expectedItems);
 				require(clientById.containsKey(Identifier.fromNamespaceAndPath(MoreBuildingBlocks.MOD_ID, "terracotta_slab")),
 						"the client is missing morebuildingblocks:terracotta_slab");
 
 				BlockState received = minecraft.level.getBlockState(pos);
 				require(received.is(clientById.get(Identifier.fromNamespaceAndPath(MoreBuildingBlocks.MOD_ID, "terracotta_slab"))),
 						"the block the server placed did not arrive at the client: " + received);
+
+				BlockState receivedEighth = minecraft.level.getBlockState(eighthPos);
+				require(receivedEighth.is(clientById.get(Identifier.fromNamespaceAndPath(MoreBuildingBlocks.MOD_ID, "eighth_stone"))),
+						"the eighth block the server placed did not arrive at the client: " + receivedEighth);
+				require(!receivedEighth.getValue(MBEighthProperties.bit(3)),
+						"the eighth block arrived with a piece the server had taken out: " + receivedEighth);
 			});
 		}
 	}
@@ -1433,6 +1472,174 @@ public class MBClientGameTest implements FabricClientGameTest {
 				require(Math.abs(slab.maxY - 0.5) < 1.0E-4, family.slabPath() + " slab shape: " + slab);
 			}
 		});
+	}
+
+	/**
+	 * Checks the eighth blocks: one for every material, each with an item, the eight pieces adding
+	 * up to the whole block, and a click choosing the piece it landed on - the same cell when it
+	 * landed on a middle plane of it, the cell beyond the face when it landed on the block itself.
+	 *
+	 * <p>This is the part of the feature a screenshot cannot prove: a piece in the wrong eighth of
+	 * the cell photographs as a small cube either way, and whether a click stayed in the cell it
+	 * was made on is only visible in the placement context it is read from.
+	 */
+	private static void verifyEighths(TestServerContext server) {
+		server.runOnServer(minecraftServer -> {
+			ServerLevel level = minecraftServer.overworld();
+			ServerPlayer player = minecraftServer.getPlayerList().getPlayers().get(0);
+			List<MBEighths.Material> materials = MBEighths.materials();
+
+			// The 33 terracotta families of the mod's own and the 96 blocks the game cuts slabs from.
+			require(materials.size() == 129, "found " + materials.size() + " eighth materials, expected 129");
+
+			for (MBEighths.Material material : materials) {
+				Identifier id = BuiltInRegistries.BLOCK.getKey(material.eighth());
+
+				require(id.getPath().equals(material.eighthPath()),
+						"the eighth block of " + material.basePath() + " is called " + id);
+				require(Item.BY_BLOCK.get(material.eighth()) != null, "no item for " + id);
+			}
+
+			MBEighths.Material stone = MBEighths.byBase(Blocks.STONE);
+
+			if (stone == null) {
+				throw new AssertionError("stone has no eighth block");
+			}
+
+			Block eighth = stone.eighth();
+			BlockPos pos = new BlockPos(6, FIRST_ROW_Y, 6);
+
+			// Full by default: the item icon is the parent block itself, so a cell nothing has been
+			// taken out of has to look like it.
+			BlockState full = eighth.defaultBlockState();
+
+			require(MBEighthProperties.isFull(full), "the default state of " + eighth + " is not full: " + full);
+			require(sameShape(shapeOf(full, level), Shapes.block()),
+					"a full cell of eighths is not the whole block: " + shapeOf(full, level).bounds());
+
+			// One piece is the eighth of the cell its name says, and two of them are their union.
+			require(sameShape(shapeOf(piece(eighth, 0), level), Block.box(0.0, 0.0, 0.0, 8.0, 8.0, 8.0)),
+					"the lower north west piece is not the corner it is named after");
+			require(sameShape(shapeOf(piece(eighth, 7), level), Block.box(8.0, 8.0, 8.0, 16.0, 16.0, 16.0)),
+					"the upper south east piece is not the corner it is named after");
+			require(sameShape(shapeOf(twoPieces(eighth, 0, 7), level),
+					Shapes.or(Block.box(0.0, 0.0, 0.0, 8.0, 8.0, 8.0), Block.box(8.0, 8.0, 8.0, 16.0, 16.0, 16.0))),
+					"two pieces of a cell do not add up to the shapes they name");
+			require(sameShape(piece(eighth, 0).getCollisionShape(level, BlockPos.ZERO),
+					shapeOf(piece(eighth, 0), level)),
+					"an eighth block collides with something other than its own outline");
+
+			// A click on the top of a block at the north west quarter of the cell above it fills the
+			// piece under the click, which is the one touching the face that was clicked.
+			level.setBlockAndUpdate(pos, Blocks.STONE.defaultBlockState());
+
+			BlockState placed = eighthPlacement(player, eighth, pos,
+					new Vec3(pos.getX() + 0.25, pos.getY() + 1.0, pos.getZ() + 0.25), Direction.UP);
+
+			require(placed != null, "a click on the top of a block placed no eighth block");
+			require(MBEighthProperties.mask(placed) == MBEighthProperties.mask(piece(eighth, 0)),
+					"a click at the north west quarter placed " + placed + ", expected its lower north west piece");
+
+			BlockState far = eighthPlacement(player, eighth, pos,
+					new Vec3(pos.getX() + 0.75, pos.getY() + 1.0, pos.getZ() + 0.75), Direction.UP);
+
+			require(far != null && MBEighthProperties.mask(far) == MBEighthProperties.mask(piece(eighth, 5)),
+					"a click at the south east quarter placed " + far + ", expected its lower south east piece");
+
+			// A click on a middle plane of a cell - a seam - stays in the cell and fills the eighth
+			// beside the piece it landed on.
+			level.setBlockAndUpdate(pos, piece(eighth, 0));
+
+			BlockState beside = eighthPlacement(player, eighth, pos,
+					new Vec3(pos.getX() + 0.5, pos.getY() + 0.25, pos.getZ() + 0.25), Direction.EAST);
+
+			require(beside != null, "a click on a seam of a cell of eighths placed nothing");
+			require(MBEighthProperties.mask(beside) == MBEighthProperties.mask(twoPieces(eighth, 0, 4)),
+					"a click on the east seam made " + beside
+							+ ", expected its lower north east piece filled in beside the one already there");
+
+			// Every face of a full cell is the boundary of the cell, so a click on one is read as a
+			// click on the cell beyond it: the ninth click on a cell always lands next door.
+			level.setBlockAndUpdate(pos, full);
+
+			BlockPlaceContext nextDoor = eighthContext(player, eighth, pos,
+					new Vec3(pos.getX() + 0.25, pos.getY() + 1.0, pos.getZ() + 0.25), Direction.UP);
+
+			require(nextDoor.getClickedPos().equals(pos.above()), "a click on a full cell of eighths aimed at "
+					+ nextDoor.getClickedPos() + ", expected the cell above it");
+
+			// A second material never takes over a cell of eighths: its click carries on to the cell
+			// beyond the face instead.
+			MBEighths.Material planks = MBEighths.byBase(Blocks.OAK_PLANKS);
+
+			if (planks == null) {
+				throw new AssertionError("oak planks have no eighth block");
+			}
+
+			BlockPlaceContext otherMaterial = eighthContext(player, planks.eighth(), pos,
+					new Vec3(pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5), Direction.UP);
+
+			require(otherMaterial.getClickedPos().equals(pos.above()), "another material's eighth block aimed at "
+					+ otherMaterial.getClickedPos() + ", expected the cell above the stone eighths");
+			require(level.getBlockState(pos).is(eighth),
+					"the cell of stone eighths was taken over by " + level.getBlockState(pos));
+
+			// An eighth block may not join the slab of its own material: the click on the seam at the
+			// top of a bottom slab would put a piece into the cell the slab is already in.
+			level.setBlockAndUpdate(pos, stone.slab().defaultBlockState());
+
+			BlockState refused = eighthPlacement(player, eighth, pos,
+					new Vec3(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5), Direction.UP);
+
+			require(refused == null, "an eighth block joined its own slab: " + refused);
+
+			// A click on the side of that slab is not a seam, though: it is an ordinary placement in
+			// the cell beyond the face, with the piece touching the face that was clicked.
+			BlockState beyond = eighthPlacement(player, eighth, pos,
+					new Vec3(pos.getX() + 0.25, pos.getY() + 0.25, pos.getZ()), Direction.NORTH);
+
+			require(beyond != null && MBEighthProperties.mask(beyond) == MBEighthProperties.mask(piece(eighth, 1)),
+					"a click on the north side of a bottom slab placed " + beyond
+							+ ", expected the lower south west piece of the cell to the north");
+
+			// Breaking a cell gives every piece in it back at once: the drops are read off the state
+			// of the block, which has no loot table of its own.
+			List<ItemStack> drops = twoPieces(eighth, 0, 5).getDrops(new LootParams.Builder(level));
+
+			require(drops.size() == 2, "a cell with two eighths in it dropped " + drops.size() + " items");
+			require(drops.stream().allMatch(drop -> drop.is(Item.BY_BLOCK.get(eighth))),
+					"a cell of eighths dropped " + drops);
+		});
+	}
+
+	/** @return the state of {@code eighth} with the piece at {@code index} and nothing else in it. */
+	private static BlockState piece(Block eighth, int index) {
+		BlockState state = eighth.defaultBlockState();
+
+		for (int i = 0; i < MBEighthProperties.BITS.length; i++) {
+			state = state.setValue(MBEighthProperties.BITS[i], i == index);
+		}
+
+		return state;
+	}
+
+	/** @return the state of {@code eighth} with the pieces at {@code first} and {@code second} in it. */
+	private static BlockState twoPieces(Block eighth, int first, int second) {
+		return piece(eighth, first).setValue(MBEighthProperties.bit(second), true);
+	}
+
+	/** @return the context vanilla itself would read for a click with {@code eighth} in hand. */
+	private static BlockPlaceContext eighthContext(ServerPlayer player, Block eighth, BlockPos pos, Vec3 hit,
+			Direction face) {
+		ItemStack stack = new ItemStack(eighth.asItem());
+
+		return new BlockPlaceContext(player, InteractionHand.MAIN_HAND, stack,
+				new BlockHitResult(hit, face, pos, false));
+	}
+
+	private static BlockState eighthPlacement(ServerPlayer player, Block eighth, BlockPos pos, Vec3 hit,
+			Direction face) {
+		return eighth.getStateForPlacement(eighthContext(player, eighth, pos, hit, face));
 	}
 
 	/**

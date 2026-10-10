@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:stonecutting",
+  "ingredient": "minecraft:brown_glazed_terracotta",
+  "result": {
+    "count": 8,
+    "id": "morebuildingblocks:eighth_brown_glazed_terracotta"
+  }
+}

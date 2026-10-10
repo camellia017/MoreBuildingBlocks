@@ -12,6 +12,8 @@ import net.minecraft.client.data.models.BlockModelGenerators;
 import net.minecraft.client.data.models.ItemModelOutput;
 import net.minecraft.client.data.models.MultiVariant;
 import net.minecraft.client.data.models.blockstates.BlockModelDefinitionGenerator;
+import net.minecraft.client.data.models.blockstates.ConditionBuilder;
+import net.minecraft.client.data.models.blockstates.MultiPartGenerator;
 import net.minecraft.client.data.models.blockstates.MultiVariantGenerator;
 import net.minecraft.client.data.models.blockstates.PropertyDispatch;
 import net.minecraft.client.data.models.model.ItemModelUtils;
@@ -45,9 +47,12 @@ import net.minecraft.world.level.block.state.properties.SlabType;
 import net.minecraft.world.level.block.state.properties.StairsShape;
 
 import com.camelie.morebuildingblocks.MoreBuildingBlocks;
+import com.camelie.morebuildingblocks.block.GlazedPattern;
 import com.camelie.morebuildingblocks.block.MBBlockStateProperties;
+import com.camelie.morebuildingblocks.block.MBEighthProperties;
 import com.camelie.morebuildingblocks.block.VerticalSlab.Fill;
 import com.camelie.morebuildingblocks.registry.MBBlockFamilies;
+import com.camelie.morebuildingblocks.registry.MBEighths;
 
 /**
  * Generates every blockstate, block model, block item model and client item definition this mod
@@ -153,6 +158,7 @@ public class MBModelProvider implements DataProvider {
 
 		generateTerracotta(generators);
 		generateVanillaSlabs();
+		generateEighths();
 		finalizeItemModels();
 
 		Map<Block, BlockStateModelDispatcher> dispatchers = new LinkedHashMap<>();
@@ -167,6 +173,94 @@ public class MBModelProvider implements DataProvider {
 				DataProvider.saveAll(cache, ClientItem.CODEC,
 						item -> this.itemPathProvider.json(BuiltInRegistries.ITEM.getKey(item)),
 						Map.copyOf(this.itemDefinitions)));
+	}
+
+	// ---------------------------------------------------------------- eighths
+
+	/**
+	 * The eight models, the blockstate and the item model of every eighth block.
+	 *
+	 * <p>An eighth block is one cell cut into eight pieces, so one model per piece is enough: the
+	 * blockstate picks, for every piece and every {@code facing}, the model of the piece that ends
+	 * up there once the cell has been turned the way its first eighth was placed, and turns it by
+	 * the same amount. A {@code y} rotation turns a model's texture with it, which is what vanilla
+	 * relies on for the four {@code facing}s of a glazed block.
+	 *
+	 * <p>The item is the whole block: eight eighths make one, and the icon of a full cell is the
+	 * very model the vanilla block it is cut from uses.
+	 */
+	private void generateEighths() {
+		for (MBEighths.Material material : MBEighths.materials()) {
+			Block eighth = material.eighth();
+
+			for (int index = 0; index < MBEighthProperties.BITS.length; index++) {
+				this.models.put(eighthModelId(eighth, index), modelInstance(eighthGeometry(material, index)));
+			}
+
+			this.blockStates.put(eighth, eighthState(eighth));
+			registerItemModel(Item.BY_BLOCK.get(eighth), baseBlockModelId(material.base()));
+		}
+	}
+
+	/** One part of the blockstate for every piece and every facing. */
+	private static MultiPartGenerator eighthState(final Block eighth) {
+		MultiPartGenerator generator = MultiPartGenerator.multiPart(eighth);
+
+		for (int index = 0; index < MBEighthProperties.BITS.length; index++) {
+			for (int turn = 0; turn < TURNS; turn++) {
+				int turned = MBEighthProperties.turned(index, (TURNS - turn) % TURNS);
+				ConditionBuilder condition = new ConditionBuilder()
+						.term(MBEighthProperties.BITS[index], true)
+						.term(MBEighthProperties.FACING, MBEighthProperties.facing(turn));
+
+				generator.with(condition, plainVariant(eighthModelId(eighth, turned)).with(yRotation(turn)));
+			}
+		}
+
+		return generator;
+	}
+
+	/**
+	 * One eighth of a block: the box of that piece, textured with the part of the parent's sprite
+	 * the piece covers, the way a slab or a stair is.
+	 *
+	 * <p>The three sprites are the ones the block's own slab uses - the mod ships no textures, and
+	 * vanilla's slab is already textured like the block it is cut from - falling back to the block's
+	 * texture on all three slots for a material whose forms this mod made itself, whose terracotta
+	 * is one texture on every face anyway.
+	 */
+	private static JsonObject eighthGeometry(final MBEighths.Material material, final int index) {
+		Box box = eighthBox(index);
+
+		if (material.slab() instanceof GlazedPattern) {
+			return glazedCubeGeometry(BLOCK_PARENT, vanillaTexture(material.base()), box);
+		}
+
+		VanillaSlabTextures.Textures textures = material.slab() == null ? null
+				: VanillaSlabTextures.bySlab(BuiltInRegistries.BLOCK.getKey(material.slab()).getPath());
+
+		if (textures == null) {
+			Material all = vanillaTexture(material.base());
+
+			return geometry(all, all, all, box);
+		}
+
+		return geometry(vanillaTexture(textures.bottom()), vanillaTexture(textures.top()),
+				vanillaTexture(textures.side()), box);
+	}
+
+	/** The box of one piece, in the model's own coordinates. */
+	private static Box eighthBox(final int index) {
+		int x = MBEighthProperties.isEast(index) ? 8 : 0;
+		int y = MBEighthProperties.isUpper(index) ? 8 : 0;
+		int z = MBEighthProperties.isSouth(index) ? 8 : 0;
+
+		return new Box(x, y, z, x + 8, y + 8, z + 8);
+	}
+
+	/** {@code morebuildingblocks:block/eighth_<base>_<piece>}, one per piece of one material. */
+	private static Identifier eighthModelId(final Block eighth, final int index) {
+		return baseModelId(eighth, MBEighthProperties.bit(index).getName());
 	}
 
 	// ------------------------------------------------------------- terracotta
