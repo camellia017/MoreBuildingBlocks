@@ -119,27 +119,32 @@ public final class VerticalSlab {
 	 * the southern half of the cell to the north - and a click at its centre carries a wall on
 	 * straight, because the region around the centre is the one that names the half behind the face.
 	 *
-	 * <p>Clicking an upright slab lands on one of its four flat faces, and only the open one -
-	 * {@link #openFace}, the plane closing off the empty half beside the filled one, which is the
-	 * face the slab is seen as - means "finish this block". The rule reads a click there the way
-	 * vanilla does: the region the click lands in names a half, and the two halves of one block
-	 * combine into a double slab rather than a second block appearing beside it. Completing the
-	 * block is the caller's answer to produce, so this returns {@code null} for it and lets the
-	 * vanilla state stand.
+	 * <p>Clicking a slab lands on one of its two whole faces or on one of its four edges. The open
+	 * whole face - {@link #openFace}, the plane closing off the empty half beside the filled one,
+	 * which is the face the slab is seen as - is the one that means "finish this block", for an
+	 * upright slab and a flat one alike: a bottom slab is completed through its top face and an
+	 * upright one filling the northern half through its southern face. The rule reads a click there
+	 * the way vanilla does: the two halves of one block combine into a double slab rather than a
+	 * second block appearing beside it. Completing the block is the caller's answer to produce, so
+	 * this returns {@code null} for it and lets the vanilla state stand.
 	 *
-	 * <p>A wall already standing carries on through the two thin sides and through the top and the
-	 * bottom: those are the ends of the wall, so the next block takes the clicked slab's own half,
-	 * not the one the click landed nearest. Reading the click position there would turn the wall a
-	 * quarter turn at the joint, because the two thin sides are faces of one axis while the cell
-	 * they look at is filled along the other, and it would thicken the joint into a block and a half
-	 * on the sides where the two agree.
+	 * <p>The other four faces are the slab's edges: the narrow sides of an upright slab and the
+	 * four sides of a flat one, each of them half a block deep and a whole one long. A row already
+	 * standing carries on through them - the next cell takes the clicked slab's own half, whichever
+	 * end of it the click landed on. Reading the click position there would turn the row a quarter
+	 * turn at the joint, because the narrow sides of an upright slab are faces of one axis while
+	 * the cell they look at is filled along the other, and it would thicken the joint into a block
+	 * and a half on the edges where the two agree. A flat slab reads the same way, which is what a
+	 * player laying a floor means by clicking its edge: the half carries on into the cell beside
+	 * it, rather than a quarter turn of upright slab standing up against the joint.
 	 *
-	 * <p>The boundary the filled half runs up to ({@link Fill#outward()}) is not one of those ends:
-	 * it is the wall seen from its side, a whole face of the block like any face of a plain block,
-	 * so a click there is read by the frame like the rest. A click at its centre carries the half
-	 * lying against this wall on into the next cell - the same plane and thickness, which is what a
-	 * player pointing at the side of a wall means - while its bands name the halves their own edges
-	 * sit on, and so start a second wall at right angles or lay a flat half down.
+	 * <p>The boundary the filled half runs up to ({@link Fill#outward()}) is not one of those
+	 * edges: it is the slab seen from its filled side, a whole face of the block like any face of a
+	 * plain block, so a click there is read by the frame like the rest. A click at its centre
+	 * carries the half lying against this face on into the next cell - the same plane and
+	 * thickness, which is what a player pointing at the side of a wall means - while its bands name
+	 * the halves their own edges sit on, and so start a second row at right angles or lay a flat
+	 * half down.
 	 *
 	 * <p>A double slab has no empty half left and is read the same way on every face, the one that
 	 * used to be open included: it is a plain full block, and the caller stops moving clicks into it
@@ -159,17 +164,17 @@ public final class VerticalSlab {
 		BlockPos cell = context.getClickedPos();
 		BlockPos hitPos = context instanceof PlacementClick click ? click.morebuildingblocks$hitPos() : cell;
 
-		// The wall the click landed on, read at the block the click was really made against.
+		// The slab the click landed on, read at the block the click was really made against.
 		BlockState clicked = context.getLevel().getBlockState(hitPos);
 
-		if (VerticalSlab.isVertical(clicked) && !VerticalSlab.isDouble(clicked)) {
+		if (clicked.getBlock() instanceof SlabBlock && !VerticalSlab.isDouble(clicked)) {
 			if (face == VerticalSlab.openFace(clicked)) {
 				return null;
 			}
 
-			// Continuing a wall is not the same rule as starting one: which half the next block takes
-			// is settled by the slab the player built against, not by where on the face the click
-			// landed.
+			// Carrying a row on is not the same rule as starting one: which half the next block
+			// takes is settled by the slab the player built against, not by where on the edge the
+			// click landed.
 			if (face != Fill.of(clicked).outward()) {
 				return Fill.of(clicked);
 			}

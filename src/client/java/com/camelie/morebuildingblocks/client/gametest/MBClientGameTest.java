@@ -239,6 +239,7 @@ public class MBClientGameTest implements FabricClientGameTest {
 			verifyPlacement(server);
 			verifyUprightStacking(server);
 			verifyWallContinuation(server);
+			verifyFlatContinuation(server);
 			verifyDoubleSlabClicks(server);
 			verifyGlazedSlabs(server);
 			verifyDrops(context, server);
@@ -960,6 +961,70 @@ public class MBClientGameTest implements FabricClientGameTest {
 	}
 
 	/**
+	 * Clicks the four edges of a flat slab and checks that its half carries on into the cell beside
+	 * it, the way an upright slab's thin sides carry its wall on.
+	 *
+	 * <p>An edge of a flat slab is half a block deep, so there is no frame inside it to read: a
+	 * click anywhere on one means the cell it looks at, filled with the clicked slab's own half.
+	 * Reading the click position instead stands an upright slab up against the joint - a quarter
+	 * turn away from the floor the player is laying - so each edge is clicked at both of its ends
+	 * here. The face the filled half runs up to is a whole one and is still read by position, that
+	 * being the face a player starts a wall against.
+	 */
+	private static void verifyFlatContinuation(TestServerContext server) {
+		server.runOnServer(minecraftServer -> {
+			ServerLevel level = minecraftServer.overworld();
+			ServerPlayer player = minecraftServer.getPlayerList().getPlayers().get(0);
+			Block slabBlock = vanillaSlabs().get(0);
+			BlockPos pos = new BlockPos(6, FLOOR_Y + 42, 6);
+			BlockState flat = slabBlock.defaultBlockState();
+
+			require(!VerticalSlab.isVertical(flat), "the check did not build a flat slab: " + flat);
+
+			level.setBlockAndUpdate(pos.below(), Blocks.STONE.defaultBlockState());
+			level.setBlockAndUpdate(pos, flat);
+
+			double low = pos.getY() + 0.25;
+
+			checkFlatEdge(player, slabBlock, pos, flat, Direction.NORTH,
+					new Vec3(pos.getX() + 0.1, low, pos.getZ()), pos.north());
+			checkFlatEdge(player, slabBlock, pos, flat, Direction.NORTH,
+					new Vec3(pos.getX() + 0.9, low, pos.getZ()), pos.north());
+			checkFlatEdge(player, slabBlock, pos, flat, Direction.EAST,
+					new Vec3(pos.getX() + 1.0, low, pos.getZ() + 0.1), pos.east());
+			checkFlatEdge(player, slabBlock, pos, flat, Direction.EAST,
+					new Vec3(pos.getX() + 1.0, low, pos.getZ() + 0.9), pos.east());
+			checkFlatEdge(player, slabBlock, pos, flat, Direction.SOUTH,
+					new Vec3(pos.getX() + 0.1, low, pos.getZ() + 1.0), pos.south());
+			checkFlatEdge(player, slabBlock, pos, flat, Direction.SOUTH,
+					new Vec3(pos.getX() + 0.9, low, pos.getZ() + 1.0), pos.south());
+			checkFlatEdge(player, slabBlock, pos, flat, Direction.WEST,
+					new Vec3(pos.getX(), low, pos.getZ() + 0.1), pos.west());
+			checkFlatEdge(player, slabBlock, pos, flat, Direction.WEST,
+					new Vec3(pos.getX(), low, pos.getZ() + 0.9), pos.west());
+
+			// The boundary the filled half runs up to is a whole face, read by position like any
+			// plain block's face: a band of it starts the half that band names rather than carrying
+			// this slab's own half on.
+			checkAgainstBoundary(player, slabBlock, pos, Direction.DOWN,
+					new Vec3(pos.getX() + 0.5, pos.getY() + 0.1, pos.getZ() + 0.1),
+					Fill.negative(Direction.Axis.Z), "band of a flat slab's boundary");
+
+			// The open face still finishes this block rather than placing a second one beside it.
+			checkAgainstOpenFace(player, slabBlock, pos, flat);
+
+			// The upper half of the block reads the same way, carrying its own - upper - half on.
+			BlockState upper = flat.setValue(SlabBlock.TYPE, SlabType.TOP);
+			level.setBlockAndUpdate(pos, upper);
+			checkFlatEdge(player, slabBlock, pos, upper, Direction.NORTH,
+					new Vec3(pos.getX() + 0.5, pos.getY() + 0.75, pos.getZ()), pos.north());
+
+			level.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
+			level.setBlockAndUpdate(pos.below(), Blocks.AIR.defaultBlockState());
+		});
+	}
+
+	/**
 	 * Clicks the face of a completed - double - upright slab that used to be its open face, once
 	 * with the same slab in hand and once with an unrelated block, and checks that both land in the
 	 * cell beyond rather than in the slab's own cell.
@@ -1093,8 +1158,35 @@ public class MBClientGameTest implements FabricClientGameTest {
 	}
 
 	/**
-	 * Clicks a point on a whole face of an upright slab - the boundary its filled half runs up to -
-	 * and checks the placement starts the next block in the cell beyond, filling the half the click
+	 * Clicks one edge of a flat slab - the half-block-deep side of it, which looks at the next cell
+	 * along - and checks that the cell beyond is filled with the clicked slab's own half, laid flat
+	 * rather than stood up.
+	 */
+	private static void checkFlatEdge(ServerPlayer player, Block slabBlock, BlockPos pos, BlockState flat,
+			Direction face, Vec3 hit, BlockPos expectedPos) {
+		BlockPlaceContext context = new BlockPlaceContext(player, InteractionHand.MAIN_HAND,
+				new ItemStack(slabBlock.asItem()), new BlockHitResult(hit, face, pos, false));
+
+		require(context.getClickedPos().equals(expectedPos),
+				"clicking the " + face + " edge of a flat slab aimed at " + context.getClickedPos()
+						+ ", expected the cell beyond it at " + expectedPos);
+
+		BlockState placed = slabBlock.getStateForPlacement(context);
+
+		require(placed != null, "no block state was produced for a click on the " + face + " edge of a flat slab");
+		require(SlabType.DOUBLE != placed.getValue(SlabBlock.TYPE),
+				"clicking the " + face + " edge of a flat slab doubled it: " + placed);
+		require(!VerticalSlab.isVertical(placed),
+				"the slab placed against the " + face + " edge of a flat slab stood up: " + placed);
+		require(Fill.of(placed).equals(Fill.of(flat)),
+				"the slab placed against the " + face + " edge of a flat slab filled " + Fill.of(placed)
+						+ ", expected the clicked slab's own half " + Fill.of(flat) + " so the floor keeps its"
+						+ " plane and its level: " + placed);
+	}
+
+	/**
+	 * Clicks a point on a whole face of a slab - the boundary its filled half runs up to - and
+	 * checks the placement starts the next block in the cell beyond, filling the half the click
 	 * position names rather than the clicked slab's own half.
 	 *
 	 * <p>This is the face a player uses to build against the side of a wall, so it is read the way
@@ -1107,16 +1199,16 @@ public class MBClientGameTest implements FabricClientGameTest {
 				new ItemStack(slabBlock.asItem()), new BlockHitResult(hit, face, pos, false));
 
 		require(context.getClickedPos().equals(pos.relative(face)),
-				"clicking the " + what + " of an upright slab aimed at " + context.getClickedPos()
+				"clicking the " + what + " of a slab aimed at " + context.getClickedPos()
 						+ ", expected the cell beyond it at " + pos.relative(face));
 
 		BlockState placed = slabBlock.getStateForPlacement(context);
 
-		require(placed != null, "no block state was produced for a click on the " + what + " of an upright slab");
+		require(placed != null, "no block state was produced for a click on the " + what + " of a slab");
 		require(!VerticalSlab.isDouble(placed),
-				"clicking the " + what + " of an upright slab doubled the slab up: " + placed);
+				"clicking the " + what + " of a slab doubled the slab up: " + placed);
 		require(Fill.of(placed).equals(expected),
-				"clicking the " + what + " of an upright slab filled " + Fill.of(placed) + ", expected "
+				"clicking the " + what + " of a slab filled " + Fill.of(placed) + ", expected "
 						+ expected + " from the click position: " + placed);
 	}
 
@@ -1132,14 +1224,14 @@ public class MBClientGameTest implements FabricClientGameTest {
 				new ItemStack(slabBlock.asItem()), new BlockHitResult(hit, face, pos, false));
 
 		require(context.getClickedPos().equals(pos),
-				"clicking the open face of an upright slab aimed at " + context.getClickedPos()
+				"clicking the open face of a slab aimed at " + context.getClickedPos()
 						+ ", expected the clicked block itself at " + pos);
 
 		BlockState doubled = slabBlock.getStateForPlacement(context);
 
-		require(doubled != null, "no block state was produced for a click on the open face of an upright slab");
+		require(doubled != null, "no block state was produced for a click on the open face of a slab");
 		require(SlabType.DOUBLE == doubled.getValue(SlabBlock.TYPE),
-				"the click on the open face of an upright slab produced " + doubled
+				"the click on the open face of a slab produced " + doubled
 						+ ", expected a double slab completing the same block");
 	}
 
