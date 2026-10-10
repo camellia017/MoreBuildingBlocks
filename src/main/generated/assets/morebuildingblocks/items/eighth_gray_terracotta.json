@@ -1,6 +1,6 @@
 {
   "model": {
     "type": "minecraft:model",
-    "model": "minecraft:block/gray_terracotta"
+    "model": "morebuildingblocks:block/eighth_gray_terracotta_lower_north_west"
   }
 }

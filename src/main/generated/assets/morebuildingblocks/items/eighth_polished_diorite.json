@@ -1,6 +1,6 @@
 {
   "model": {
     "type": "minecraft:model",
-    "model": "minecraft:block/polished_diorite"
+    "model": "morebuildingblocks:block/eighth_polished_diorite_lower_north_west"
   }
 }

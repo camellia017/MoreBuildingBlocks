@@ -1,6 +1,6 @@
 {
   "model": {
     "type": "minecraft:model",
-    "model": "minecraft:block/bricks"
+    "model": "morebuildingblocks:block/eighth_bricks_lower_north_west"
   }
 }

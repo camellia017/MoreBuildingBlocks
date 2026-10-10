@@ -1,6 +1,6 @@
 {
   "model": {
     "type": "minecraft:model",
-    "model": "minecraft:block/deepslate_tiles"
+    "model": "morebuildingblocks:block/eighth_deepslate_tiles_lower_north_west"
   }
 }

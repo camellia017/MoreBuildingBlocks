@@ -1,6 +1,6 @@
 {
   "model": {
     "type": "minecraft:model",
-    "model": "minecraft:block/cinnabar_bricks"
+    "model": "morebuildingblocks:block/eighth_cinnabar_bricks_lower_north_west"
   }
 }

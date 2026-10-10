@@ -1,6 +1,6 @@
 {
   "model": {
     "type": "minecraft:model",
-    "model": "minecraft:block/warped_planks"
+    "model": "morebuildingblocks:block/eighth_warped_planks_lower_north_west"
   }
 }

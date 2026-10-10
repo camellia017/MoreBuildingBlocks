@@ -1,6 +1,6 @@
 {
   "model": {
     "type": "minecraft:model",
-    "model": "minecraft:block/smooth_quartz"
+    "model": "morebuildingblocks:block/eighth_smooth_quartz_lower_north_west"
   }
 }

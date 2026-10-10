@@ -1,6 +1,6 @@
 {
   "model": {
     "type": "minecraft:model",
-    "model": "minecraft:block/poplar_planks"
+    "model": "morebuildingblocks:block/eighth_poplar_planks_lower_north_west"
   }
 }

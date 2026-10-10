@@ -1,6 +1,6 @@
 {
   "model": {
     "type": "minecraft:model",
-    "model": "minecraft:block/exposed_cut_copper"
+    "model": "morebuildingblocks:block/eighth_exposed_cut_copper_lower_north_west"
   }
 }

@@ -1,6 +1,6 @@
 {
   "model": {
     "type": "minecraft:model",
-    "model": "minecraft:block/acacia_planks"
+    "model": "morebuildingblocks:block/eighth_acacia_planks_lower_north_west"
   }
 }

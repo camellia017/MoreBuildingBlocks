@@ -1,6 +1,6 @@
 {
   "model": {
     "type": "minecraft:model",
-    "model": "minecraft:block/polished_tuff"
+    "model": "morebuildingblocks:block/eighth_polished_tuff_lower_north_west"
   }
 }

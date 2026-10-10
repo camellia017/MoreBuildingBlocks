@@ -1,6 +1,6 @@
 {
   "model": {
     "type": "minecraft:model",
-    "model": "minecraft:block/polished_cinnabar"
+    "model": "morebuildingblocks:block/eighth_polished_cinnabar_lower_north_west"
   }
 }

@@ -1,6 +1,6 @@
 {
   "model": {
     "type": "minecraft:model",
-    "model": "minecraft:block/purpur_block"
+    "model": "morebuildingblocks:block/eighth_purpur_block_lower_north_west"
   }
 }

@@ -1,6 +1,6 @@
 {
   "model": {
     "type": "minecraft:model",
-    "model": "minecraft:block/cobbled_deepslate"
+    "model": "morebuildingblocks:block/eighth_cobbled_deepslate_lower_north_west"
   }
 }

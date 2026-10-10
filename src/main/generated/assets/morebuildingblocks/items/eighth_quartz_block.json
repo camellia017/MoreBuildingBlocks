@@ -1,6 +1,6 @@
 {
   "model": {
     "type": "minecraft:model",
-    "model": "minecraft:block/quartz_block"
+    "model": "morebuildingblocks:block/eighth_quartz_block_lower_north_west"
   }
 }

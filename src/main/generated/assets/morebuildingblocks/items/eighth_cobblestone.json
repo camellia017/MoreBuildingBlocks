@@ -1,6 +1,6 @@
 {
   "model": {
     "type": "minecraft:model",
-    "model": "minecraft:block/cobblestone"
+    "model": "morebuildingblocks:block/eighth_cobblestone_lower_north_west"
   }
 }

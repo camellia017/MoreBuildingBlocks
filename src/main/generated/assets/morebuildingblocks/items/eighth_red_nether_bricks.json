@@ -1,6 +1,6 @@
 {
   "model": {
     "type": "minecraft:model",
-    "model": "minecraft:block/red_nether_bricks"
+    "model": "morebuildingblocks:block/eighth_red_nether_bricks_lower_north_west"
   }
 }

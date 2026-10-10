@@ -1,6 +1,6 @@
 {
   "model": {
     "type": "minecraft:model",
-    "model": "minecraft:block/cherry_planks"
+    "model": "morebuildingblocks:block/eighth_cherry_planks_lower_north_west"
   }
 }

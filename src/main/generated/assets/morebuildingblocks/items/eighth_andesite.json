@@ -1,6 +1,6 @@
 {
   "model": {
     "type": "minecraft:model",
-    "model": "minecraft:block/andesite"
+    "model": "morebuildingblocks:block/eighth_andesite_lower_north_west"
   }
 }

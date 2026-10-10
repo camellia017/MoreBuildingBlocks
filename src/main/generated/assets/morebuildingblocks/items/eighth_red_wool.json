@@ -1,6 +1,6 @@
 {
   "model": {
     "type": "minecraft:model",
-    "model": "minecraft:block/red_wool"
+    "model": "morebuildingblocks:block/eighth_red_wool_lower_north_west"
   }
 }

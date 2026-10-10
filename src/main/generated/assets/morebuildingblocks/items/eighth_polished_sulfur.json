@@ -1,6 +1,6 @@
 {
   "model": {
     "type": "minecraft:model",
-    "model": "minecraft:block/polished_sulfur"
+    "model": "morebuildingblocks:block/eighth_polished_sulfur_lower_north_west"
   }
 }

@@ -1,6 +1,6 @@
 {
   "model": {
     "type": "minecraft:model",
-    "model": "minecraft:block/spruce_planks"
+    "model": "morebuildingblocks:block/eighth_spruce_planks_lower_north_west"
   }
 }

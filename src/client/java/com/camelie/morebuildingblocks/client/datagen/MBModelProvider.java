@@ -186,8 +186,10 @@ public class MBModelProvider implements DataProvider {
 	 * the same amount. A {@code y} rotation turns a model's texture with it, which is what vanilla
 	 * relies on for the four {@code facing}s of a glazed block.
 	 *
-	 * <p>The item is the whole block: eight eighths make one, and the icon of a full cell is the
-	 * very model the vanilla block it is cut from uses.
+	 * <p>The item is one eighth of the block, not the block it is cut from: the icon is the piece
+	 * in the x-, y- and z- corner, unrotated, so it shows an eighth at its own size with the part
+	 * of the sprite that piece covers. Squeezing the whole sprite onto the small cube would stretch
+	 * the texture, which is what this avoids.
 	 */
 	private void generateEighths() {
 		for (MBEighths.Material material : MBEighths.materials()) {
@@ -198,7 +200,10 @@ public class MBModelProvider implements DataProvider {
 			}
 
 			this.blockStates.put(eighth, eighthState(eighth));
-			registerItemModel(Item.BY_BLOCK.get(eighth), baseBlockModelId(material.base()));
+
+			// The icon is the unrotated piece in the x-, y- and z- corner of the block.
+			registerItemModel(Item.BY_BLOCK.get(eighth),
+					eighthModelId(eighth, MBEighthProperties.index(false, false, false)));
 		}
 	}
 

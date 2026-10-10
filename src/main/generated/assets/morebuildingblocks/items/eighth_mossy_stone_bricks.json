@@ -1,6 +1,6 @@
 {
   "model": {
     "type": "minecraft:model",
-    "model": "minecraft:block/mossy_stone_bricks"
+    "model": "morebuildingblocks:block/eighth_mossy_stone_bricks_lower_north_west"
   }
 }

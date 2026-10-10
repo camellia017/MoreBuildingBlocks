@@ -1,6 +1,6 @@
 {
   "model": {
     "type": "minecraft:model",
-    "model": "minecraft:block/crimson_planks"
+    "model": "morebuildingblocks:block/eighth_crimson_planks_lower_north_west"
   }
 }

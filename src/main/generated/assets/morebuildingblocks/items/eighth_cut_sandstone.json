@@ -1,6 +1,6 @@
 {
   "model": {
     "type": "minecraft:model",
-    "model": "minecraft:block/cut_sandstone"
+    "model": "morebuildingblocks:block/eighth_cut_sandstone_lower_north_west"
   }
 }

@@ -1,6 +1,6 @@
 {
   "model": {
     "type": "minecraft:model",
-    "model": "minecraft:block/brown_wool"
+    "model": "morebuildingblocks:block/eighth_brown_wool_lower_north_west"
   }
 }

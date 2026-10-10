@@ -1,6 +1,6 @@
 {
   "model": {
     "type": "minecraft:model",
-    "model": "minecraft:block/dark_prismarine"
+    "model": "morebuildingblocks:block/eighth_dark_prismarine_lower_north_west"
   }
 }

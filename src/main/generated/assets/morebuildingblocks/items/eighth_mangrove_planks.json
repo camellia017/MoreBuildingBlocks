@@ -1,6 +1,6 @@
 {
   "model": {
     "type": "minecraft:model",
-    "model": "minecraft:block/mangrove_planks"
+    "model": "morebuildingblocks:block/eighth_mangrove_planks_lower_north_west"
   }
 }

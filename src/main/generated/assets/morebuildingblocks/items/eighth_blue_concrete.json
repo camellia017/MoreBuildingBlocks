@@ -1,6 +1,6 @@
 {
   "model": {
     "type": "minecraft:model",
-    "model": "minecraft:block/blue_concrete"
+    "model": "morebuildingblocks:block/eighth_blue_concrete_lower_north_west"
   }
 }

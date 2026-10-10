@@ -1,6 +1,6 @@
 {
   "model": {
     "type": "minecraft:model",
-    "model": "minecraft:block/tuff"
+    "model": "morebuildingblocks:block/eighth_tuff_lower_north_west"
   }
 }

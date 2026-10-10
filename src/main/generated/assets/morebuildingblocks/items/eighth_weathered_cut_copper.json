@@ -1,6 +1,6 @@
 {
   "model": {
     "type": "minecraft:model",
-    "model": "minecraft:block/weathered_cut_copper"
+    "model": "morebuildingblocks:block/eighth_weathered_cut_copper_lower_north_west"
   }
 }
