@@ -29,11 +29,13 @@ import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.IronBarsBlock;
 import net.minecraft.world.level.block.SlabBlock;
 import net.minecraft.world.level.block.StairBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.Half;
+import net.minecraft.world.level.block.state.properties.Property;
 import net.minecraft.world.level.block.state.properties.SlabType;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
@@ -44,6 +46,7 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 import com.camelie.morebuildingblocks.MoreBuildingBlocks;
 import com.camelie.morebuildingblocks.block.GlazedPattern;
 import com.camelie.morebuildingblocks.block.MBBlockStateProperties;
+import com.camelie.morebuildingblocks.block.MBPaneProperties;
 import com.camelie.morebuildingblocks.block.VerticalSlab;
 import com.camelie.morebuildingblocks.block.VerticalSlab.Fill;
 import com.camelie.morebuildingblocks.registry.MBBlockFamilies;
@@ -236,6 +239,7 @@ public class MBClientGameTest implements FabricClientGameTest {
 			// Geometry and loot come last: a failed assertion aborts the run, and the
 			// screenshots above are the evidence for the checks a log cannot make.
 			verifyShapes(server);
+			verifyPaneProperties(server);
 			verifyPlacement(server);
 			verifyUprightStacking(server);
 			verifyWallContinuation(server);
@@ -249,6 +253,55 @@ public class MBClientGameTest implements FabricClientGameTest {
 		// The singleplayer world has to be closed first: the client can only be in one
 		// world at a time, and this join is the multiplayer half of the acceptance run.
 		verifyDedicatedServer(context);
+	}
+
+	/**
+	 * Checks that the eight pane flags reached every pane-shaped block and that they default to
+	 * {@code false}.
+	 *
+	 * <p>This is the guard behind the panes' whole design. A piece is switched on by the
+	 * connection rules and never by a block being placed, so the default state of a pane has to
+	 * stay the vanilla pane: post and arms, nothing else. Vanilla's own boolean property would
+	 * have made it the opposite, because its values run {@code true} first, which is why the
+	 * flags are the mod's property class instead.
+	 */
+	private static void verifyPaneProperties(TestServerContext server) {
+		server.runOnServer(minecraftServer -> {
+			List<Property<Boolean>> flags = List.of(
+					MBPaneProperties.NORTH_UP,
+					MBPaneProperties.EAST_UP,
+					MBPaneProperties.SOUTH_UP,
+					MBPaneProperties.WEST_UP,
+					MBPaneProperties.CORNER_NORTH_EAST,
+					MBPaneProperties.CORNER_SOUTH_EAST,
+					MBPaneProperties.CORNER_SOUTH_WEST,
+					MBPaneProperties.CORNER_NORTH_WEST);
+
+			List<Block> panes = BuiltInRegistries.BLOCK.stream()
+					.filter(block -> block instanceof IronBarsBlock)
+					.toList();
+
+			require(panes.size() == 26,
+					"found " + panes.size() + " pane-shaped blocks, expected the 26 vanilla ones");
+
+			for (Block pane : panes) {
+				Identifier id = BuiltInRegistries.BLOCK.getKey(pane);
+				BlockState state = pane.defaultBlockState();
+
+				for (Property<Boolean> flag : flags) {
+					require(state.hasProperty(flag), id + " does not declare " + flag.getName());
+					require(!state.getValue(flag),
+							id + " defaults to " + flag.getName() + "=true, expected the vanilla pane");
+				}
+			}
+
+			for (Property<Boolean> flag : flags) {
+				require(flag.getPossibleValues().equals(List.of(false, true)),
+						flag.getName() + " lists " + flag.getPossibleValues() + ", expected false first");
+				require(flag.getInternalIndex(false) == 0 && flag.getInternalIndex(true) == 1,
+						flag.getName() + " indexes its values in the wrong order");
+			}
+		});
 	}
 
 	/**
