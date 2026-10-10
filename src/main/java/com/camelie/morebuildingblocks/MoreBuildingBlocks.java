@@ -1,6 +1,7 @@
 package com.camelie.morebuildingblocks;
 
 import com.camelie.morebuildingblocks.registry.MBBlocks;
+import com.camelie.morebuildingblocks.registry.MBEighthWeathering;
 import com.camelie.morebuildingblocks.registry.MBItems;
 import net.fabricmc.api.ModInitializer;
 
@@ -13,8 +14,9 @@ import org.slf4j.LoggerFactory;
  * Common (client + dedicated server) entrypoint.
  *
  * <p>All block and item registration happens here so a dedicated server ends up with exactly the
- * same registry contents as a client. Anything that touches rendering lives in the {@code client}
- * source set instead.</p>
+ * same registry contents as a client, and so does the one table that is filled in after
+ * registration - the game's own weathering maps, which the copper eighths are handed to. Anything
+ * that touches rendering lives in the {@code client} source set instead.</p>
  */
 public class MoreBuildingBlocks implements ModInitializer {
 	public static final String MOD_ID = "morebuildingblocks";
@@ -28,6 +30,7 @@ public class MoreBuildingBlocks implements ModInitializer {
 	public void onInitialize() {
 		MBBlocks.bootstrap();
 		MBItems.register();
+		MBEighthWeathering.bootstrap();
 	}
 
 	public static Identifier id(String path) {

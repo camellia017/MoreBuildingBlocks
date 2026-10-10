@@ -2,9 +2,11 @@ package com.camelie.morebuildingblocks.registry;
 
 import com.camelie.morebuildingblocks.MoreBuildingBlocks;
 import com.camelie.morebuildingblocks.block.MBEighthBlock;
+import com.camelie.morebuildingblocks.block.MBWeatheringEighthBlock;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.WeatheringCopper;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import org.jspecify.annotations.Nullable;
 
@@ -26,6 +28,10 @@ import java.util.Map;
  * <p>Each material also carries the slab and the stairs of the same block, which is what an eighth
  * block refuses to share a cell with, and what the game is asked for a stonecutter recipe: one base
  * block cuts into eight eighth blocks, and nothing crafts them at a crafting table.
+ *
+ * <p>The material decides what its eighth is: where the game weathers the block - copper - the
+ * eighth is a block the game weathers too, which {@link MBEighthWeathering} hands to the game's own
+ * weathering maps, and every other eighth is a plain one.
  *
  * <p>The vanilla half of the table is generated from the blockstates of the game itself, so the rows
  * below are written with the ids those blockstates gave. Reading the rows back resolves every id,
@@ -222,13 +228,30 @@ public final class MBEighths {
 			BlockBehaviour.Properties.ofLegacyCopy(base).isViewBlocking(MBBlockFamilies.NEAR_PLANE_INTERSECTS_OUTLINE);
 		Block eighth = MBRegistry.register(
 			PREFIX + basePath,
-			blockProperties -> new MBEighthBlock(slab, stairs, blockProperties),
+			blockProperties -> eighth(base, slab, stairs, blockProperties),
 			properties
 		);
 		Material material = new Material(basePath, base, slab, stairs, eighth);
 		MATERIALS.add(material);
 		BY_BASE.put(base, material);
 		BY_EIGHTH.put(eighth, material);
+	}
+
+	/**
+	 * Builds the eighth block of a material, in the shape the material calls for: an eighth of a
+	 * block the game weathers is one more copper block to the game, so it is registered as the
+	 * weathering eighth - at the stage of the block it is cut from, which the base block itself is
+	 * asked for - and everything else is a plain eighth.
+	 *
+	 * <p>The pairs a weathering eighth turns through are not built here; {@link MBEighthWeathering}
+	 * puts it into the game's own weathering maps once the whole table exists.
+	 */
+	private static MBEighthBlock eighth(final Block base, final @Nullable Block slab, final @Nullable Block stairs, final BlockBehaviour.Properties properties) {
+		if (base instanceof WeatheringCopper copper) {
+			return new MBWeatheringEighthBlock(copper.getAge(), slab, stairs, properties);
+		}
+
+		return new MBEighthBlock(slab, stairs, properties);
 	}
 
 	/**

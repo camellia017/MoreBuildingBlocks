@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
@@ -24,11 +25,18 @@ import net.minecraft.server.Bootstrap;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.entity.LightningBolt;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.HoneycombItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.DyeColor;
@@ -39,6 +47,7 @@ import net.minecraft.world.level.block.CrossCollisionBlock;
 import net.minecraft.world.level.block.IronBarsBlock;
 import net.minecraft.world.level.block.SlabBlock;
 import net.minecraft.world.level.block.StairBlock;
+import net.minecraft.world.level.block.WeatheringCopper;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.Half;
@@ -130,6 +139,21 @@ public class MBClientGameTest implements FabricClientGameTest {
 	private static final int COLUMNS = 101;
 	private static final int X0 = COLUMN_X0 - 4;
 	private static final int X1 = COLUMN_X0 + COLUMNS + 4;
+
+	/**
+	 * Where the weathering checks build: a clear patch of the flat world east of the showcase, one
+	 * cell per check and three blocks apart, so a lightning strike's random steps cannot reach a
+	 * cell another check is looking at.
+	 */
+	private static final int WEATHER_X = 20;
+	private static final int WEATHER_Z = 20;
+	private static final int WEATHER_Y = FLOOR_Y + 3;
+
+	/**
+	 * How many random ticks a lone cell is given to age once. Its chance is about one call in
+	 * twenty, so ten thousand calls without an age is a failure rather than bad luck.
+	 */
+	private static final int AGING_TICKS = 10_000;
 
 	@Override
 	public void runTest(ClientGameTestContext context) {
@@ -265,6 +289,7 @@ public class MBClientGameTest implements FabricClientGameTest {
 			verifyDrops(context, server);
 			verifyCreativeTab(server);
 			verifyVanillaTabs(server);
+			verifyWeathering(context, server);
 		}
 
 		// The singleplayer world has to be closed first: the client can only be in one
@@ -727,6 +752,206 @@ public class MBClientGameTest implements FabricClientGameTest {
 		require(tab != null, "the game has no creative tab " + key.identifier());
 
 		return tab;
+	}
+
+	/**
+	 * Checks that the copper eighths weather the way the game's own copper does: the same four
+	 * stages in the same order, the same maps deciding what ages into what and what waxes into
+	 * what, and the same four things that turn a copper block - the game's random tick, an axe, a
+	 * honeycomb, and a lightning strike.
+	 *
+	 * <p>The eighths carry no rules of their own: they are written into the two maps the game reads
+	 * and implement the game's own interface, so what is checked here is that the wiring is in
+	 * place and that a cell turns as one block. The game turns a block by copying the properties of
+	 * the state it replaces onto the new one, so every check turns a cell with three eighths in it
+	 * and facing away from the default, and then reads back both the block it became and the pieces
+	 * it still holds.
+	 *
+	 * <p>The age check calls the tick the game ages blocks on rather than waiting for one to come
+	 * around: a lone cell ages on about one call in twenty, so this calls it until it takes effect
+	 * instead of hoping the random ticks of a short test run happen to land on it.
+	 */
+	private static void verifyWeathering(ClientGameTestContext context, TestServerContext server) {
+		List<Block> plain = new ArrayList<>();
+		List<Block> waxed = new ArrayList<>();
+
+		for (WeatheringCopper.WeatherState stage : WeatheringCopper.WeatherState.values()) {
+			plain.add(eighthOf(Blocks.CUT_COPPER.weathering().pick(stage)));
+			waxed.add(eighthOf(Blocks.CUT_COPPER.waxed().pick(stage)));
+		}
+
+		// Writing the eighths into the game's maps must not take out what the game itself put there.
+		require(WeatheringCopper.getNext(Blocks.CUT_COPPER.weathering().unaffected())
+				.filter(next -> next == Blocks.CUT_COPPER.weathering().exposed()).isPresent(),
+				"the game's own cut copper no longer ages into its next stage");
+
+		for (int stage = 0; stage < plain.size(); stage++) {
+			Block eighth = plain.get(stage);
+			Block copper = Blocks.CUT_COPPER.weathering().pick(WeatheringCopper.WeatherState.values()[stage]);
+			Block waxedHere = waxed.get(stage);
+
+			// The same stage and the same rate as the block it was cut from: the age a block reports
+			// is what the game reads to see whether its neighbours are older or younger, and the
+			// chance modifier is what makes plain copper the slowest of the four.
+			require(weathering(eighth).getAge() == weathering(copper).getAge(),
+					name(eighth) + " calls itself " + weathering(eighth).getAge()
+							+ " where the game calls its copper " + weathering(copper).getAge());
+			require(weathering(eighth).getChanceModifier() == weathering(copper).getChanceModifier(),
+					name(eighth) + " ages at " + weathering(eighth).getChanceModifier()
+							+ " where the game's copper ages at " + weathering(copper).getChanceModifier());
+
+			if (stage + 1 == plain.size()) {
+				require(WeatheringCopper.getNext(eighth).isEmpty(), "the most weathered eighth, " + name(eighth)
+						+ ", still ages into " + name(WeatheringCopper.getNext(eighth)));
+			} else {
+				Block next = plain.get(stage + 1);
+
+				require(WeatheringCopper.getNext(eighth).filter(candidate -> candidate == next).isPresent(),
+						name(eighth) + " ages into " + name(WeatheringCopper.getNext(eighth)) + " instead of " + name(next));
+			}
+
+			// A honeycomb waxes the stage the cell is at, and a waxed eighth is not aged at all.
+			require(HoneycombItem.getWaxed(eighth.defaultBlockState()).map(BlockState::getBlock)
+					.filter(candidate -> candidate == waxedHere).isPresent(),
+					"a honeycomb does not turn " + name(eighth) + " into " + name(waxedHere));
+			require(WeatheringCopper.getNext(waxedHere).isEmpty(),
+					"the waxed eighth " + name(waxedHere) + " is still aged by the game");
+		}
+
+		// The same turns as states, where the pieces and the facing are visible.
+		BlockState cell = weatheringCell(plain.get(2), Direction.WEST, 0, 3, 7);
+
+		assertSameCell(weathering(plain.get(2)).getNext(cell)
+						.orElseThrow(() -> new AssertionError("a cell of " + name(plain.get(2)) + " no longer ages")),
+				cell, plain.get(3), "aging");
+		assertSameCell(WeatheringCopper.getPrevious(cell)
+						.orElseThrow(() -> new AssertionError("a cell of " + name(plain.get(2)) + " can no longer be scraped")),
+				cell, plain.get(1), "an axe");
+		assertSameCell(HoneycombItem.getWaxed(cell)
+						.orElseThrow(() -> new AssertionError("a cell of " + name(plain.get(2)) + " can no longer be waxed")),
+				cell, waxed.get(2), "a honeycomb");
+		assertSameCell(WeatheringCopper.getFirst(cell), cell, plain.get(0), "a lightning strike");
+
+		BlockPos agedPos = new BlockPos(WEATHER_X, WEATHER_Y, WEATHER_Z);
+		BlockPos clickedPos = agedPos.offset(3, 0, 0);
+		BlockPos struckPos = agedPos.offset(6, 0, 0);
+		BlockState fresh = weatheringCell(plain.get(0), Direction.EAST, 1, 6, 7);
+		BlockState oxidized = weatheringCell(plain.get(3), Direction.WEST, 0, 3, 7);
+		BlockState struck = weatheringCell(plain.get(3), Direction.NORTH, 2, 5, 7);
+
+		server.runOnServer(minecraftServer -> {
+			ServerLevel level = minecraftServer.overworld();
+			ServerPlayer player = minecraftServer.getPlayerList().getPlayers().get(0);
+
+			// The random tick the game ages blocks on, called on the state the game would call it on.
+			level.setBlockAndUpdate(agedPos, fresh);
+
+			int ticks = 0;
+
+			while (level.getBlockState(agedPos).getBlock() == fresh.getBlock() && ticks < AGING_TICKS) {
+				level.getBlockState(agedPos).randomTick(level, agedPos, level.getRandom());
+				ticks++;
+			}
+
+			require(ticks < AGING_TICKS,
+					"the random tick left " + name(fresh.getBlock()) + " alone " + AGING_TICKS + " times");
+			assertSameCell(level.getBlockState(agedPos), fresh, plain.get(1), "a random tick");
+
+			// The turns a player makes, each with the real item in the real hand: an axe scrapes one
+			// stage off the whole cell, a honeycomb waxes it where it stands, and the axe takes the
+			// wax off again.
+			level.setBlockAndUpdate(clickedPos, oxidized);
+
+			InteractionResult scraped = click(player, Items.IRON_AXE, clickedPos);
+			assertSameCell(level.getBlockState(clickedPos), oxidized, plain.get(2), "an axe (" + scraped + ")");
+
+			BlockState weathered = level.getBlockState(clickedPos);
+			InteractionResult waxedOn = click(player, Items.HONEYCOMB, clickedPos);
+			assertSameCell(level.getBlockState(clickedPos), weathered, waxed.get(2), "a honeycomb (" + waxedOn + ")");
+
+			BlockState waxedCell = level.getBlockState(clickedPos);
+			InteractionResult waxedOff = click(player, Items.IRON_AXE, clickedPos);
+			assertSameCell(level.getBlockState(clickedPos), waxedCell, plain.get(2),
+					"an axe on a waxed cell (" + waxedOff + ")");
+
+			level.setBlockAndUpdate(struckPos, struck);
+		});
+
+		// Lightning is the one turn that skips the stages: the bolt takes the whole cell back to the
+		// youngest stage of its metal, and it is a real bolt in the world that does it.
+		server.runOnServer(minecraftServer -> {
+			ServerLevel level = minecraftServer.overworld();
+			LightningBolt bolt = EntityTypes.LIGHTNING_BOLT.create(level, EntitySpawnReason.TRIGGERED);
+
+			require(bolt != null, "the game has no lightning bolt entity to strike with");
+
+			bolt.setPos(struckPos.getX() + 0.5, struckPos.getY() + 1.0, struckPos.getZ() + 0.5);
+			level.addFreshEntity(bolt);
+		});
+
+		context.waitTicks(4);
+
+		server.runOnServer(minecraftServer -> assertSameCell(minecraftServer.overworld().getBlockState(struckPos),
+				struck, plain.get(0), "a lightning strike"));
+	}
+
+	/** @return the state of {@code eighth} with the pieces at {@code pieces} in it and facing {@code facing}. */
+	private static BlockState weatheringCell(Block eighth, Direction facing, int... pieces) {
+		BlockState state = eighth.defaultBlockState();
+
+		for (int index = 0; index < MBEighthProperties.BITS.length; index++) {
+			boolean present = false;
+
+			for (int piece : pieces) {
+				present = present || piece == index;
+			}
+
+			state = state.setValue(MBEighthProperties.BITS[index], present);
+		}
+
+		return state.setValue(MBEighthProperties.FACING, facing);
+	}
+
+	/**
+	 * Requires {@code turned} to be the same cell as {@code before} - the same pieces and the same
+	 * facing - in the block of the stage it was turned into.
+	 */
+	private static void assertSameCell(BlockState turned, BlockState before, Block expected, String what) {
+		require(turned.getBlock() == expected, what + " turned " + name(before.getBlock()) + " into "
+				+ name(turned.getBlock()) + " instead of " + name(expected));
+		require(MBEighthProperties.mask(turned) == MBEighthProperties.mask(before), what + " left "
+				+ Integer.bitCount(MBEighthProperties.mask(turned)) + " eighths in the cell where there were "
+				+ Integer.bitCount(MBEighthProperties.mask(before)) + ": " + turned);
+		require(turned.getValue(MBEighthProperties.FACING) == before.getValue(MBEighthProperties.FACING),
+				what + " turned the cell from " + before.getValue(MBEighthProperties.FACING) + " to "
+						+ turned.getValue(MBEighthProperties.FACING));
+	}
+
+	/** Clicks {@code pos} with a fresh stack of {@code item} held the way a player holds it. */
+	private static InteractionResult click(ServerPlayer player, Item item, BlockPos pos) {
+		ItemStack stack = new ItemStack(item);
+
+		player.setItemInHand(InteractionHand.MAIN_HAND, stack);
+
+		return stack.useOn(new UseOnContext(player, InteractionHand.MAIN_HAND,
+				new BlockHitResult(Vec3.atCenterOf(pos), Direction.UP, pos, false)));
+	}
+
+	/** The block as the game's own weathering interface, failing the test when it does not implement it. */
+	private static WeatheringCopper weathering(Block block) {
+		require(block instanceof WeatheringCopper, name(block) + " is not a block the game can weather");
+
+		return (WeatheringCopper) block;
+	}
+
+	/** @return the id of {@code block}, for failure messages. */
+	private static String name(Block block) {
+		return BuiltInRegistries.BLOCK.getKey(block).toString();
+	}
+
+	/** @return the id of {@code block}, or {@code nothing} when the game ages it into nothing. */
+	private static String name(Optional<Block> block) {
+		return block.map(MBClientGameTest::name).orElse("nothing");
 	}
 
 	/**
