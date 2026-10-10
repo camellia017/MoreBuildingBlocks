@@ -123,42 +123,56 @@ public final class VerticalSlab {
 	 * {@link #openFace}, the plane closing off the empty half beside the filled one, which is the
 	 * face the slab is seen as - means "finish this block". The rule reads a click there the way
 	 * vanilla does: the region the click lands in names a half, and the two halves of one block
-	 * combine into a double slab rather than a second block appearing beside it.
+	 * combine into a double slab rather than a second block appearing beside it. Completing the
+	 * block is the caller's answer to produce, so this returns {@code null} for it and lets the
+	 * vanilla state stand.
 	 *
-	 * <p>The other three - the two thin sides, and the boundary the filled half runs up to - all
-	 * look at the next cell along instead, and the wall continues into it. The half that cell is
-	 * filled with is the clicked slab's own half, not the one the click landed nearest: those three
-	 * faces are one wall seen from its free side and from its two ends, so filling the neighbouring
-	 * cell with the same half carries the wall on at its own thickness and in its own plane, while
-	 * the half nearest the click would thicken that one cell into a block and a half and leave the
-	 * plane broken.
+	 * <p>A wall already standing carries on through the two thin sides and through the top and the
+	 * bottom: those are the ends of the wall, so the next block takes the clicked slab's own half,
+	 * not the one the click landed nearest. Reading the click position there would turn the wall a
+	 * quarter turn at the joint, because the two thin sides are faces of one axis while the cell
+	 * they look at is filled along the other, and it would thicken the joint into a block and a half
+	 * on the sides where the two agree.
+	 *
+	 * <p>The boundary the filled half runs up to ({@link Fill#outward()}) is not one of those ends:
+	 * it is the wall seen from its side, a whole face of the block like any face of a plain block,
+	 * so a click there is read by the frame like the rest. A click at its centre carries the half
+	 * lying against this wall on into the next cell - the same plane and thickness, which is what a
+	 * player pointing at the side of a wall means - while its bands name the halves their own edges
+	 * sit on, and so start a second wall at right angles or lay a flat half down.
+	 *
+	 * <p>A double slab has no empty half left and is read the same way on every face, the one that
+	 * used to be open included: it is a plain full block, and the caller stops moving clicks into it
+	 * for the same reason - a click that stayed inside it would land on a block that cannot be
+	 * replaced.
 	 *
 	 * <p>The moved click is why the frame is read off the block the click landed on -
 	 * {@link PlacementClick#morebuildingblocks$hitPos()}, which is where the face the player pointed
 	 * at really is - rather than off {@code context.getClickedPos()}, the block that will be built
-	 * in. Those two are the same block for every placement except those three faces, and for them
-	 * the click point itself lies a whole block outside the block being placed in: a click on the
-	 * boundary of an upright slab at the middle of its face would read as a click on the far edge of
-	 * the new block and fill the wrong half entirely.
+	 * in. Those two are the same block for every placement except the ones that look at the next
+	 * cell along, and for them the click point itself lies a whole block outside the block being
+	 * placed in: a click on the boundary of an upright slab at the middle of its face would read as
+	 * a click on the far edge of the new block and fill the wrong half entirely.
 	 */
 	public static Fill placementFill(final BlockPlaceContext context) {
 		Direction face = context.getClickedFace();
-		BlockPos clickedPos = context.getClickedPos();
+		BlockPos cell = context.getClickedPos();
+		BlockPos hitPos = context instanceof PlacementClick click ? click.morebuildingblocks$hitPos() : cell;
 
-		if (context instanceof PlacementClick click) {
-			clickedPos = click.morebuildingblocks$hitPos();
-		}
+		// The wall the click landed on, read at the block the click was really made against.
+		BlockState clicked = context.getLevel().getBlockState(hitPos);
 
-		// Continuing a wall is not the same rule as starting one: which half the next block takes is
-		// settled by the slab the player built against, not by where on the face the click landed.
-		// Reading the click instead would turn the wall a quarter turn at that joint, because the two
-		// thin sides are faces of one axis while the cell they look at is filled along the other.
-		// Only the open face is left to the frame below: there the click doubles this slab up.
-		BlockState clicked = context.getLevel().getBlockState(clickedPos);
+		if (VerticalSlab.isVertical(clicked) && !VerticalSlab.isDouble(clicked)) {
+			if (face == VerticalSlab.openFace(clicked)) {
+				return null;
+			}
 
-		if (VerticalSlab.isVertical(clicked) && !VerticalSlab.isDouble(clicked)
-				&& face != VerticalSlab.openFace(clicked)) {
-			return Fill.of(clicked);
+			// Continuing a wall is not the same rule as starting one: which half the next block takes
+			// is settled by the slab the player built against, not by where on the face the click
+			// landed.
+			if (face != Fill.of(clicked).outward()) {
+				return Fill.of(clicked);
+			}
 		}
 
 		FaceFrame frame = FaceFrame.of(face);
@@ -176,7 +190,7 @@ public final class VerticalSlab {
 		// That is the clicked block, which for a moved click is the slab and not the cell being
 		// filled - the two differ by a whole block there, so using getClickedPos() would read the
 		// hit as lying on the far edge and name the wrong half.
-		Vec3 hit = context.getClickLocation().subtract(Vec3.atLowerCornerOf(clickedPos));
+		Vec3 hit = context.getClickLocation().subtract(Vec3.atLowerCornerOf(hitPos));
 		double u = frame.u(hit);
 		double v = frame.v(hit, face);
 		boolean middle = u > FaceFrame.middleMin() && u < FaceFrame.middleMax()
@@ -187,14 +201,14 @@ public final class VerticalSlab {
 
 	/**
 	 * The direction this slab's open face looks, which is the one face a click on it means
-	 * "complete this block" rather than "continue the wall".
+	 * "complete this block" rather than "start the next one".
 	 *
 	 * <p>An upright slab fills one horizontal half of its block, and the face that shows it as it
 	 * is - half a block, with the empty half behind it - is the one closing off the empty side.
 	 * A slab filling {@code z} from 0.5 to 1 shows that face to the north, so a click on the north
-	 * face stays in the block and doubles it up. The other three faces a player can point at - the
-	 * two thin sides and the boundary the filled half runs up to - all look at the next cell along
-	 * instead, and continue the wall into it.
+	 * face stays in the block and doubles it up. The two thin sides and the top and bottom are the
+	 * ends of the wall, and continue it into the cell they look at; the boundary the filled half
+	 * runs up to is the wall's side, and is read by the frame like the face of a plain block.
 	 */
 	public static Direction openFace(final BlockState state) {
 		return Fill.of(state).open();

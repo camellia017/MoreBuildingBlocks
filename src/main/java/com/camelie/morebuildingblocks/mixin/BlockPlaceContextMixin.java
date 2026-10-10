@@ -94,7 +94,13 @@ public abstract class BlockPlaceContextMixin implements PlacementClick {
 
 	/**
 	 * Decides, for every click on an upright slab, whether the placement lands in the slab's own
-	 * block - which it does only on the open face.
+	 * block - which it does only on the open face of one that is still half empty.
+	 *
+	 * <p>A double slab fills its whole block and has no empty half left, so no click on it completes
+	 * it any more: its faces start a new block like the faces of any plain block do, and the
+	 * placement has to move out of the cell it landed on for that to happen. Vanilla already refuses
+	 * to replace a double slab, so this leaves that refusal alone; the value written here is the one
+	 * {@code getClickedPos} reads.
 	 *
 	 * <p>Replacing the constructor's own {@code canBeReplaced} answer rather than filtering it is
 	 * what makes this work. The vanilla slab refuses a replacement for reasons of its own - a
@@ -115,7 +121,7 @@ public abstract class BlockPlaceContextMixin implements PlacementClick {
 			final CallbackInfo info) {
 		BlockState clicked = level.getBlockState(hitResult.getBlockPos());
 
-		if (VerticalSlab.isVertical(clicked)) {
+		if (VerticalSlab.isVertical(clicked) && !VerticalSlab.isDouble(clicked)) {
 			this.replaceClicked = hitResult.getDirection() == VerticalSlab.openFace(clicked);
 		}
 	}
