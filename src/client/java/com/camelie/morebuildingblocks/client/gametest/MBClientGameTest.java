@@ -404,9 +404,9 @@ public class MBClientGameTest implements FabricClientGameTest {
 			checkPlacement(level, player, slabBlock, pos, new Vec3(0.5, FLOOR_Y + 25.0, 0.5), Direction.UP,
 					Fill.negative(Direction.Axis.Y), "top face centre");
 			checkPlacement(level, player, slabBlock, pos, new Vec3(0.5, FLOOR_Y + 25.0, 0.1), Direction.UP,
-					Fill.negative(Direction.Axis.Z), "top face south band");
+					Fill.negative(Direction.Axis.Z), "top face north band");
 			checkPlacement(level, player, slabBlock, pos, new Vec3(0.5, FLOOR_Y + 25.0, 0.9), Direction.UP,
-					Fill.positive(Direction.Axis.Z), "top face north band");
+					Fill.positive(Direction.Axis.Z), "top face south band");
 			checkPlacement(level, player, slabBlock, pos, new Vec3(0.1, FLOOR_Y + 25.0, 0.5), Direction.UP,
 					Fill.negative(Direction.Axis.X), "top face west band");
 			checkPlacement(level, player, slabBlock, pos, new Vec3(0.9, FLOOR_Y + 25.0, 0.5), Direction.UP,
@@ -446,9 +446,9 @@ public class MBClientGameTest implements FabricClientGameTest {
 			checkPlacement(level, player, slabBlock, pos, new Vec3(0.5, FLOOR_Y + 24.0, 0.5), Direction.DOWN,
 					Fill.positive(Direction.Axis.Y), "bottom face centre");
 			checkPlacement(level, player, slabBlock, pos, new Vec3(0.5, FLOOR_Y + 24.0, 0.1), Direction.DOWN,
-					Fill.negative(Direction.Axis.Z), "bottom face south band");
+					Fill.negative(Direction.Axis.Z), "bottom face north band");
 			checkPlacement(level, player, slabBlock, pos, new Vec3(0.5, FLOOR_Y + 24.0, 0.9), Direction.DOWN,
-					Fill.positive(Direction.Axis.Z), "bottom face north band");
+					Fill.positive(Direction.Axis.Z), "bottom face south band");
 			checkPlacement(level, player, slabBlock, pos, new Vec3(0.1, FLOOR_Y + 24.0, 0.5), Direction.DOWN,
 					Fill.negative(Direction.Axis.X), "bottom face west band");
 			checkPlacement(level, player, slabBlock, pos, new Vec3(0.9, FLOOR_Y + 24.0, 0.5), Direction.DOWN,

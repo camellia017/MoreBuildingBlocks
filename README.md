@@ -140,7 +140,7 @@ without declaring an explicit or implicit dependency`），因为 `src/main/gene
 | 检查 | 内容 |
 |---|---|
 | `verifyShapes` | 101 个原版半砖在 `axis=x` / `axis=z` 下碰撞箱厚度均为 0.5、高度为 1；水平半砖仍是 0～0.5；66 个陶瓦楼梯 `maxY=1.0`、台阶 `maxY=0.5` |
-| `verifyPlacement` | 用真实 `BlockPlaceContext` 放置：点**上表面正中心** → 平放下半砖（`axis=y` + `type=bottom`）、四条边上的带 → 各自那条边背后的半（北带 `axis=z` + `type=bottom`、东带 `axis=x` + `type=bottom`…）；点**侧面正中心** → 贴着这个面、同平面的竖半砖（北面 → `axis=z` + `type=bottom`、东面 → `axis=x` + `type=top`）；点下表面同样读一遍（`verifyBandSides` 再把六个面的四条带逐一核对，`verifyClickFrame` 核对转角与两条对角线） |
+| `verifyPlacement` | 用真实 `BlockPlaceContext` 放置：点**上表面正中心** → 平放下半砖（`axis=y` + `type=bottom`）、四条边上的带 → 各自那条边背后的半（北带 `axis=z` + `type=top`，填北半；东带 `axis=x` + `type=bottom`，填东半）；点**侧面正中心** → 贴着这个面、同平面的竖半砖（北面 → `axis=z` + `type=bottom`、东面 → `axis=x` + `type=top`）；点下表面同样读一遍（`verifyBandSides` 再把六个面的四条带逐一核对，`verifyClickFrame` 核对转角与两条对角线） |
 | `verifyUprightStacking` | 竖半砖的**开面**（封住空半的平面，先按形状验一遍它确实是那一面）与**填满那半远端的格子边界**各点一次：开面 → 留在原格补成 double，远端边界 → 越到相邻格并填**贴着这堵墙的那半**（按点击区域判，不是被点那块自己的半） |
 | `verifyWallContinuation` | 一堵 `axis=z` 的竖半砖墙：两个薄侧面都续到相邻格且填**被点那块自己的半**；填满那半远端的格子边界则按普通方块的面读——中间 → 贴住这堵墙的那半，上带 → 平放上半砖，西带 → 朝西的竖半砖；点开面留在原格补成 double |
 | `verifyDoubleSlabClicks` | 补全后的 `double` 竖半砖：点原开面那一面时，手里的半砖与任何别的方块都落在相邻格、且原格不被替换（`getClickedPos()` 必须是相邻格） |
