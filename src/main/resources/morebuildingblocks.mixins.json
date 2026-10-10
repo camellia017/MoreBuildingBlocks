@@ -5,6 +5,7 @@
 	"mixins": [
 		"BlockBehaviourMixin",
 		"BlockPlaceContextMixin",
+		"CrossCollisionBlockMixin",
 		"IronBarsBlockMixin",
 		"SlabBlockMixin",
 		"StairBlockMixin"

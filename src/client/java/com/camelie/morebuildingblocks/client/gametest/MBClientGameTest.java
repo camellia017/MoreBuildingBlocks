@@ -29,6 +29,7 @@ import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.CrossCollisionBlock;
 import net.minecraft.world.level.block.IronBarsBlock;
 import net.minecraft.world.level.block.SlabBlock;
 import net.minecraft.world.level.block.StairBlock;
@@ -41,12 +42,15 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.level.EmptyBlockGetter;
+import net.minecraft.world.phys.shapes.BooleanOp;
+import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
 import com.camelie.morebuildingblocks.MoreBuildingBlocks;
 import com.camelie.morebuildingblocks.block.GlazedPattern;
 import com.camelie.morebuildingblocks.block.MBBlockStateProperties;
 import com.camelie.morebuildingblocks.block.MBPaneProperties;
+import com.camelie.morebuildingblocks.block.MBPaneShapes;
 import com.camelie.morebuildingblocks.block.VerticalSlab;
 import com.camelie.morebuildingblocks.block.VerticalSlab.Fill;
 import com.camelie.morebuildingblocks.registry.MBBlockFamilies;
@@ -240,6 +244,7 @@ public class MBClientGameTest implements FabricClientGameTest {
 			// screenshots above are the evidence for the checks a log cannot make.
 			verifyShapes(server);
 			verifyPaneProperties(server);
+			verifyPaneShapes(server);
 			verifyPlacement(server);
 			verifyUprightStacking(server);
 			verifyWallContinuation(server);
@@ -302,6 +307,63 @@ public class MBClientGameTest implements FabricClientGameTest {
 						flag.getName() + " indexes its values in the wrong order");
 			}
 		});
+	}
+
+	/**
+	 * Checks that the twelve pieces add up to the shapes they should.
+	 *
+	 * <p>A pane always keeps its post. A connection boolean is the lower half of an arm and the
+	 * mod's {@code *_up} flag is its upper half, so a state with both halves set is the vanilla arm
+	 * and a state with only the lower half set is half an arm - the pieces only become the vanilla
+	 * pane again once the connection rules have run over a block.
+	 *
+	 * <p>The last four checks cover the reason the mod answers {@code skipRendering} itself: two
+	 * panes hide the face between them only where the pieces on either side of that face meet, so a
+	 * half arm facing air stays visible.
+	 */
+	private static void verifyPaneShapes(TestServerContext server) {
+		server.runOnServer(minecraftServer -> {
+			ServerLevel level = minecraftServer.overworld();
+			VoxelShape post = Block.column(2.0, 0.0, 16.0);
+			BlockState plain = Blocks.GLASS_PANE.defaultBlockState();
+			BlockState lower = plain.setValue(CrossCollisionBlock.NORTH, true);
+			BlockState arm = lower.setValue(MBPaneProperties.NORTH_UP, true);
+			BlockState mirrored = plain
+					.setValue(CrossCollisionBlock.SOUTH, true)
+					.setValue(MBPaneProperties.SOUTH_UP, true);
+			BlockState corner = plain.setValue(MBPaneProperties.CORNER_NORTH_EAST, true);
+
+			require(sameShape(shapeOf(plain, level), post),
+					"a pane with no pieces set is not the vanilla post");
+			require(sameShape(shapeOf(arm, level), Shapes.or(post, Block.box(7.0, 0.0, 0.0, 9.0, 16.0, 8.0))),
+					"an arm with both halves set is not the vanilla arm");
+			require(sameShape(shapeOf(lower, level), Shapes.or(post, Block.box(7.0, 0.0, 0.0, 9.0, 8.0, 8.0))),
+					"an arm with only its lower half set is not half an arm");
+			require(sameShape(shapeOf(corner, level), Shapes.or(post, Block.box(8.0, 7.0, 0.0, 16.0, 9.0, 8.0))),
+					"a corner piece is not the quadrant it sits in");
+			require(sameShape(arm.getCollisionShape(level, BlockPos.ZERO), shapeOf(arm, level)),
+					"a pane collides with something other than its outline");
+
+			require(MBPaneShapes.hides(arm, lower, Direction.UP),
+					"a full arm no longer hides against the lower half above it");
+			require(!MBPaneShapes.hides(lower, arm, Direction.UP),
+					"a lower half hides against the air above it");
+			require(MBPaneShapes.hides(arm, mirrored, Direction.NORTH),
+					"two matching arms no longer hide the face between them");
+			require(!MBPaneShapes.hides(arm, plain, Direction.NORTH),
+					"an arm hides its face against a pane carrying no arm");
+		});
+	}
+
+	/** The outline of a state, read at an empty position in the overworld. */
+	private static VoxelShape shapeOf(BlockState state, ServerLevel level) {
+		return state.getShape(level, BlockPos.ZERO);
+	}
+
+	/** Whether two shapes cover exactly the same voxels. */
+	private static boolean sameShape(VoxelShape first, VoxelShape second) {
+		return !Shapes.joinIsNotEmpty(first, second, BooleanOp.ONLY_FIRST)
+				&& !Shapes.joinIsNotEmpty(first, second, BooleanOp.ONLY_SECOND);
 	}
 
 	/**
