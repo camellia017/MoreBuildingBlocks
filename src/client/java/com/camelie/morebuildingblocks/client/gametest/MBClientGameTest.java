@@ -150,6 +150,26 @@ public class MBClientGameTest implements FabricClientGameTest {
 	private static final int WEATHER_Y = FLOOR_Y + 3;
 
 	/**
+	 * Where the pane connection checks build: a clear patch of the flat world south of the
+	 * showcase and west of every other check, one scenario every four blocks.
+	 */
+	private static final int PANE_X = -80;
+	private static final int PANE_Y = FLOOR_Y + 2;
+	private static final int PANE_Z = 60;
+
+	/**
+	 * The twelve pieces of a pane, in the order the state writes them: four lower halves
+	 * (vanilla's own connection properties), four upper halves and four corners.
+	 */
+	private static final List<Property<Boolean>> PANE_PIECES = List.of(
+			MBPaneProperties.lower(Direction.NORTH), MBPaneProperties.upper(Direction.NORTH),
+			MBPaneProperties.lower(Direction.EAST), MBPaneProperties.upper(Direction.EAST),
+			MBPaneProperties.lower(Direction.SOUTH), MBPaneProperties.upper(Direction.SOUTH),
+			MBPaneProperties.lower(Direction.WEST), MBPaneProperties.upper(Direction.WEST),
+			MBPaneProperties.CORNER_NORTH_EAST, MBPaneProperties.CORNER_SOUTH_EAST,
+			MBPaneProperties.CORNER_SOUTH_WEST, MBPaneProperties.CORNER_NORTH_WEST);
+
+	/**
 	 * How many random ticks a lone cell is given to age once. Its chance is about one call in
 	 * twenty, so ten thousand calls without an age is a failure rather than bad luck.
 	 */
@@ -279,6 +299,7 @@ public class MBClientGameTest implements FabricClientGameTest {
 			verifyShapes(server);
 			verifyPaneProperties(server);
 			verifyPaneShapes(server);
+			verifyPaneConnection(server);
 			verifyPlacement(server);
 			verifyUprightStacking(server);
 			verifyWallContinuation(server);
@@ -402,6 +423,163 @@ public class MBClientGameTest implements FabricClientGameTest {
 			require(!MBPaneShapes.hides(armWithCorner, mirroredWestCorner, Direction.NORTH),
 					"a corner hides its face against a corner across the block");
 		});
+	}
+
+	/**
+	 * The connection rules, checked on a real level.
+	 *
+	 * <p>{@link #verifyPaneShapes} proves that the twelve pieces build the shape they
+	 * should; this proves the rules that switch them on, which is where a wrong reading of
+	 * vanilla's own connection test, of a diagonal or of a vertical neighbour shows up. The
+	 * scenarios follow the rules of {@code MBPaneConnection}: the pane hanging in the air
+	 * (rule 6), the pane wedged between two blocks with and without the block in the corner
+	 * between them (rules 1 and 2), four panes meeting in a square (rules 3 and 4) and a
+	 * pane whose two halves copy each other (rule 5).
+	 *
+	 * <p>States are asked for the way the game asks for them, through {@code
+	 * getStateForPlacement}, which is one of the entry points. Two of the scenarios then
+	 * read the world back, because they need the change to travel: through a neighbour of
+	 * the pane (the direct shape update) and through a block in the corner, which is no
+	 * neighbour of the pane at all.
+	 */
+	private static void verifyPaneConnection(TestServerContext server) {
+		server.runOnServer(minecraftServer -> {
+			ServerLevel level = minecraftServer.overworld();
+			ServerPlayer player = minecraftServer.getPlayerList().getPlayers().get(0);
+			BlockPos origin = new BlockPos(PANE_X, PANE_Y, PANE_Z);
+
+			clearPanes(level, origin);
+
+			// Rule 6: a pane with air above and below it is the full window. The stone that
+			// is put north of it and taken away again travels the direct shape update: a
+			// neighbour that connects but is no pane lights both halves of that arm instead
+			// (rule 4) and takes the fallback away.
+			BlockPos lone = origin;
+			requirePieces(paneAt(player, level, lone), "a pane hanging in the air", PANE_PIECES);
+
+			level.setBlockAndUpdate(lone, paneAt(player, level, lone));
+			level.setBlockAndUpdate(lone.north(), Blocks.STONE.defaultBlockState());
+			requirePieces(level.getBlockState(lone), "a pane with a block north of it",
+					pieces(lowerHalf(Direction.NORTH), upperHalf(Direction.NORTH)));
+
+			level.setBlockAndUpdate(lone.north(), Blocks.AIR.defaultBlockState());
+			requirePieces(level.getBlockState(lone), "a pane whose northern block was taken away",
+					PANE_PIECES);
+
+			// Rules 1, 2 and 4: a pane between two blocks. Both arms stand full height
+			// because no pane took the corner over, and the corner between them stays shut
+			// while the block in it is air: two blocks meeting at a pane only bend it round
+			// the corner once the space between them is filled.
+			BlockPos wedged = origin.offset(4, 0, 0);
+			level.setBlockAndUpdate(wedged.north(), Blocks.STONE.defaultBlockState());
+			level.setBlockAndUpdate(wedged.east(), Blocks.STONE.defaultBlockState());
+			requirePieces(paneAt(player, level, wedged),
+					"a pane with blocks north and east of it and air between them",
+					pieces(lowerHalf(Direction.NORTH), upperHalf(Direction.NORTH),
+							lowerHalf(Direction.EAST), upperHalf(Direction.EAST)));
+
+			level.setBlockAndUpdate(wedged.north().east(), Blocks.STONE.defaultBlockState());
+			requirePieces(paneAt(player, level, wedged),
+					"a pane with the block between its two neighbours filled in",
+					pieces(lowerHalf(Direction.NORTH), upperHalf(Direction.NORTH),
+							lowerHalf(Direction.EAST), upperHalf(Direction.EAST),
+							MBPaneProperties.CORNER_NORTH_EAST));
+
+			// The block in the corner is no neighbour of the pane, so taking it away only
+			// reaches the pane through the indirect shape update the mod adds: without it
+			// the corner would stay behind.
+			level.setBlockAndUpdate(wedged, paneAt(player, level, wedged));
+			level.setBlockAndUpdate(wedged.north().east(), Blocks.AIR.defaultBlockState());
+			requirePieces(level.getBlockState(wedged), "a pane whose corner block was taken away",
+					pieces(lowerHalf(Direction.NORTH), upperHalf(Direction.NORTH),
+							lowerHalf(Direction.EAST), upperHalf(Direction.EAST)));
+
+			// Rules 3 and 4: four panes meeting in a square. Each of them shares an edge
+			// with two of the others and meets the fourth one in the corner, so each lights
+			// the single corner that faces the middle of the square and leaves the arms to
+			// the blocks around it.
+			BlockPos square = origin.offset(8, 0, 0);
+			level.setBlockAndUpdate(square, Blocks.GLASS_PANE.defaultBlockState());
+			level.setBlockAndUpdate(square.east(), Blocks.GLASS_PANE.defaultBlockState());
+			level.setBlockAndUpdate(square.south(), Blocks.GLASS_PANE.defaultBlockState());
+			level.setBlockAndUpdate(square.south().east(), paneAt(player, level, square.south().east()));
+
+			requirePieces(level.getBlockState(square), "the north-western pane of four in a square",
+					pieces(MBPaneProperties.CORNER_SOUTH_EAST));
+			requirePieces(level.getBlockState(square.east()), "the north-eastern pane of four",
+					pieces(MBPaneProperties.CORNER_SOUTH_WEST));
+			requirePieces(level.getBlockState(square.south()), "the south-western pane of four",
+					pieces(MBPaneProperties.CORNER_NORTH_EAST));
+			requirePieces(level.getBlockState(square.south().east()), "the south-eastern pane of four",
+					pieces(MBPaneProperties.CORNER_NORTH_WEST));
+
+			// Rule 5: when exactly one of the two vertical neighbours holds a block that is
+			// no pane, the two halves of an arm copy each other. This pane has a partner
+			// above and to the north, which lights its upper northern half through rule 3,
+			// and the stone below it copies that half down.
+			BlockPos copied = origin.offset(0, 0, 6);
+			level.setBlockAndUpdate(copied.below(), Blocks.STONE.defaultBlockState());
+			level.setBlockAndUpdate(copied.north(), Blocks.GLASS_PANE.defaultBlockState());
+			level.setBlockAndUpdate(copied.above(), Blocks.GLASS_PANE.defaultBlockState());
+			level.setBlockAndUpdate(copied.above().north(), Blocks.GLASS_PANE.defaultBlockState());
+			requirePieces(paneAt(player, level, copied), "a pane under a partner with a block below it",
+					pieces(lowerHalf(Direction.NORTH), upperHalf(Direction.NORTH)));
+		});
+	}
+
+	/** The state a pane is placed with at {@code pos}, asked the way the game asks for it. */
+	private static BlockState paneAt(ServerPlayer player, ServerLevel level, BlockPos pos) {
+		BlockPlaceContext context = new BlockPlaceContext(player, InteractionHand.MAIN_HAND,
+				new ItemStack(Blocks.GLASS_PANE.asItem()),
+				new BlockHitResult(Vec3.atCenterOf(pos), Direction.UP, pos, false));
+
+		require(context.getClickedPos().equals(pos),
+				"a click into the empty block at " + pos + " aimed at " + context.getClickedPos()
+						+ ", expected the clicked block itself");
+
+		BlockState placed = Blocks.GLASS_PANE.getStateForPlacement(context);
+
+		require(placed != null, "no block state was produced for a pane at " + pos);
+		return placed;
+	}
+
+	/** Checks that exactly the named pieces are on and every other piece is off. */
+	private static void requirePieces(BlockState state, String what, Collection<Property<Boolean>> on) {
+		Set<Property<Boolean>> expected = new HashSet<>(on);
+
+		for (Property<Boolean> piece : PANE_PIECES) {
+			boolean actual = state.getValue(piece);
+
+			require(expected.contains(piece) == actual, "the " + what + " has " + piece.getName()
+					+ "=" + actual + ", expected " + expected.contains(piece) + ": " + state);
+		}
+	}
+
+	/** The named pieces, for {@link #requirePieces}. */
+	@SafeVarargs
+	private static List<Property<Boolean>> pieces(Property<Boolean>... on) {
+		return List.of(on);
+	}
+
+	/** The lower half of an arm, which is one of vanilla's own connection properties. */
+	private static Property<Boolean> lowerHalf(Direction direction) {
+		return MBPaneProperties.lower(direction);
+	}
+
+	/** The upper half of an arm, which is one of the properties this mod adds. */
+	private static Property<Boolean> upperHalf(Direction direction) {
+		return MBPaneProperties.upper(direction);
+	}
+
+	/** Opens up the volume the pane scenarios build in. */
+	private static void clearPanes(ServerLevel level, BlockPos origin) {
+		for (int x = -2; x <= 10; x++) {
+			for (int z = -2; z <= 8; z++) {
+				for (int y = -2; y <= 3; y++) {
+					level.setBlockAndUpdate(origin.offset(x, y, z), Blocks.AIR.defaultBlockState());
+				}
+			}
+		}
 	}
 
 	/** The outline of a state, read at an empty position in the overworld. */

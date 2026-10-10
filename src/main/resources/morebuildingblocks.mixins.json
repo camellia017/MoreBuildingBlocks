@@ -5,8 +5,10 @@
 	"mixins": [
 		"BlockBehaviourMixin",
 		"BlockPlaceContextMixin",
+		"BlockStatePostProcessMixin",
 		"CrossCollisionBlockMixin",
 		"IronBarsBlockMixin",
+		"LevelChunkPostProcessMixin",
 		"SlabBlockMixin",
 		"StairBlockMixin"
 	],
