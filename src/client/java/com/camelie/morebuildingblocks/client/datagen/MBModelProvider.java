@@ -87,6 +87,19 @@ public class MBModelProvider implements DataProvider {
 	 */
 	private static final Identifier BLOCK_PARENT = Identifier.fromNamespaceAndPath(VANILLA_NAMESPACE, "block/block");
 
+	/**
+	 * Vanilla's own stair models. A stair is not shown the way a plain block is: vanilla tilts its
+	 * icon a quarter turn further round so the step is read from the side, and that tilt is written
+	 * on the stair models themselves rather than on {@link #BLOCK_PARENT}. A glazed stair draws its
+	 * own geometry, so it has to name the same parent to be shown the same way; the inner and outer
+	 * shapes take vanilla's too, which carry no display at all, they being shapes never held.
+	 */
+	private static final Identifier STAIRS_PARENT = Identifier.fromNamespaceAndPath(VANILLA_NAMESPACE, "block/stairs");
+	private static final Identifier INNER_STAIRS_PARENT =
+			Identifier.fromNamespaceAndPath(VANILLA_NAMESPACE, "block/inner_stairs");
+	private static final Identifier OUTER_STAIRS_PARENT =
+			Identifier.fromNamespaceAndPath(VANILLA_NAMESPACE, "block/outer_stairs");
+
 	/** Vanilla's per-face pattern rotation on a full glazed terracotta cube. */
 	private static final Map<String, Integer> GLAZED_FACE_ROTATION = Map.of(
 			"down", 0,
@@ -216,17 +229,17 @@ public class MBModelProvider implements DataProvider {
 			// the block's own model id. baseModelId would append "_" and emit a model named
 			// "…_stairs_" that nothing - least of all the item definition - ever asks for.
 			this.models.put(formModelId(slab, suffix("", turn)),
-				modelInstance(turned(glazedCubeGeometry(pattern, SLAB_BOX), turn)));
+				modelInstance(turned(glazedCubeGeometry(BLOCK_PARENT, pattern, SLAB_BOX), turn)));
 			this.models.put(formModelId(slab, suffix("top", turn)),
-				modelInstance(turned(glazedCubeGeometry(pattern, TOP_SLAB_BOX), turn)));
+				modelInstance(turned(glazedCubeGeometry(BLOCK_PARENT, pattern, TOP_SLAB_BOX), turn)));
 			// The stair boxes stay put: the stair's own facing is carried by the blockstate's y,
 			// and a box turned here as well would turn twice. Only the pattern moves.
-			this.models.put(formModelId(stairs, suffix("", turn)),
-				modelInstance(turned(glazedCubeGeometry(pattern, SLAB_BOX, STAIR_BOX), turn, false)));
-			this.models.put(formModelId(stairs, suffix("inner", turn)),
-				modelInstance(turned(glazedCubeGeometry(pattern, SLAB_BOX, STAIR_BOX, INNER_BOX), turn, false)));
-			this.models.put(formModelId(stairs, suffix("outer", turn)),
-				modelInstance(turned(glazedCubeGeometry(pattern, SLAB_BOX, OUTER_BOX), turn, false)));
+			this.models.put(formModelId(stairs, suffix("", turn)), modelInstance(turned(
+					glazedCubeGeometry(STAIRS_PARENT, pattern, SLAB_BOX, STAIR_BOX), turn, false)));
+			this.models.put(formModelId(stairs, suffix("inner", turn)), modelInstance(turned(
+					glazedCubeGeometry(INNER_STAIRS_PARENT, pattern, SLAB_BOX, STAIR_BOX, INNER_BOX), turn, false)));
+			this.models.put(formModelId(stairs, suffix("outer", turn)), modelInstance(turned(
+					glazedCubeGeometry(OUTER_STAIRS_PARENT, pattern, SLAB_BOX, OUTER_BOX), turn, false)));
 
 			writeVerticalModels(slab, upright, turn);
 		}
@@ -505,10 +518,10 @@ public class MBModelProvider implements DataProvider {
 		Material pattern = vanillaTexture(base);
 
 		Map<String, JsonObject> geometries = new LinkedHashMap<>(4);
-		geometries.put(FILL_NEGATIVE_X, glazedCubeGeometry(pattern, NEGATIVE_X_BOX));
-		geometries.put(FILL_POSITIVE_X, glazedCubeGeometry(pattern, POSITIVE_X_BOX));
-		geometries.put(FILL_NEGATIVE_Z, glazedCubeGeometry(pattern, NEGATIVE_Z_BOX));
-		geometries.put(FILL_POSITIVE_Z, glazedCubeGeometry(pattern, POSITIVE_Z_BOX));
+		geometries.put(FILL_NEGATIVE_X, glazedCubeGeometry(BLOCK_PARENT, pattern, NEGATIVE_X_BOX));
+		geometries.put(FILL_POSITIVE_X, glazedCubeGeometry(BLOCK_PARENT, pattern, POSITIVE_X_BOX));
+		geometries.put(FILL_NEGATIVE_Z, glazedCubeGeometry(BLOCK_PARENT, pattern, NEGATIVE_Z_BOX));
+		geometries.put(FILL_POSITIVE_Z, glazedCubeGeometry(BLOCK_PARENT, pattern, POSITIVE_Z_BOX));
 		return geometries;
 	}
 
@@ -828,9 +841,9 @@ public class MBModelProvider implements DataProvider {
 	 * One glazed box: the pattern's rotation is written onto every face, so the motif on a cut
 	 * shape continues to point the way it does on the full block.
 	 */
-	private static JsonObject glazedCubeGeometry(final Material pattern, final Box... boxes) {
+	private static JsonObject glazedCubeGeometry(final Identifier parent, final Material pattern, final Box... boxes) {
 		JsonObject root = new JsonObject();
-		root.addProperty("parent", BLOCK_PARENT.toString());
+		root.addProperty("parent", parent.toString());
 
 		// The faces refer to "#pattern", so the slot has to be defined here. Vanilla's
 		// template_glazed_terracotta only names "particle" because it inherits the rest from the

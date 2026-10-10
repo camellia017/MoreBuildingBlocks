@@ -1,5 +1,5 @@
 {
-  "parent": "minecraft:block/block",
+  "parent": "minecraft:block/inner_stairs",
   "elements": [
     {
       "faces": {
