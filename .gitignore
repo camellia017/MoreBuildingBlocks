@@ -43,3 +43,7 @@ replay_*.log
 # project logs — kept on the author's machine, never published
 
 项目日志/
+
+# internal docs — kept on the author's machine, never published
+
+docs/
