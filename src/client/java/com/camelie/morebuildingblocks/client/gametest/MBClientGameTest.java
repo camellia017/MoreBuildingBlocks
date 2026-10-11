@@ -609,9 +609,15 @@ public class MBClientGameTest implements FabricClientGameTest {
 			// edge connections the eastern, the western and the upper one are there and the
 			// lower one is not. The corner is what holds that side up now, so the rule leaves
 			// it, and the pane shows the upper half of its southern arm beside the two upper
-			// corners of the ring. Those corners lie in two different planes, so the completing
-			// rule has nothing to fill here: the pane is drawn from the three pieces the rules
-			// above gave it.
+			// corners of the ring. Those two lie in two planes that meet along the vertical
+			// axis - one in the plane the eastern and western arms lie in, the other in the
+			// plane the northern and southern arms lie in - and along that axis the pane has
+			// four sides of two corners each: east the two halves of the eastern arm, west
+			// those of the western arm, south those of the southern arm, north those of the
+			// arm that faces air. East, west and south each have one of their two corners on,
+			// so the completing rule turns the other one on as well and all three arms are
+			// drawn whole, even the halves that face air; the northern side has neither of its
+			// two corners on and stays empty.
 			BlockPos openBelow = origin.offset(8, 0, 8);
 			for (int dx = -2; dx <= 2; dx++) {
 				for (int dy = -1; dy <= 1; dy++) {
@@ -634,8 +640,9 @@ public class MBClientGameTest implements FabricClientGameTest {
 			level.setBlockAndUpdate(openBelow.south().below(), Blocks.STONE.defaultBlockState());
 			requirePieces(paneAt(player, level, openBelow),
 					"a pane turning beside a row of full faces with nothing below it",
-					pieces(upperHalf(Direction.EAST), upperHalf(Direction.SOUTH),
-							upperHalf(Direction.WEST)));
+					pieces(upperHalf(Direction.EAST), lowerHalf(Direction.EAST),
+							upperHalf(Direction.SOUTH), lowerHalf(Direction.SOUTH),
+							upperHalf(Direction.WEST), lowerHalf(Direction.WEST)));
 
 			// The fallback is for a pane the rules leave without a corner and for no other
 			// pane, and vanilla's own connection test counts a wall whatever its shape. The
@@ -692,6 +699,66 @@ public class MBClientGameTest implements FabricClientGameTest {
 					"a pane turning in all three planes at once",
 					pieces(MBPaneProperties.CORNER_NORTH_EAST, upperHalf(Direction.EAST),
 							upperHalf(Direction.NORTH)));
+
+			// Two planes can be true without a third. This pane has full faces north and above
+			// it and a pane to its east whose northern neighbour is a full face as well, which
+			// lights the corner between the northern and the eastern edge, in the horizontal
+			// plane, and the corner above the northern edge, in the vertical plane the northern
+			// and the southern arm lie in. Those two planes meet along the axis running north,
+			// and along it each of the four sides carries two corners: the two halves of the
+			// northern arm, of the southern arm, and the two corner pieces of the eastern and of
+			// the western face. The corner above the northern edge is on, so the upper half of
+			// the southern arm comes on with it, and the corner between the northern and the
+			// eastern edge being on brings the south eastern piece with it; the western and the
+			// lower sides have neither of their two corners on and stay dark.
+			BlockPos twoWaysAlongZ = origin.offset(12, 0, 12);
+			for (int dx = -2; dx <= 2; dx++) {
+				for (int dy = -1; dy <= 1; dy++) {
+					for (int dz = -2; dz <= 2; dz++) {
+						level.setBlockAndUpdate(twoWaysAlongZ.offset(dx, dy, dz),
+								Blocks.AIR.defaultBlockState());
+					}
+				}
+			}
+
+			level.setBlockAndUpdate(twoWaysAlongZ.north(), Blocks.STONE.defaultBlockState());
+			level.setBlockAndUpdate(twoWaysAlongZ.above(), Blocks.STONE.defaultBlockState());
+			level.setBlockAndUpdate(twoWaysAlongZ.east(), Blocks.GLASS_PANE.defaultBlockState());
+			level.setBlockAndUpdate(twoWaysAlongZ.north().east(), Blocks.STONE.defaultBlockState());
+			requirePieces(paneAt(player, level, twoWaysAlongZ),
+					"a pane turning in two planes that meet along the northern axis",
+					pieces(MBPaneProperties.CORNER_NORTH_EAST, MBPaneProperties.CORNER_SOUTH_EAST,
+							upperHalf(Direction.NORTH), upperHalf(Direction.SOUTH)));
+
+			// The other pair of planes meets along an axis that runs east and west. This pane
+			// has full faces east and above it and a pane to its north whose eastern neighbour
+			// is a full face, which lights the corner above the eastern edge, in the vertical
+			// plane the eastern and western arms lie in, and the corner between the northern and
+			// the eastern edge, in the horizontal plane. The two meet along the axis running
+			// east, and along it each of the four sides carries two corners: the two halves of
+			// the eastern arm, of the western arm, and the two corner pieces of the northern and
+			// of the southern face. The corner above the eastern edge is on, so the upper half
+			// of the western arm comes on with it, and the corner between the northern and the
+			// eastern edge brings the north western piece; the southern and the lower sides have
+			// neither of their two corners on and stay dark.
+			BlockPos twoWaysAlongX = origin.offset(16, 0, 12);
+			for (int dx = -2; dx <= 2; dx++) {
+				for (int dy = -1; dy <= 1; dy++) {
+					for (int dz = -2; dz <= 2; dz++) {
+						level.setBlockAndUpdate(twoWaysAlongX.offset(dx, dy, dz),
+								Blocks.AIR.defaultBlockState());
+					}
+				}
+			}
+
+			level.setBlockAndUpdate(twoWaysAlongX.east(), Blocks.STONE.defaultBlockState());
+			level.setBlockAndUpdate(twoWaysAlongX.above(), Blocks.STONE.defaultBlockState());
+			level.setBlockAndUpdate(twoWaysAlongX.north(), Blocks.GLASS_PANE.defaultBlockState());
+			level.setBlockAndUpdate(twoWaysAlongX.north().east(), Blocks.STONE.defaultBlockState());
+			requirePieces(paneAt(player, level, twoWaysAlongX),
+					"a pane turning in two planes that meet along the eastern axis",
+					pieces(upperHalf(Direction.EAST), upperHalf(Direction.WEST),
+							MBPaneProperties.CORNER_NORTH_EAST, MBPaneProperties.CORNER_NORTH_WEST));
 		});
 	}
 

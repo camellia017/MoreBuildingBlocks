@@ -50,9 +50,12 @@ import net.minecraft.world.level.chunk.LevelChunkSection;
  * corner it lit goes with them and draws no arm; a face that never lit one keeps its edge.</li>
  * <li>Completing: a pane left true in exactly one plane fills that plane with all four of its
  * corners - both halves of both arms a vertical plane carries, even towards air, and all four corner
- * pieces of the horizontal one. A pane left true in more than one plane keeps only the corners the
- * rules above gave it. Only a plane that is already true is filled, so this rule adds corners and
- * never takes any away.</li>
+ * pieces of the horizontal one. A pane left true in exactly two planes turns in both of them, and
+ * the two meet along the third axis: along that axis each of the four sides carries exactly two
+ * corners, and a side with one of them on gets the other one too, whether or not the world beside it
+ * offers anything. A pane left true in all three planes keeps only the corners the rules above gave
+ * it. Only planes that are already true are read, so this rule adds corners and never takes any
+ * away.</li>
  * </ol>
  *
  * <p>What is drawn: the twelve pieces are the twelve corner connections, so a pane with corners is
@@ -164,6 +167,19 @@ public final class MBPaneConnection {
 		/** Whether this corner hangs on that face of the pane. */
 		boolean hangs(final Direction face) {
 			return this.first == face || this.second == face;
+		}
+
+		/** Whether one of the two faces of this corner lies on that axis. */
+		boolean uses(final Direction.Axis axis) {
+			return this.first.getAxis() == axis || this.second.getAxis() == axis;
+		}
+
+		/**
+		 * The face of this corner that is not on that axis, which names the side of that axis the
+		 * corner sits on. Only meaningful for a corner that uses the axis.
+		 */
+		Direction beside(final Direction.Axis axis) {
+			return this.first.getAxis() == axis ? this.second : this.first;
 		}
 
 		/** The piece this corner draws. */
@@ -427,30 +443,80 @@ public final class MBPaneConnection {
 	 * four of them come on. A pane leaning on a single full face therefore still fills the plane it
 	 * turns in, and only the arms of the planes it does not turn in stay off.
 	 *
-	 * <p>A pane true in two planes or in all three is left exactly as the rules above left it: it
-	 * already reaches in more than one direction, and filling every plane it turns in would draw the
-	 * whole pane wherever two of them happen to meet. Nothing here can make a plane true that was
-	 * not - a corner of the filled plane lies in that same plane - and all three planes are read
-	 * before the one of them is filled, so the order they are visited in cannot change the answer.
+	 * <p>A pane true in exactly two planes turns in both of them, and the two meet along the third
+	 * axis. Along that axis the pane has four sides, and each of them carries exactly two corners:
+	 * the two halves of one arm, or the two corner pieces of one vertical face. One of those two
+	 * being on turns the other one on as well, so a side the rules above lit anywhere is drawn
+	 * whole, even towards air, and a side they left dark stays dark. The four corners of the third
+	 * plane, the one that is not true, are not touched.
+	 *
+	 * <p>A pane true in all three planes is left exactly as the rules above left it: it already
+	 * reaches every way, and completing it would draw the whole pane wherever two of its planes
+	 * happen to meet.
+	 *
+	 * <p>Nothing here can make a plane true that was not - a corner this rule adds lies in a plane
+	 * that was already true - and all three planes are read before any corner is added, so the order
+	 * they are visited in cannot change the answer.
 	 */
 	private static void complete(final EnumSet<Crossing> crossings) {
-		Direction.Axis only = null;
+		Direction.Axis first = null;
+		Direction.Axis second = null;
 
 		for (Direction.Axis axis : Direction.Axis.values()) {
-			if (plane(crossings, axis)) {
-				if (only != null) {
-					return;
-				}
+			if (!plane(crossings, axis)) {
+				continue;
+			}
 
-				only = axis;
+			if (first == null) {
+				first = axis;
+			} else if (second == null) {
+				second = axis;
+			} else {
+				return;
+			}
+		}
+
+		if (first == null) {
+			return;
+		}
+
+		if (second == null) {
+			for (Crossing crossing : Crossing.values()) {
+				if (crossing.plane() == first) {
+					crossings.add(crossing);
+				}
+			}
+
+			return;
+		}
+
+		// The two planes meet along the axis neither of them spans; along it each side carries
+		// exactly two corners, and one of the two being on covers the other one
+		Direction.Axis shared = shared(first, second);
+		EnumSet<Direction> sides = EnumSet.noneOf(Direction.class);
+
+		for (Crossing crossing : crossings) {
+			if (crossing.uses(shared)) {
+				sides.add(crossing.beside(shared));
 			}
 		}
 
 		for (Crossing crossing : Crossing.values()) {
-			if (crossing.plane() == only) {
+			if (crossing.uses(shared) && sides.contains(crossing.beside(shared))) {
 				crossings.add(crossing);
 			}
 		}
+	}
+
+	/** The axis two planes share, which is the one of the three neither of them names. */
+	private static Direction.Axis shared(final Direction.Axis first, final Direction.Axis second) {
+		for (Direction.Axis axis : Direction.Axis.values()) {
+			if (axis != first && axis != second) {
+				return axis;
+			}
+		}
+
+		throw new IllegalStateException(first + " and " + second + " do not name two planes");
 	}
 
 	/**
