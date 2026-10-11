@@ -1356,11 +1356,11 @@ public class MBModelProvider implements DataProvider {
 			new PaneTemplate("pane_edge_east_upper_up", List.of(
 					paneBox(9, 9, 7, 16, 9, 9, PaneFace.full("up", "#pane")))),
 			new PaneTemplate("pane_edge_east_lower_north", List.of(
-					paneBox(9, 7, 7, 16, 8, 7, PaneFace.cut("north", "#pane", 9, 8, 16, 9)))),
+					paneBox(9, 7, 7, 16, 8, 7, PaneFace.cut("north", "#pane", 16, 8, 9, 9)))),
 			new PaneTemplate("pane_edge_east_lower_south", List.of(
 					paneBox(9, 7, 9, 16, 8, 9, PaneFace.cut("south", "#pane", 9, 8, 16, 9)))),
 			new PaneTemplate("pane_edge_east_upper_north", List.of(
-					paneBox(9, 8, 7, 16, 9, 7, PaneFace.cut("north", "#pane", 9, 7, 16, 8)))),
+					paneBox(9, 8, 7, 16, 9, 7, PaneFace.cut("north", "#pane", 16, 7, 9, 8)))),
 			new PaneTemplate("pane_edge_east_upper_south", List.of(
 					paneBox(9, 8, 9, 16, 9, 9, PaneFace.cut("south", "#pane", 9, 7, 16, 8)))),
 			new PaneTemplate("pane_edge_west_lower", List.of(
@@ -1374,11 +1374,11 @@ public class MBModelProvider implements DataProvider {
 			new PaneTemplate("pane_edge_west_upper_up", List.of(
 					paneBox(0, 9, 7, 7, 9, 9, PaneFace.full("up", "#pane")))),
 			new PaneTemplate("pane_edge_west_lower_north", List.of(
-					paneBox(0, 7, 7, 7, 8, 7, PaneFace.cut("north", "#pane", 0, 8, 7, 9)))),
+					paneBox(0, 7, 7, 7, 8, 7, PaneFace.cut("north", "#pane", 7, 8, 0, 9)))),
 			new PaneTemplate("pane_edge_west_lower_south", List.of(
 					paneBox(0, 7, 9, 7, 8, 9, PaneFace.cut("south", "#pane", 0, 8, 7, 9)))),
 			new PaneTemplate("pane_edge_west_upper_north", List.of(
-					paneBox(0, 8, 7, 7, 9, 7, PaneFace.cut("north", "#pane", 0, 7, 7, 8)))),
+					paneBox(0, 8, 7, 7, 9, 7, PaneFace.cut("north", "#pane", 7, 7, 0, 8)))),
 			new PaneTemplate("pane_edge_west_upper_south", List.of(
 					paneBox(0, 8, 9, 7, 9, 9, PaneFace.cut("south", "#pane", 0, 7, 7, 8)))),
 			new PaneTemplate("pane_middle_lower_down", List.of(
