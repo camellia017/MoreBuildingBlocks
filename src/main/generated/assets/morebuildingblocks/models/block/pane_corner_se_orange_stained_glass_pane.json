@@ -1,0 +1,13 @@
+{
+  "parent": "morebuildingblocks:block/pane_corner_se",
+  "textures": {
+    "edge": {
+      "force_translucent": true,
+      "sprite": "minecraft:block/orange_stained_glass_pane_top"
+    },
+    "pane": {
+      "force_translucent": true,
+      "sprite": "minecraft:block/orange_stained_glass"
+    }
+  }
+}

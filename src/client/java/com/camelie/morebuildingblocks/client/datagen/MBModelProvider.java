@@ -1,6 +1,7 @@
 package com.camelie.morebuildingblocks.client.datagen;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
@@ -40,6 +41,7 @@ import net.minecraft.util.random.WeightedList;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.IronBarsBlock;
 import net.minecraft.world.level.block.SlabBlock;
 import net.minecraft.world.level.block.StairBlock;
 import net.minecraft.world.level.block.state.properties.Half;
@@ -74,6 +76,13 @@ import com.camelie.morebuildingblocks.registry.MBEighths;
  * extra states are supplied at load time by
  * {@code com.camelie.morebuildingblocks.client.MBVanillaSlabModelPlugin}, and the boxes it points
  * at are generated here, per slab, with their own textures.
+ *
+ * <p>A pane is a third shape vanilla's files cannot describe, for the same reason again: this mod's
+ * panes have twelve switches where vanilla's have four, and each switch shows a box of its own. The
+ * eight boxes a pane is built from are generated here, once as a template and once per vanilla pane
+ * for that pane's sprites, and
+ * {@code com.camelie.morebuildingblocks.client.MBPaneModelPlugin} resolves which of them a state
+ * shows.
  */
 public class MBModelProvider implements DataProvider {
 	/** The namespace every texture this mod references lives in. */
@@ -159,6 +168,7 @@ public class MBModelProvider implements DataProvider {
 		generateTerracotta(generators);
 		generateVanillaSlabs();
 		generateEighths();
+		generatePanes();
 		finalizeItemModels();
 
 		Map<Block, BlockStateModelDispatcher> dispatchers = new LinkedHashMap<>();
@@ -1194,6 +1204,205 @@ public class MBModelProvider implements DataProvider {
 		array.add(maxU);
 		array.add(maxV);
 		return array;
+	}
+
+	// -------------------------------------------------------------------- panes
+
+	/**
+	 * The eight boxes a pane is drawn from, in the order of the twelve switches that show them.
+	 *
+	 * <p>A side piece is one arm of the pane. The northern and southern arm of each half are boxes
+	 * here; the eastern and western arms are those same boxes turned a quarter, which the resolver
+	 * asks for with {@code Variant#withYRot} rather than with four more boxes that would have to be
+	 * kept in step with these. A corner piece is the wedge that reaches the diagonal neighbour.
+	 *
+	 * <p>Only the faces a piece shows are listed. Its wide faces carry {@code #pane} and its thin
+	 * edges {@code #edge}, and none of them carries a {@code cullface}: the middle of a pane is
+	 * see-through, so a piece hidden behind a neighbour would take the pane with it.
+	 *
+	 * <p>The sprites the slots name below are placeholders, the ones a template shows on its own;
+	 * every copy of it - {@link #generatePanes()} writes one per vanilla pane - replaces both.
+	 */
+	private static final List<PaneTemplate> PANE_TEMPLATES = List.of(
+			new PaneTemplate("pane_side_lower", new Box(7, 0, 0, 9, 8, 8), List.of(
+					PaneFace.full("north", "#edge"),
+					PaneFace.full("down", "#edge"),
+					PaneFace.cut("west", "#pane", 16, 8, 8, 16),
+					PaneFace.cut("east", "#pane", 8, 8, 16, 16))),
+			new PaneTemplate("pane_side_lower_alt", new Box(7, 0, 8, 9, 8, 16), List.of(
+					PaneFace.full("south", "#edge"),
+					PaneFace.full("down", "#edge"),
+					PaneFace.cut("west", "#pane", 8, 8, 0, 16),
+					PaneFace.cut("east", "#pane", 0, 8, 8, 16))),
+			new PaneTemplate("pane_side_upper", new Box(7, 8, 0, 9, 16, 8), List.of(
+					PaneFace.full("north", "#edge"),
+					PaneFace.full("up", "#edge"),
+					PaneFace.cut("west", "#pane", 16, 0, 8, 8),
+					PaneFace.cut("east", "#pane", 8, 0, 16, 8))),
+			new PaneTemplate("pane_side_upper_alt", new Box(7, 8, 8, 9, 16, 16), List.of(
+					PaneFace.full("south", "#edge"),
+					PaneFace.full("up", "#edge"),
+					PaneFace.cut("west", "#pane", 8, 0, 0, 8),
+					PaneFace.cut("east", "#pane", 0, 0, 8, 8))),
+			new PaneTemplate("pane_corner", new Box(8, 7, 0, 16, 9, 8), List.of(
+					PaneFace.full("down", "#pane"),
+					PaneFace.full("up", "#pane"),
+					PaneFace.turned("north", "#edge", 7, 8, 9, 16),
+					PaneFace.turned("east", "#edge", 7, 0, 9, 8))),
+			new PaneTemplate("pane_corner_se", new Box(8, 7, 8, 16, 9, 16), List.of(
+					PaneFace.cut("up", "#pane", 8, 8, 16, 16),
+					PaneFace.cut("down", "#pane", 8, 0, 16, 8),
+					PaneFace.turned("east", "#edge", 7, 8, 9, 16),
+					PaneFace.turned("south", "#edge", 7, 16, 9, 8))),
+			new PaneTemplate("pane_corner_sw", new Box(0, 7, 8, 8, 9, 16), List.of(
+					PaneFace.cut("up", "#pane", 0, 8, 8, 16),
+					PaneFace.cut("down", "#pane", 0, 0, 8, 8),
+					PaneFace.turned("west", "#edge", 7, 16, 9, 8),
+					PaneFace.turned("south", "#edge", 7, 8, 9, 0))),
+			new PaneTemplate("pane_corner_nw", new Box(0, 7, 0, 8, 9, 8), List.of(
+					PaneFace.cut("up", "#pane", 0, 0, 8, 8),
+					PaneFace.cut("down", "#pane", 0, 8, 8, 16),
+					PaneFace.turned("west", "#edge", 7, 8, 9, 0),
+					PaneFace.turned("north", "#edge", 7, 0, 9, 8))));
+
+	/** One box of a pane, with the faces it shows. */
+	private record PaneTemplate(String name, Box box, List<PaneFace> faces) {
+	}
+
+	/**
+	 * One face of a piece: the slot it reads its sprite from and, when it covers only part of that
+	 * sprite or shows it turned, the rectangle and the quarter turn it has to name.
+	 */
+	private record PaneFace(String direction, String texture, int[] uv, int rotation) {
+		/** A face that shows its whole sprite, the way vanilla's own pane templates write one. */
+		private static PaneFace full(String direction, String texture) {
+			return new PaneFace(direction, texture, null, 0);
+		}
+
+		/** A face that covers part of its sprite and names that part. */
+		private static PaneFace cut(String direction, String texture, int minU, int minV, int maxU, int maxV) {
+			return new PaneFace(direction, texture, new int[] { minU, minV, maxU, maxV }, 0);
+		}
+
+		/**
+		 * A face whose sprite is turned a quarter clockwise, which is how the thin edges of a
+		 * corner piece read their strip of the edge sprite rather than stretching it.
+		 */
+		private static PaneFace turned(String direction, String texture, int minU, int minV, int maxU, int maxV) {
+			return new PaneFace(direction, texture, new int[] { minU, minV, maxU, maxV }, 90);
+		}
+	}
+
+	/**
+	 * The eight template models and one textured copy of each for every vanilla pane.
+	 *
+	 * <p>26 vanilla blocks draw panes: the seventeen glass panes - plain and dyed - the iron bars
+	 * and the eight copper bars. A glass pane takes its glass from its own name with {@code _pane}
+	 * cut off and its edge from the same name with {@code _top} added; a bars block takes both from
+	 * its own name with any {@code waxed_} prefix removed, which is the sprite its unwaxed form
+	 * draws and the model vanilla's own blockstate names for it.
+	 *
+	 * <p>The copies are what the client asks for by name - {@code <template>_<pane>} - so the
+	 * geometry is written once per box and only the two sprites differ from pane to pane.
+	 */
+	private void generatePanes() {
+		for (PaneTemplate template : PANE_TEMPLATES) {
+			this.models.put(paneModelId(template.name()), modelInstance(paneGeometry(template)));
+		}
+
+		for (Block block : BuiltInRegistries.BLOCK) {
+			if (!(block instanceof IronBarsBlock)) {
+				continue;
+			}
+
+			Identifier id = BuiltInRegistries.BLOCK.getKey(block);
+
+			if (!VANILLA_NAMESPACE.equals(id.getNamespace())) {
+				continue;
+			}
+
+			String path = id.getPath();
+			boolean glass = path.endsWith("_pane");
+			String base = glass ? path.substring(0, path.length() - "_pane".length()) : path.replaceFirst("^waxed_", "");
+
+			for (PaneTemplate template : PANE_TEMPLATES) {
+				this.models.put(paneModelId(template.name() + "_" + path),
+						modelInstance(paneCopy(template, base, glass)));
+			}
+		}
+	}
+
+	/** {@code morebuildingblocks:block/<path>}: a pane template or one of its copies. */
+	private static Identifier paneModelId(String path) {
+		return Identifier.fromNamespaceAndPath(MoreBuildingBlocks.MOD_ID, "block/" + path);
+	}
+
+	/** The geometry of one box of a pane: its element, the faces it shows and the two slots. */
+	private static JsonObject paneGeometry(PaneTemplate template) {
+		JsonObject root = new JsonObject();
+		root.addProperty("ambientocclusion", false);
+
+		JsonObject textures = new JsonObject();
+		textures.addProperty("particle", "#pane");
+		textures.addProperty("pane", "minecraft:block/glass");
+		textures.addProperty("edge", "minecraft:block/glass_pane_top");
+		root.add("textures", textures);
+
+		JsonObject element = boxElement(template.box());
+		JsonObject faces = new JsonObject();
+
+		for (PaneFace face : template.faces()) {
+			JsonObject json = new JsonObject();
+
+			if (face.uv() != null) {
+				json.add("uv", uv(face.uv()[0], face.uv()[1], face.uv()[2], face.uv()[3]));
+			}
+
+			if (face.rotation() != 0) {
+				json.addProperty("rotation", face.rotation());
+			}
+
+			json.addProperty("texture", face.texture());
+			faces.add(face.direction(), json);
+		}
+
+		element.add("faces", faces);
+		JsonArray elements = new JsonArray();
+		elements.add(element);
+		root.add("elements", elements);
+		return root;
+	}
+
+	/**
+	 * One pane's copy of one box: the template's geometry with that pane's two sprites.
+	 *
+	 * <p>A glass pane draws translucent glass, so its sprites are written the way 26.3 writes a
+	 * translucent texture - {@code {"force_translucent": true, "sprite": ...}} - which a bare
+	 * sprite string cannot say. The bars are cut out instead, so theirs stay bare strings.
+	 */
+	private static JsonObject paneCopy(PaneTemplate template, String base, boolean glass) {
+		JsonObject root = new JsonObject();
+		root.addProperty("parent", paneModelId(template.name()).toString());
+
+		JsonObject textures = new JsonObject();
+		paneSprite(textures, "pane", "block/" + base, glass);
+		paneSprite(textures, "edge", glass ? "block/" + base + "_pane_top" : "block/" + base, glass);
+		root.add("textures", textures);
+		return root;
+	}
+
+	private static void paneSprite(JsonObject textures, String slot, String path, boolean translucent) {
+		String sprite = Identifier.fromNamespaceAndPath(VANILLA_NAMESPACE, path).toString();
+
+		if (!translucent) {
+			textures.addProperty(slot, sprite);
+			return;
+		}
+
+		JsonObject value = new JsonObject();
+		value.addProperty("force_translucent", true);
+		value.addProperty("sprite", sprite);
+		textures.add(slot, value);
 	}
 
 	// ------------------------------------------------------------------ plumbing

@@ -1,0 +1,48 @@
+{
+  "ambientocclusion": false,
+  "elements": [
+    {
+      "faces": {
+        "down": {
+          "texture": "#edge"
+        },
+        "east": {
+          "texture": "#pane",
+          "uv": [
+            0,
+            8,
+            8,
+            16
+          ]
+        },
+        "south": {
+          "texture": "#edge"
+        },
+        "west": {
+          "texture": "#pane",
+          "uv": [
+            8,
+            8,
+            0,
+            16
+          ]
+        }
+      },
+      "from": [
+        7,
+        0,
+        8
+      ],
+      "to": [
+        9,
+        8,
+        16
+      ]
+    }
+  ],
+  "textures": {
+    "edge": "minecraft:block/glass_pane_top",
+    "pane": "minecraft:block/glass",
+    "particle": "#pane"
+  }
+}
