@@ -39,7 +39,7 @@ import net.minecraft.world.level.chunk.LevelChunkSection;
  * diagonal space itself. Two full faces meet in a corner whether or not that space holds anything; a
  * pair of panes only meets there when something connectable lies between them.
  *
- * <p>Three rules, in order:
+ * <p>Four rules, in order:
  *
  * <ol>
  * <li>Edge connections: panes and full faces, as above.</li>
@@ -48,19 +48,25 @@ import net.minecraft.world.level.chunk.LevelChunkSection;
  * one plane that does not contain that face, and the far side of the plane the corner lies in holds
  * nothing at all - the pane leans on that face instead of turning round it. A face that loses every
  * corner it lit goes with them and draws no arm; a face that never lit one keeps its edge.</li>
+ * <li>Completing: a pane left true in exactly one plane fills that plane with all four of its
+ * corners - both halves of both arms a vertical plane carries, even towards air, and all four corner
+ * pieces of the horizontal one. A pane left true in more than one plane keeps only the corners the
+ * rules above gave it. Only a plane that is already true is filled, so this rule adds corners and
+ * never takes any away.</li>
  * </ol>
  *
  * <p>What is drawn: the twelve pieces are the twelve corner connections, so a pane with corners is
- * drawn from those corners alone. The two halves of an arm are the pieces of the corners below and
- * above that edge, and an edge that no corner hangs on draws nothing at all - an arm is not a thing
- * of its own. A pane the rules leave without a single corner connection - not one left after the
- * pruning - is vanilla's own instead: it falls back to vanilla's four connections and to the full
- * arms vanilla draws for them, and shows no corner piece anywhere, so a pane next to a wall, a fence
- * or another shape vanilla would bend around still looks the way vanilla draws it. A pane with even
- * one corner left is never asked about vanilla's way: the wall or fence beside it turns no full face
- * towards it, so it arms nothing there. Nothing reaches up or down, so the two vertical faces never
- * carry an arm of their own; they only decide, through their corners, which halves of the horizontal
- * arms are on.
+ * drawn from those corners alone - the corners it turns, and the ones the rule above fills in. The
+ * two halves of an arm are the pieces of the corners below and above that edge, and an edge that no
+ * corner hangs on draws nothing at all - an arm is not a thing of its own. A pane the rules leave
+ * without a single corner connection - not one left after the pruning - is vanilla's own instead:
+ * it falls back to vanilla's four connections and to the full arms vanilla draws for them, and
+ * shows no corner piece anywhere, so a pane next to a wall, a fence or another shape vanilla would
+ * bend around still looks the way vanilla draws it. A pane with even one corner left is never asked
+ * about vanilla's way: no wall and no fence lights an arm there, since only the pane's own planes
+ * fill arms and only panes and full faces ever make a plane true. Nothing reaches up or down, so
+ * the two vertical faces never carry an arm of their own; they only decide, through their corners,
+ * which halves of the horizontal arms are on.
  *
  * <p>Every rule reads the world and never the pieces a neighbour computed, so a pane's twelve flags
  * are a pure function of its surroundings: the same surroundings always give the same flags, whatever
@@ -257,6 +263,9 @@ public final class MBPaneConnection {
 		// ===== Rule 3: a full face that loses every corner it lit loses its edge as well =====
 		prune(edges, crossings);
 
+		// ===== Rule 4: a plane that still holds a corner is filled with all four of its corners =====
+		complete(crossings);
+
 		// ===== What is drawn: the piece of every corner left, and vanilla's arms for a pane the
 		// rules leave without one =====
 		for (Crossing crossing : Crossing.values()) {
@@ -406,6 +415,42 @@ public final class MBPaneConnection {
 		}
 
 		return false;
+	}
+
+	/**
+	 * The completing rule.
+	 *
+	 * <p>A pane that is true in one plane and in no other turns in a single direction, and that
+	 * whole plane is drawn: every corner connection lying in it is turned on, whether or not the
+	 * world beside it offers anything. A vertical plane carries two arms, and both halves of both of
+	 * them come on, even towards air; the horizontal plane carries the four corner pieces, and all
+	 * four of them come on. A pane leaning on a single full face therefore still fills the plane it
+	 * turns in, and only the arms of the planes it does not turn in stay off.
+	 *
+	 * <p>A pane true in two planes or in all three is left exactly as the rules above left it: it
+	 * already reaches in more than one direction, and filling every plane it turns in would draw the
+	 * whole pane wherever two of them happen to meet. Nothing here can make a plane true that was
+	 * not - a corner of the filled plane lies in that same plane - and all three planes are read
+	 * before the one of them is filled, so the order they are visited in cannot change the answer.
+	 */
+	private static void complete(final EnumSet<Crossing> crossings) {
+		Direction.Axis only = null;
+
+		for (Direction.Axis axis : Direction.Axis.values()) {
+			if (plane(crossings, axis)) {
+				if (only != null) {
+					return;
+				}
+
+				only = axis;
+			}
+		}
+
+		for (Crossing crossing : Crossing.values()) {
+			if (crossing.plane() == only) {
+				crossings.add(crossing);
+			}
+		}
 	}
 
 	/**

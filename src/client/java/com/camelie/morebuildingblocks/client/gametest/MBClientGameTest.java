@@ -474,30 +474,34 @@ public class MBClientGameTest implements FabricClientGameTest {
 
 			// Two full faces meet in a corner whether or not the space between them holds
 			// anything, so this pane turns the corner between them. A thin side such as a
-			// slab's would not count here: only a full 1x1 face does. The two faces arm
-			// nothing by themselves - an edge is not a piece - so the corner is the whole
-			// pane.
+			// slab's would not count here: only a full 1x1 face does. That one corner is
+			// enough for the completing rule, which fills the horizontal plane it lies in:
+			// all four corner pieces are drawn and no arm is, because no corner of this pane
+			// lies above or below one of its edges.
 			BlockPos cornered = origin.offset(4, 0, 0);
 			level.setBlockAndUpdate(cornered.north(), Blocks.STONE.defaultBlockState());
 			level.setBlockAndUpdate(cornered.east(), Blocks.STONE.defaultBlockState());
 			requirePieces(paneAt(player, level, cornered),
 					"a pane with full faces north and east of it and air between them",
-					pieces(MBPaneProperties.CORNER_NORTH_EAST));
+					pieces(MBPaneProperties.CORNER_NORTH_EAST, MBPaneProperties.CORNER_SOUTH_EAST,
+							MBPaneProperties.CORNER_SOUTH_WEST, MBPaneProperties.CORNER_NORTH_WEST));
 
 			// A corner is only there while both of the blocks beside it reach across: with
-			// panes north, east and between them, the pane turns that corner and draws its
-			// one piece. The third pane is no neighbour of this one, so taking it away
+			// panes north, east and between them, the pane turns that corner, and the
+			// completing rule fills the plane that corner lies in with all four of that
+			// plane's corners. The third pane is no neighbour of this one, so taking it away
 			// reaches the pane only through the indirect shape update the mod adds; without
 			// it the corner would stay behind. With that corner gone the pane has none left,
-			// and only then is it vanilla's own: it falls back to vanilla's connections and
-			// is armed towards both of the panes beside it.
+			// no plane of its is true, and only then is it vanilla's own: it falls back to
+			// vanilla's connections and is armed towards both of the panes beside it.
 			BlockPos partners = origin.offset(8, 0, 0);
 			level.setBlockAndUpdate(partners.north(), Blocks.GLASS_PANE.defaultBlockState());
 			level.setBlockAndUpdate(partners.east(), Blocks.GLASS_PANE.defaultBlockState());
 			level.setBlockAndUpdate(partners.north().east(), Blocks.GLASS_PANE.defaultBlockState());
 			requirePieces(paneAt(player, level, partners),
 					"a pane with partners north, east and in the corner between them",
-					pieces(MBPaneProperties.CORNER_NORTH_EAST));
+					pieces(MBPaneProperties.CORNER_NORTH_EAST, MBPaneProperties.CORNER_SOUTH_EAST,
+							MBPaneProperties.CORNER_SOUTH_WEST, MBPaneProperties.CORNER_NORTH_WEST));
 
 			level.setBlockAndUpdate(partners, paneAt(player, level, partners));
 			level.setBlockAndUpdate(partners.north().east(), Blocks.AIR.defaultBlockState());
@@ -506,10 +510,11 @@ public class MBClientGameTest implements FabricClientGameTest {
 							lowerHalf(Direction.EAST), upperHalf(Direction.EAST)));
 
 			// Four panes meeting in a square: each of them shares an edge with two of the
-			// others and meets the fourth one in the corner, so each turns that corner and
-			// draws that one piece. An edge on its own is nothing an arm can stand on: no
-			// corner hangs above or below it here, so the partners a pane shares an edge with
-			// add no piece of their own.
+			// others and meets the fourth one in the corner, so each turns that corner and the
+			// completing rule then fills the horizontal plane with all four of its corner
+			// pieces. No arm is drawn: an edge on its own is nothing an arm can stand on, and
+			// no corner of any of these panes lies above or below one, so no vertical plane of
+			// theirs is true.
 			BlockPos square = origin.offset(0, 0, 4);
 			level.setBlockAndUpdate(square, Blocks.GLASS_PANE.defaultBlockState());
 			level.setBlockAndUpdate(square.east(), Blocks.GLASS_PANE.defaultBlockState());
@@ -517,27 +522,34 @@ public class MBClientGameTest implements FabricClientGameTest {
 			level.setBlockAndUpdate(square.south().east(), paneAt(player, level, square.south().east()));
 
 			requirePieces(level.getBlockState(square), "the north-western pane of four in a square",
-					pieces(MBPaneProperties.CORNER_SOUTH_EAST));
+					pieces(MBPaneProperties.CORNER_NORTH_EAST, MBPaneProperties.CORNER_SOUTH_EAST,
+							MBPaneProperties.CORNER_SOUTH_WEST, MBPaneProperties.CORNER_NORTH_WEST));
 			requirePieces(level.getBlockState(square.east()), "the north-eastern pane of four",
-					pieces(MBPaneProperties.CORNER_SOUTH_WEST));
+					pieces(MBPaneProperties.CORNER_NORTH_EAST, MBPaneProperties.CORNER_SOUTH_EAST,
+							MBPaneProperties.CORNER_SOUTH_WEST, MBPaneProperties.CORNER_NORTH_WEST));
 			requirePieces(level.getBlockState(square.south()), "the south-western pane of four",
-					pieces(MBPaneProperties.CORNER_NORTH_EAST));
+					pieces(MBPaneProperties.CORNER_NORTH_EAST, MBPaneProperties.CORNER_SOUTH_EAST,
+							MBPaneProperties.CORNER_SOUTH_WEST, MBPaneProperties.CORNER_NORTH_WEST));
 			requirePieces(level.getBlockState(square.south().east()), "the south-eastern pane of four",
-					pieces(MBPaneProperties.CORNER_NORTH_WEST));
+					pieces(MBPaneProperties.CORNER_NORTH_EAST, MBPaneProperties.CORNER_SOUTH_EAST,
+							MBPaneProperties.CORNER_SOUTH_WEST, MBPaneProperties.CORNER_NORTH_WEST));
 
 			// A vertical neighbour is what lights the halves of an arm, through the corners
 			// it takes part in: this pane has panes above and to the north, and the third one
 			// above and north fills the space both of them reach towards, so the corner above
-			// the northern edge is on and with it the upper half of the northern arm. The
-			// block below is no partner across that edge - the space north of it is empty -
-			// so the lower half's corner is off.
+			// the northern edge is on and with it the upper half of the northern arm. That is
+			// one corner in a vertical plane, and the completing rule fills that plane: the
+			// northern arm is drawn whole, and the southern one with it, towards nothing at
+			// all. The block below is no partner across the edge above it - the space north
+			// of it is empty - so it lights no corner of its own.
 			BlockPos vertical = origin.offset(5, 0, 4);
 			level.setBlockAndUpdate(vertical.below(), Blocks.STONE.defaultBlockState());
 			level.setBlockAndUpdate(vertical.north(), Blocks.GLASS_PANE.defaultBlockState());
 			level.setBlockAndUpdate(vertical.above(), Blocks.GLASS_PANE.defaultBlockState());
 			level.setBlockAndUpdate(vertical.above().north(), Blocks.GLASS_PANE.defaultBlockState());
 			requirePieces(paneAt(player, level, vertical), "a pane under a partner with a block below it",
-					pieces(upperHalf(Direction.NORTH)));
+					pieces(upperHalf(Direction.NORTH), lowerHalf(Direction.NORTH),
+							upperHalf(Direction.SOUTH), lowerHalf(Direction.SOUTH)));
 
 			// The pruning rule, and the example the framework was written around: this pane
 			// turns inside a ring of panes with a full face to its south. The pane is true in
@@ -563,15 +575,16 @@ public class MBClientGameTest implements FabricClientGameTest {
 					pieces(lowerHalf(Direction.EAST), upperHalf(Direction.EAST),
 							lowerHalf(Direction.WEST), upperHalf(Direction.WEST)));
 
-			// Only a corner is a piece here, so this pane is drawn from the one corner it
-			// has: it is flanked by full faces east and west, and turns the corner between
+			// This pane is flanked by full faces east and west and turns the corner between
 			// its northern pane and the eastern face. That corner hangs on the east and
 			// north faces only, and the pruning leaves it alone because the pane turns
-			// across both of them rather than within the plane of either. The western face
-			// lights no corner at all and therefore shows nothing, wall or no wall. The box
-			// is swept clean first because this is the one scenario wired outside the ground
-			// the others cleared, and a face left lying beside it would light a corner the
-			// wrong way.
+			// across both of them rather than within the plane of either. The completing
+			// rule then fills the horizontal plane that corner lies in, so all four corner
+			// pieces are drawn; the flanking faces still add nothing of their own, because
+			// no corner of this pane lies above or below one of its edges: neither vertical
+			// plane is true and no arm is drawn. The box is swept clean first because this
+			// is the one scenario wired outside the ground the others cleared, and a face
+			// left lying beside it would light a corner the wrong way.
 			BlockPos flanked = origin.offset(5, 0, 8);
 			for (int dx = -2; dx <= 2; dx++) {
 				for (int dy = -1; dy <= 1; dy++) {
@@ -587,7 +600,8 @@ public class MBClientGameTest implements FabricClientGameTest {
 			level.setBlockAndUpdate(flanked.north().east(), Blocks.STONE.defaultBlockState());
 			requirePieces(paneAt(player, level, flanked),
 					"a pane flanked by full faces east and west with a pane to its north",
-					pieces(MBPaneProperties.CORNER_NORTH_EAST));
+					pieces(MBPaneProperties.CORNER_NORTH_EAST, MBPaneProperties.CORNER_SOUTH_EAST,
+							MBPaneProperties.CORNER_SOUTH_WEST, MBPaneProperties.CORNER_NORTH_WEST));
 
 			// The ring of the pruning scenario with the pane below it taken away. The full faces
 			// to the south still light the southern corner above, and the pane still turns in
@@ -595,7 +609,9 @@ public class MBClientGameTest implements FabricClientGameTest {
 			// edge connections the eastern, the western and the upper one are there and the
 			// lower one is not. The corner is what holds that side up now, so the rule leaves
 			// it, and the pane shows the upper half of its southern arm beside the two upper
-			// corners of the ring.
+			// corners of the ring. Those corners lie in two different planes, so the completing
+			// rule has nothing to fill here: the pane is drawn from the three pieces the rules
+			// above gave it.
 			BlockPos openBelow = origin.offset(8, 0, 8);
 			for (int dx = -2; dx <= 2; dx++) {
 				for (int dy = -1; dy <= 1; dy++) {
@@ -625,11 +641,12 @@ public class MBClientGameTest implements FabricClientGameTest {
 			// pane, and vanilla's own connection test counts a wall whatever its shape. The
 			// same wall beside the two panes below therefore shows which of the two is being
 			// asked: the pane with full faces north and east of it turns the corner between
-			// them and is drawn from the rules alone, so the wall south of it - no full face
-			// - lights nothing and the pane draws nothing that way, while the pane that has
-			// no corner at all falls back to vanilla and is armed towards that very wall.
-			// The box the two panes read is swept first, so that what stands around them is
-			// only what this scenario puts there.
+			// them and the completing rule fills the horizontal plane it turns in, so it is
+			// drawn from four corner pieces and from nothing towards the wall south of it,
+			// which - no full face - lights nothing, while the pane that has no corner at all
+			// falls back to vanilla and is armed towards that very wall. The box the two panes
+			// read is swept first, so that what stands around them is only what this scenario
+			// puts there.
 			BlockPos walled = origin.offset(0, 0, 12);
 			for (int dx = -1; dx <= 1; dx++) {
 				for (int dy = -1; dy <= 1; dy++) {
@@ -644,12 +661,37 @@ public class MBClientGameTest implements FabricClientGameTest {
 			level.setBlockAndUpdate(walled.south(), Blocks.COBBLESTONE_WALL.defaultBlockState());
 			requirePieces(paneAt(player, level, walled),
 					"a pane with a corner beside a wall",
-					pieces(MBPaneProperties.CORNER_NORTH_EAST));
+					pieces(MBPaneProperties.CORNER_NORTH_EAST, MBPaneProperties.CORNER_SOUTH_EAST,
+							MBPaneProperties.CORNER_SOUTH_WEST, MBPaneProperties.CORNER_NORTH_WEST));
 
 			BlockPos walledAlone = walled.south().south();
 			requirePieces(paneAt(player, level, walledAlone),
 					"a pane with no corner beside a wall",
 					pieces(lowerHalf(Direction.NORTH), upperHalf(Direction.NORTH)));
+
+			// A pane can be true in all three planes at once, and this one is: full faces north,
+			// east and above it light the corner between the northern and the eastern one, the
+			// corner above the northern edge and the corner above the eastern edge, one in each
+			// plane. The completing rule fills a plane for a pane that turns in one plane and no
+			// other, so it adds nothing here: the pane is drawn from those three corners alone,
+			// and the sides nothing stands at - west, south and below - stay empty. The box is
+			// swept first, so that only these three faces stand around the pane.
+			BlockPos threeWays = origin.offset(4, 0, 12);
+			for (int dx = -1; dx <= 1; dx++) {
+				for (int dy = -1; dy <= 1; dy++) {
+					for (int dz = -1; dz <= 1; dz++) {
+						level.setBlockAndUpdate(threeWays.offset(dx, dy, dz), Blocks.AIR.defaultBlockState());
+					}
+				}
+			}
+
+			level.setBlockAndUpdate(threeWays.north(), Blocks.STONE.defaultBlockState());
+			level.setBlockAndUpdate(threeWays.east(), Blocks.STONE.defaultBlockState());
+			level.setBlockAndUpdate(threeWays.above(), Blocks.STONE.defaultBlockState());
+			requirePieces(paneAt(player, level, threeWays),
+					"a pane turning in all three planes at once",
+					pieces(MBPaneProperties.CORNER_NORTH_EAST, upperHalf(Direction.EAST),
+							upperHalf(Direction.NORTH)));
 		});
 	}
 
