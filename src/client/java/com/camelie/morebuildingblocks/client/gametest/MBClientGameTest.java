@@ -370,10 +370,12 @@ public class MBClientGameTest implements FabricClientGameTest {
 	/**
 	 * Checks that the twelve pieces add up to the shapes they should.
 	 *
-	 * <p>The stick - the post and its faces - is what the models draw while every flag is false, so
-	 * only an untouched pane is the vanilla post. A connection boolean is the lower half of an arm
-	 * and the mod's {@code *_up} flag is its upper half, so a state with both halves set is the
-	 * vanilla arm on its own and a state with only the lower half set is half an arm.
+	 * <p>The post is what the models draw at both ends: only an untouched pane is the vanilla post,
+	 * and a pane with any piece set draws the pieces around this mod's own column instead. A
+	 * connection boolean is the lower half of an arm and the mod's {@code *_up} flag is its upper
+	 * half, so a state with both halves set is the arm the models draw - a pixel short of the
+	 * middle - with that column filling the rest, and a state with only the lower half set is half
+	 * an arm beside it.
 	 *
 	 * <p>The rest cover the reason the mod answers {@code skipRendering} itself: two panes hide the
 	 * face between them only where the pieces on either side of that face meet, so a half arm facing
@@ -399,12 +401,15 @@ public class MBClientGameTest implements FabricClientGameTest {
 
 			require(sameShape(shapeOf(plain, level), post),
 					"a pane with no pieces set is not the vanilla post");
-			require(sameShape(shapeOf(arm, level), Block.box(7.0, 0.0, 0.0, 9.0, 16.0, 8.0)),
-					"an arm with both halves set is not the vanilla arm on its own");
-			require(sameShape(shapeOf(lower, level), Block.box(7.0, 0.0, 0.0, 9.0, 8.0, 8.0)),
-					"an arm with only its lower half set is not half an arm");
-			require(sameShape(shapeOf(corner, level), Block.box(8.0, 7.0, 0.0, 16.0, 9.0, 8.0)),
-					"a corner piece is not the quadrant it sits in");
+			require(sameShape(shapeOf(arm, level),
+							Shapes.or(Block.box(7.0, 0.0, 0.0, 9.0, 16.0, 7.0), post)),
+					"an arm with both halves set is not the arm with the post it stands round");
+			require(sameShape(shapeOf(lower, level),
+							Shapes.or(Block.box(7.0, 0.0, 0.0, 9.0, 8.0, 7.0), post)),
+					"an arm with only its lower half set is not half an arm with the post");
+			require(sameShape(shapeOf(corner, level),
+							Shapes.or(Block.box(9.0, 7.0, 0.0, 16.0, 9.0, 8.0), post)),
+					"a corner piece is not the quadrant it sits in with the post");
 			require(sameShape(arm.getCollisionShape(level, BlockPos.ZERO), shapeOf(arm, level)),
 					"a pane collides with something other than its outline");
 

@@ -19,10 +19,10 @@ import net.minecraft.world.phys.shapes.VoxelShape;
  * and four horizontal corners at mid height, one per quadrant. A piece is two pixels thick, so
  * the outline and the collision box are the same shape.
  *
- * <p>The stick - the two pixel column through the middle plus the post faces - stands for a pane
- * that connects to nothing, and the models only draw it while all twelve flags are false. The
- * shapes follow: with none of them set the vanilla shape stays untouched, and as soon as one is
- * set the shape is the pieces alone, which is what the models then draw.
+ * <p>The post - the two pixel column through the middle - is drawn at both ends of that: a pane
+ * that connects to nothing keeps vanilla's own post, its four faces and the vanilla shape, and a
+ * pane with any piece set is the pieces plus this mod's own post, which is what the models then
+ * draw and what the shapes here then are.
  *
  * <p>Vanilla asks {@code skipRendering} whether a whole face may be skipped, not whether the
  * pieces on either side of it meet. Two questions have to be answered here: a pane's middle
@@ -30,18 +30,19 @@ import net.minecraft.world.phys.shapes.VoxelShape;
  * and a piece facing air has to be drawn even when the neighbour carries an arm.
  */
 public final class MBPaneShapes {
-	private static final VoxelShape NORTH_LOWER = Block.box(7.0, 0.0, 0.0, 9.0, 8.0, 8.0);
-	private static final VoxelShape NORTH_UPPER = Block.box(7.0, 8.0, 0.0, 9.0, 16.0, 8.0);
-	private static final VoxelShape EAST_LOWER = Block.box(8.0, 0.0, 7.0, 16.0, 8.0, 9.0);
-	private static final VoxelShape EAST_UPPER = Block.box(8.0, 8.0, 7.0, 16.0, 16.0, 9.0);
-	private static final VoxelShape SOUTH_LOWER = Block.box(7.0, 0.0, 8.0, 9.0, 8.0, 16.0);
-	private static final VoxelShape SOUTH_UPPER = Block.box(7.0, 8.0, 8.0, 9.0, 16.0, 16.0);
-	private static final VoxelShape WEST_LOWER = Block.box(0.0, 0.0, 7.0, 8.0, 8.0, 9.0);
-	private static final VoxelShape WEST_UPPER = Block.box(0.0, 8.0, 7.0, 8.0, 16.0, 9.0);
-	private static final VoxelShape CORNER_NORTH_EAST = Block.box(8.0, 7.0, 0.0, 16.0, 9.0, 8.0);
-	private static final VoxelShape CORNER_SOUTH_EAST = Block.box(8.0, 7.0, 8.0, 16.0, 9.0, 16.0);
-	private static final VoxelShape CORNER_SOUTH_WEST = Block.box(0.0, 7.0, 8.0, 8.0, 9.0, 16.0);
-	private static final VoxelShape CORNER_NORTH_WEST = Block.box(0.0, 7.0, 0.0, 8.0, 9.0, 8.0);
+	private static final VoxelShape NORTH_LOWER = Block.box(7.0, 0.0, 0.0, 9.0, 8.0, 7.0);
+	private static final VoxelShape NORTH_UPPER = Block.box(7.0, 8.0, 0.0, 9.0, 16.0, 7.0);
+	private static final VoxelShape EAST_LOWER = Block.box(9.0, 0.0, 7.0, 16.0, 8.0, 9.0);
+	private static final VoxelShape EAST_UPPER = Block.box(9.0, 8.0, 7.0, 16.0, 16.0, 9.0);
+	private static final VoxelShape SOUTH_LOWER = Block.box(7.0, 0.0, 9.0, 9.0, 8.0, 16.0);
+	private static final VoxelShape SOUTH_UPPER = Block.box(7.0, 8.0, 9.0, 9.0, 16.0, 16.0);
+	private static final VoxelShape WEST_LOWER = Block.box(0.0, 0.0, 7.0, 7.0, 8.0, 9.0);
+	private static final VoxelShape WEST_UPPER = Block.box(0.0, 8.0, 7.0, 7.0, 16.0, 9.0);
+	private static final VoxelShape CORNER_NORTH_EAST = Block.box(9.0, 7.0, 0.0, 16.0, 9.0, 8.0);
+	private static final VoxelShape CORNER_SOUTH_EAST = Block.box(9.0, 7.0, 8.0, 16.0, 9.0, 16.0);
+	private static final VoxelShape CORNER_SOUTH_WEST = Block.box(0.0, 7.0, 8.0, 7.0, 9.0, 16.0);
+	private static final VoxelShape CORNER_NORTH_WEST = Block.box(0.0, 7.0, 0.0, 7.0, 9.0, 8.0);
+	private static final VoxelShape POST = Block.box(7.0, 0.0, 7.0, 9.0, 16.0, 9.0);
 
 	/**
 	 * The piece shapes depend on the state alone, so they are cached. An empty shape means the
@@ -180,7 +181,7 @@ public final class MBPaneShapes {
 		{Direction.NORTH, Direction.WEST}
 	};
 
-	/** Every piece the state turns on, or an empty shape when it turns on none. */
+	/** Every piece the state turns on, with the post they stand round, or an empty shape. */
 	private static VoxelShape build(final BlockState state) {
 		if (!isPane(state)) {
 			return Shapes.empty();
@@ -204,7 +205,11 @@ public final class MBPaneShapes {
 			}
 		}
 
-		return shape;
+		if (shape.isEmpty()) {
+			return shape;
+		}
+
+		return Shapes.or(shape, POST);
 	}
 
 	private static VoxelShape lowerShape(final Direction direction) {

@@ -42,10 +42,12 @@ import com.camelie.morebuildingblocks.block.MBPaneProperties;
  * state selected, so the 4096 states of a pane cost what twelve models cost and not
  * what 4096 of them would.
  *
- * <p>Once any box is shown, the pane's own post is not: the twelve boxes are the
- * outline and the collision shape of the pane, and this mod draws the post only while
- * the pane is connected to nothing - which is the state vanilla's own files draw
- * their post in too, so a lone pane looks the same either way.
+ * <p>The post joins them as one more part, shown whenever any of the twelve is. The
+ * twelve boxes stop short of the middle of the block and this mod draws the column
+ * there - which is vanilla's own layout, where the arms stop at z 7 and the post covers
+ * 7 to 9 - so a pane with a corner has no hole where its arm turns into it and no face
+ * is ever laid over another. A pane connected to nothing keeps vanilla's own post and
+ * the four faces it is closed with, drawn from vanilla's files as it always was.
  *
  * <p>Only vanilla's panes are taken over. A pane from another mod carries the same
  * switches - the mixin adds them to every {@code IronBarsBlock} - but nothing ever
@@ -168,8 +170,8 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 	}
 
 	/**
-	 * The twelve boxes of a pane, each conditioned on its switch, plus what the pane
-	 * shows while all twelve are off.
+	 * The twelve boxes of a pane, each conditioned on its switch, the post they are
+	 * drawn around, and what the pane shows while all twelve are off.
 	 */
 	private static List<MultiPartModel.Selector<BlockStateModel.Unbaked>> selectors(Identifier paneId) {
 		List<MultiPartModel.Selector<BlockStateModel.Unbaked>> selectors = new ArrayList<>();
@@ -183,6 +185,8 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 			selectors.add(new MultiPartModel.Selector<>(
 					state -> state.hasProperty(property) && state.getValue(property), piece));
 		}
+
+		selectors.add(new MultiPartModel.Selector<>(MBPaneModelPlugin::anyPiece, post(paneId)));
 
 		for (StickPart part : bars ? BARS_STICK : GLASS_STICK) {
 			BlockStateModel.Unbaked model = stickPart(bare, part);
@@ -208,6 +212,14 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 		return new SingleVariant.Unbaked(variant);
 	}
 
+	/** The column the twelve boxes stand round: the copy datagen wrote for this pane. */
+	private static BlockStateModel.Unbaked post(Identifier paneId) {
+		Variant variant = new Variant(Identifier.fromNamespaceAndPath(MoreBuildingBlocks.MOD_ID,
+				"block/pane_post_" + paneId.getPath()));
+
+		return new SingleVariant.Unbaked(variant);
+	}
+
 	/** One model a pane connected to nothing is drawn from, under vanilla's namespace. */
 	private static BlockStateModel.Unbaked stickPart(String path, StickPart part) {
 		Variant variant = new Variant(
@@ -229,5 +241,10 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 		}
 
 		return true;
+	}
+
+	/** Whether a state shows any of the twelve boxes, and so the post with them. */
+	private static boolean anyPiece(BlockState state) {
+		return !bare(state);
 	}
 }
