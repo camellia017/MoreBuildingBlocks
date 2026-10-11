@@ -22,7 +22,7 @@
         },
         "west": {
           "cullface": "west",
-          "rotation": 90,
+          "rotation": 270,
           "texture": "#edge",
           "uv": [
             7,

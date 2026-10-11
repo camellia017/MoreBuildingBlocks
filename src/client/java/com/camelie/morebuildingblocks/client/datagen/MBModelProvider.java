@@ -1252,7 +1252,7 @@ public class MBModelProvider implements DataProvider {
 	 * the way vanilla does and it names no rectangle. A level corner plate's edge face is seven by
 	 * two - the same two pixels of border seen from the side - and the crop the client would work
 	 * out for it falls on the transparent part of the sprite, so those name the border's two pixel
-	 * column and read it a quarter turn round ({@link PaneFace#turned}).
+	 * column and read it a quarter turn round ({@link PaneFace#turned}) - whichever quarter sends the sprite's length away from the band end the plate stands beside, which is one way round on a northern or southern plate and the other on an eastern or western one.
 	 *
 	 * <p>The sprites the slots name below are placeholders, the ones a template shows on its own;
 	 * every copy of it - {@link #generatePanes()} writes one per vanilla pane - replaces both.
@@ -1287,25 +1287,25 @@ public class MBModelProvider implements DataProvider {
 							PaneFace.full("up", "#pane"),
 							PaneFace.full("down", "#pane"),
 							PaneFace.turned("north", "#edge", 7, 0, 9, 7, 90),
-							PaneFace.turned("east", "#edge", 7, 0, 9, 7, 90)))),
+							PaneFace.turned("east", "#edge", 7, 0, 9, 7, 270)))),
 			new PaneTemplate("pane_corner_se", List.of(
 					paneBox(9, 7, 9, 16, 9, 16,
 							PaneFace.full("up", "#pane"),
 							PaneFace.full("down", "#pane"),
 							PaneFace.turned("south", "#edge", 7, 0, 9, 7, 90),
-							PaneFace.turned("east", "#edge", 7, 0, 9, 7, 90)))),
+							PaneFace.turned("east", "#edge", 7, 0, 9, 7, 270)))),
 			new PaneTemplate("pane_corner_sw", List.of(
 					paneBox(0, 7, 9, 7, 9, 16,
 							PaneFace.full("up", "#pane"),
 							PaneFace.full("down", "#pane"),
 							PaneFace.turned("south", "#edge", 7, 0, 9, 7, 90),
-							PaneFace.turned("west", "#edge", 7, 0, 9, 7, 90)))),
+							PaneFace.turned("west", "#edge", 7, 0, 9, 7, 270)))),
 			new PaneTemplate("pane_corner_nw", List.of(
 					paneBox(0, 7, 0, 7, 9, 7,
 							PaneFace.full("up", "#pane"),
 							PaneFace.full("down", "#pane"),
 							PaneFace.turned("north", "#edge", 7, 0, 9, 7, 90),
-							PaneFace.turned("west", "#edge", 7, 0, 9, 7, 90)))),
+							PaneFace.turned("west", "#edge", 7, 0, 9, 7, 270)))),
 			new PaneTemplate("pane_edge_north_lower", List.of(
 					paneBox(7, 7, 0, 9, 8, 7,
 							PaneFace.cut("north", "#edge", 7, 9, 9, 10)))),
