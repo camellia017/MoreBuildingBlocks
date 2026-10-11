@@ -52,10 +52,13 @@ import net.minecraft.world.level.chunk.LevelChunkSection;
  *
  * <p>What is drawn: every corner connection left after the pruning is one piece, and every horizontal
  * edge connection left draws its arm at full height, both halves, because the pieces cannot show less
- * than the corner the pane really has. A pane that no corner connection hangs on at all falls back to
- * vanilla's own connections, the four horizontal ones - so a pane next to a wall, a fence or another
- * shape vanilla would bend around still looks the way vanilla draws it - and shows no corner piece at
- * all. Nothing reaches up or down, so the two vertical faces never carry an arm of their own; they
+ * than the corner the pane really has. A pane the rules leave without a single corner connection - not
+ * one left after the pruning - falls back to vanilla's own connections, the four horizontal ones, and
+ * shows no corner piece at all: a pane next to a wall, a fence or another shape vanilla would bend
+ * around still looks the way vanilla draws it. A pane with even one corner left is drawn from the
+ * rules alone and is never asked about vanilla's way: the wall or fence beside it turns no full face
+ * towards it, so it arms nothing there. Nothing reaches up or down, so the two vertical faces never
+ * carry an arm of their own; they
  * only decide which halves of the horizontal arms are on.
  *
  * <p>Every rule reads the world and never the pieces a neighbour computed, so a pane's twelve flags
@@ -256,15 +259,15 @@ public final class MBPaneConnection {
 		prune(edges, crossings, pruned);
 
 		// ===== What is drawn: every corner left, and the full arm of every edge that survives =====
-		boolean cornered = !crossings.isEmpty();
+		boolean hasValidCorner = !crossings.isEmpty();
 
 		for (Crossing crossing : Crossing.values()) {
 			state = state.setValue(crossing.piece(), crossings.contains(crossing));
 		}
 
 		for (Direction face : ARMS) {
-			// With no corner at all this pane is vanilla's own, connections and all
-			boolean arm = cornered
+			// Only a pane with no corner left at all is vanilla's own, connections and all
+			boolean arm = hasValidCorner
 					? edges.get(face) != Edge.NONE && !pruned.contains(face)
 					: connectsTo(pane, level, pos, face);
 

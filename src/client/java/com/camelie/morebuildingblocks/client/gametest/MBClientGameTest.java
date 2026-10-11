@@ -436,7 +436,10 @@ public class MBClientGameTest implements FabricClientGameTest {
 	 * are panes, four panes meeting in a square, a pane whose pieces hang on a partner above
 	 * it, and the pruning rule, where a pane that turns inside a ring of panes beside a row
 	 * of full faces keeps two arms and loses the rest, and a pane flanked by full faces east
-	 * and west, whose western arm stands on an edge no corner hangs on.
+	 * and west, whose western arm stands on an edge no corner hangs on. The last two put the
+	 * same wall beside a pane with a corner and beside one without: vanilla's own connection
+	 * test is the only thing that ever counts a wall, so the pane with the corner must not
+	 * take the arm that wall would give it, while the pane without one must.
 	 *
 	 * <p>States are asked for the way the game asks for them, through {@code
 	 * getStateForPlacement}, which is one of the entry points. Three of the scenarios then
@@ -590,6 +593,37 @@ public class MBClientGameTest implements FabricClientGameTest {
 							lowerHalf(Direction.WEST), upperHalf(Direction.WEST),
 							lowerHalf(Direction.NORTH), upperHalf(Direction.NORTH),
 							MBPaneProperties.CORNER_NORTH_EAST));
+
+			// The fallback is for a pane the rules leave without a corner and for no other
+			// pane, and vanilla's own connection test counts a wall whatever its shape. The
+			// same wall beside the two panes below therefore shows which of the two is being
+			// asked: the pane with full faces north and east of it turns the corner between
+			// them and is drawn from the rules alone, so the wall south of it - no full face
+			// - arms nothing, while the pane that has no corner at all falls back to vanilla
+			// and is armed towards that very wall. The box the two panes read is swept first,
+			// so that what stands around them is only what this scenario puts there.
+			BlockPos walled = origin.offset(0, 0, 12);
+			for (int dx = -1; dx <= 1; dx++) {
+				for (int dy = -1; dy <= 1; dy++) {
+					for (int dz = -1; dz <= 3; dz++) {
+						level.setBlockAndUpdate(walled.offset(dx, dy, dz), Blocks.AIR.defaultBlockState());
+					}
+				}
+			}
+
+			level.setBlockAndUpdate(walled.north(), Blocks.STONE.defaultBlockState());
+			level.setBlockAndUpdate(walled.east(), Blocks.STONE.defaultBlockState());
+			level.setBlockAndUpdate(walled.south(), Blocks.COBBLESTONE_WALL.defaultBlockState());
+			requirePieces(paneAt(player, level, walled),
+					"a pane with a corner beside a wall",
+					pieces(lowerHalf(Direction.NORTH), upperHalf(Direction.NORTH),
+							lowerHalf(Direction.EAST), upperHalf(Direction.EAST),
+							MBPaneProperties.CORNER_NORTH_EAST));
+
+			BlockPos walledAlone = walled.south().south();
+			requirePieces(paneAt(player, level, walledAlone),
+					"a pane with no corner beside a wall",
+					pieces(lowerHalf(Direction.NORTH), upperHalf(Direction.NORTH)));
 		});
 	}
 
