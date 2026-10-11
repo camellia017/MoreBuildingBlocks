@@ -201,11 +201,13 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 
 				// The wide face that leads to one of the two level corners. A corner
 				// that is on closes the seam with its own plate, so the face is shown
-				// while that corner is away, whichever corner the other face answers to.
+				// while that corner is away, whichever corner the other face answers
+				// to - and only while the band itself is there, or a pane with no
+				// corner on this side shows two pixels of glass beside its collision.
 				boxes.add(new SharedBox(edge + "_" + side.firstFace(),
-						state -> !shows(state, side.first())));
+						state -> side.cornered(state) && !shows(state, side.first())));
 				boxes.add(new SharedBox(edge + "_" + side.secondFace(),
-						state -> !shows(state, side.second())));
+						state -> side.cornered(state) && !shows(state, side.second())));
 			}
 		}
 
