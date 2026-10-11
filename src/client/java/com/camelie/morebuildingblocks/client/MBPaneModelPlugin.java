@@ -142,18 +142,22 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 	 */
 	private record SharedSide(String name, Direction direction, Property<Boolean> first, String firstFace,
 			Property<Boolean> second, String secondFace) {
+		/** Whether a state shows either of the two corners that share this side. */
+		private boolean cornered(BlockState state) {
+			return shows(state, first) || shows(state, second);
+		}
 	}
 
 	/** The four sides along which a corner shares its two pixels with its neighbour. */
-	private static final List<SharedSide> SHARED_SIDES = List.of(
-			new SharedSide("north", Direction.NORTH, MBPaneProperties.CORNER_NORTH_EAST, "east",
-					MBPaneProperties.CORNER_NORTH_WEST, "west"),
-			new SharedSide("south", Direction.SOUTH, MBPaneProperties.CORNER_SOUTH_EAST, "east",
-					MBPaneProperties.CORNER_SOUTH_WEST, "west"),
-			new SharedSide("east", Direction.EAST, MBPaneProperties.CORNER_NORTH_EAST, "north",
-					MBPaneProperties.CORNER_SOUTH_EAST, "south"),
-			new SharedSide("west", Direction.WEST, MBPaneProperties.CORNER_NORTH_WEST, "north",
-					MBPaneProperties.CORNER_SOUTH_WEST, "south"));
+	private static final SharedSide NORTH = new SharedSide("north", Direction.NORTH,
+			MBPaneProperties.CORNER_NORTH_EAST, "east", MBPaneProperties.CORNER_NORTH_WEST, "west");
+	private static final SharedSide SOUTH = new SharedSide("south", Direction.SOUTH,
+			MBPaneProperties.CORNER_SOUTH_EAST, "east", MBPaneProperties.CORNER_SOUTH_WEST, "west");
+	private static final SharedSide EAST = new SharedSide("east", Direction.EAST,
+			MBPaneProperties.CORNER_NORTH_EAST, "north", MBPaneProperties.CORNER_SOUTH_EAST, "south");
+	private static final SharedSide WEST = new SharedSide("west", Direction.WEST,
+			MBPaneProperties.CORNER_NORTH_WEST, "north", MBPaneProperties.CORNER_SOUTH_WEST, "south");
+	private static final List<SharedSide> SHARED_SIDES = List.of(NORTH, SOUTH, EAST, WEST);
 
 	/**
 	 * The boxes two corners share: the two pixels of plate on each of the four sides,
@@ -180,8 +184,7 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 
 				// The two pixels of plate that lead to both corners of this side. The
 				// arm of this half covers them, so they wait for it to be away.
-				boxes.add(new SharedBox(edge, state -> (shows(state, side.first()) || shows(state, side.second()))
-						&& !arm.test(state)));
+				boxes.add(new SharedBox(edge, state -> side.cornered(state) && !arm.test(state)));
 
 				// The wide face that leads to one of the two corners. A corner that is
 				// on closes the seam with its own volume, so the face is shown only
@@ -207,12 +210,17 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 			boxes.add(new SharedBox("pane_middle_" + half + (upper ? "_up" : "_down"),
 					state -> MBPaneShapes.hasCorner(state) && !(plate.test(state) || bar.test(state))));
 
-			// Its four sides, each the seam either to the arm of that side or to the
-			// two arms across it.
-			boxes.add(middleBox(half, "north", state -> !(north.test(state) || bar.test(state))));
-			boxes.add(middleBox(half, "south", state -> !(south.test(state) || bar.test(state))));
-			boxes.add(middleBox(half, "west", state -> !(west.test(state) || plate.test(state))));
-			boxes.add(middleBox(half, "east", state -> !(east.test(state) || plate.test(state))));
+			// Its four sides, each the seam to whatever covers it: the arm of that
+			// side, the two pixels the corners of that side share, or - across the
+			// crossing - the two arms of the other plate.
+			boxes.add(middleBox(half, "north", state -> !(north.test(state) || bar.test(state)
+					|| NORTH.cornered(state))));
+			boxes.add(middleBox(half, "south", state -> !(south.test(state) || bar.test(state)
+					|| SOUTH.cornered(state))));
+			boxes.add(middleBox(half, "west", state -> !(west.test(state) || plate.test(state)
+					|| WEST.cornered(state))));
+			boxes.add(middleBox(half, "east", state -> !(east.test(state) || plate.test(state)
+					|| EAST.cornered(state))));
 		}
 
 		return boxes;
