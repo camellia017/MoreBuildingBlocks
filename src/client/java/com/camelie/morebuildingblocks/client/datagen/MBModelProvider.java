@@ -1216,6 +1216,14 @@ public class MBModelProvider implements DataProvider {
 	 * asks for with {@code Variant#withYRot} rather than with four more boxes that would have to be
 	 * kept in step with these. A corner piece is the wedge that reaches the diagonal neighbour.
 	 *
+	 * <p>Every box reaches one pixel past the middle of the block, although an arm stops at that
+	 * middle and a wedge stops at the two sides of it. A pane draws no post of its own - the post is
+	 * what a pane connected to nothing falls back on - so without that pixel the boxes that meet
+	 * round the middle leave its 2 by 2 pixels empty and a pane with a corner shows a hole exactly
+	 * where its arm turns into it. Each box carries the pixel with it: the faces that name no
+	 * rectangle take their sprite straight off the box, and the ones that name a rectangle name one
+	 * pixel more of it, so the sprite is never stretched over the wider face.
+	 *
 	 * <p>Only the faces a piece shows are listed. Its wide faces carry {@code #pane} and its thin
 	 * edges {@code #edge}, and none of them carries a {@code cullface}: the middle of a pane is
 	 * see-through, so a piece hidden behind a neighbour would take the pane with it.
@@ -1224,46 +1232,46 @@ public class MBModelProvider implements DataProvider {
 	 * every copy of it - {@link #generatePanes()} writes one per vanilla pane - replaces both.
 	 */
 	private static final List<PaneTemplate> PANE_TEMPLATES = List.of(
-			new PaneTemplate("pane_side_lower", new Box(7, 0, 0, 9, 8, 8), List.of(
+			new PaneTemplate("pane_side_lower", new Box(7, 0, 0, 9, 8, 9), List.of(
 					PaneFace.full("north", "#edge"),
 					PaneFace.full("down", "#edge"),
-					PaneFace.cut("west", "#pane", 16, 8, 8, 16),
-					PaneFace.cut("east", "#pane", 8, 8, 16, 16))),
-			new PaneTemplate("pane_side_lower_alt", new Box(7, 0, 8, 9, 8, 16), List.of(
+					PaneFace.cut("west", "#pane", 16, 8, 7, 16),
+					PaneFace.cut("east", "#pane", 7, 8, 16, 16))),
+			new PaneTemplate("pane_side_lower_alt", new Box(7, 0, 7, 9, 8, 16), List.of(
 					PaneFace.full("south", "#edge"),
 					PaneFace.full("down", "#edge"),
-					PaneFace.cut("west", "#pane", 8, 8, 0, 16),
-					PaneFace.cut("east", "#pane", 0, 8, 8, 16))),
-			new PaneTemplate("pane_side_upper", new Box(7, 8, 0, 9, 16, 8), List.of(
+					PaneFace.cut("west", "#pane", 9, 8, 0, 16),
+					PaneFace.cut("east", "#pane", 0, 8, 9, 16))),
+			new PaneTemplate("pane_side_upper", new Box(7, 8, 0, 9, 16, 9), List.of(
 					PaneFace.full("north", "#edge"),
 					PaneFace.full("up", "#edge"),
-					PaneFace.cut("west", "#pane", 16, 0, 8, 8),
-					PaneFace.cut("east", "#pane", 8, 0, 16, 8))),
-			new PaneTemplate("pane_side_upper_alt", new Box(7, 8, 8, 9, 16, 16), List.of(
+					PaneFace.cut("west", "#pane", 16, 0, 7, 8),
+					PaneFace.cut("east", "#pane", 7, 0, 16, 8))),
+			new PaneTemplate("pane_side_upper_alt", new Box(7, 8, 7, 9, 16, 16), List.of(
 					PaneFace.full("south", "#edge"),
 					PaneFace.full("up", "#edge"),
-					PaneFace.cut("west", "#pane", 8, 0, 0, 8),
-					PaneFace.cut("east", "#pane", 0, 0, 8, 8))),
-			new PaneTemplate("pane_corner", new Box(8, 7, 0, 16, 9, 8), List.of(
+					PaneFace.cut("west", "#pane", 9, 0, 0, 8),
+					PaneFace.cut("east", "#pane", 0, 0, 9, 8))),
+			new PaneTemplate("pane_corner", new Box(7, 7, 0, 16, 9, 9), List.of(
 					PaneFace.full("down", "#pane"),
 					PaneFace.full("up", "#pane"),
-					PaneFace.turned("north", "#edge", 7, 8, 9, 16),
-					PaneFace.turned("east", "#edge", 7, 0, 9, 8))),
-			new PaneTemplate("pane_corner_se", new Box(8, 7, 8, 16, 9, 16), List.of(
-					PaneFace.cut("up", "#pane", 8, 8, 16, 16),
-					PaneFace.cut("down", "#pane", 8, 0, 16, 8),
-					PaneFace.turned("east", "#edge", 7, 8, 9, 16),
-					PaneFace.turned("south", "#edge", 7, 16, 9, 8))),
-			new PaneTemplate("pane_corner_sw", new Box(0, 7, 8, 8, 9, 16), List.of(
-					PaneFace.cut("up", "#pane", 0, 8, 8, 16),
-					PaneFace.cut("down", "#pane", 0, 0, 8, 8),
-					PaneFace.turned("west", "#edge", 7, 16, 9, 8),
-					PaneFace.turned("south", "#edge", 7, 8, 9, 0))),
-			new PaneTemplate("pane_corner_nw", new Box(0, 7, 0, 8, 9, 8), List.of(
-					PaneFace.cut("up", "#pane", 0, 0, 8, 8),
-					PaneFace.cut("down", "#pane", 0, 8, 8, 16),
-					PaneFace.turned("west", "#edge", 7, 8, 9, 0),
-					PaneFace.turned("north", "#edge", 7, 0, 9, 8))));
+					PaneFace.turned("north", "#edge", 7, 7, 9, 16),
+					PaneFace.turned("east", "#edge", 7, 0, 9, 9))),
+			new PaneTemplate("pane_corner_se", new Box(7, 7, 7, 16, 9, 16), List.of(
+					PaneFace.cut("up", "#pane", 7, 7, 16, 16),
+					PaneFace.cut("down", "#pane", 7, 0, 16, 9),
+					PaneFace.turned("east", "#edge", 7, 7, 9, 16),
+					PaneFace.turned("south", "#edge", 7, 16, 9, 7))),
+			new PaneTemplate("pane_corner_sw", new Box(0, 7, 7, 9, 9, 16), List.of(
+					PaneFace.cut("up", "#pane", 0, 7, 9, 16),
+					PaneFace.cut("down", "#pane", 0, 0, 9, 9),
+					PaneFace.turned("west", "#edge", 7, 16, 9, 7),
+					PaneFace.turned("south", "#edge", 7, 9, 9, 0))),
+			new PaneTemplate("pane_corner_nw", new Box(0, 7, 0, 9, 9, 9), List.of(
+					PaneFace.cut("up", "#pane", 0, 0, 9, 9),
+					PaneFace.cut("down", "#pane", 0, 7, 9, 16),
+					PaneFace.turned("west", "#edge", 7, 9, 9, 0),
+					PaneFace.turned("north", "#edge", 7, 0, 9, 9))));
 
 	/** One box of a pane, with the faces it shows. */
 	private record PaneTemplate(String name, Box box, List<PaneFace> faces) {
