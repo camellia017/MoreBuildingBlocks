@@ -300,6 +300,7 @@ public class MBClientGameTest implements FabricClientGameTest {
 			verifyPaneProperties(server);
 			verifyPaneShapes(server);
 			verifyPaneConnection(server);
+			verifyPaneBars(server);
 			verifyPlacement(server);
 			verifyUprightStacking(server);
 			verifyWallContinuation(server);
@@ -762,17 +763,106 @@ public class MBClientGameTest implements FabricClientGameTest {
 		});
 	}
 
+	/**
+	 * Ages a copper bar that carries every corner piece of the pane model on a random tick and waxes it
+	 * with a honeycomb, and checks the pieces come through both turns untouched.
+	 *
+	 * <p>Both turns rebuild the state the game's own way: the next block of the metal is taken and
+	 * the old state's properties are copied onto it ({@code Block#withPropertiesOf}). That copy is
+	 * the one step in these blocks that is not this mod's code, and the mod's four upper halves and
+	 * four corners live on {@code IronBarsBlock}'s own state definition, so they are on both sides
+	 * of it. This is the test that says so: pieces that did not come through would leave a lone
+	 * post where a walled-in bar stood - the shapes and the collision follow the pieces - and
+	 * nothing would put them back until a neighbour of the bar changed or its chunk was read again.
+	 *
+	 * <p>The bar is the game's block, not one of the mod's panes, so it is also the check that the
+	 * connection rules of a pane are the rules of the vanilla block family they were written for.
+	 */
+	private static void verifyPaneBars(TestServerContext server) {
+		server.runOnServer(minecraftServer -> {
+			ServerLevel level = minecraftServer.overworld();
+			ServerPlayer player = minecraftServer.getPlayerList().getPlayers().get(0);
+			BlockPos bar = new BlockPos(PANE_X, PANE_Y, PANE_Z).offset(20, 0, 12);
+			Block fresh = Blocks.COPPER_BARS.weathering().unaffected();
+			List<Property<Boolean>> corners = pieces(MBPaneProperties.CORNER_NORTH_EAST,
+					MBPaneProperties.CORNER_SOUTH_EAST, MBPaneProperties.CORNER_SOUTH_WEST,
+					MBPaneProperties.CORNER_NORTH_WEST);
+
+			for (int dx = -2; dx <= 2; dx++) {
+				for (int dy = -1; dy <= 1; dy++) {
+					for (int dz = -2; dz <= 2; dz++) {
+						level.setBlockAndUpdate(bar.offset(dx, dy, dz), Blocks.AIR.defaultBlockState());
+					}
+				}
+			}
+
+			// A whole block on all four sides turns the corner between every pair of them, and the
+			// completing rule then fills the horizontal plane with all four of that plane's
+			// corners: the same answer the pane scenes check for a pane with two full faces beside
+			// it. No arm is drawn, and that is part of the test - eight of the twelve flags stay
+			// off, so a copy that came back all false would not pass either.
+			for (Direction side : Direction.Plane.HORIZONTAL) {
+				level.setBlockAndUpdate(bar.relative(side), Blocks.STONE.defaultBlockState());
+			}
+
+			BlockState placed = placedAt(player, level, bar, fresh);
+
+			requirePieces(placed, "a copper bar walled in on all four sides", corners);
+
+			level.setBlockAndUpdate(bar, placed);
+			requirePieces(level.getBlockState(bar), "a copper bar standing in the world", corners);
+
+			// The random tick the game ages a block on, called on the state the game would call it
+			// on, which is how the weathering test reaches the same turn.
+			int ticks = 0;
+
+			while (level.getBlockState(bar).getBlock() == fresh && ticks < AGING_TICKS) {
+				level.getBlockState(bar).randomTick(level, bar, level.getRandom());
+				ticks++;
+			}
+
+			Block weathered = Blocks.COPPER_BARS.weathering().pick(WeatheringCopper.WeatherState.EXPOSED);
+
+			require(ticks < AGING_TICKS,
+					"the random tick left " + name(fresh) + " alone " + AGING_TICKS + " times");
+			require(level.getBlockState(bar).getBlock() == weathered,
+					"a copper bar aged into " + name(level.getBlockState(bar).getBlock()) + " instead of "
+							+ name(weathered));
+			requirePieces(level.getBlockState(bar), "a copper bar that aged on a random tick", corners);
+
+			// The turn a player makes, with the real item in the real hand.
+			InteractionResult waxedOn = click(player, Items.HONEYCOMB, bar);
+			Block waxed = Blocks.COPPER_BARS.waxed().pick(WeatheringCopper.WeatherState.EXPOSED);
+
+			require(level.getBlockState(bar).getBlock() == waxed,
+					"a honeycomb (" + waxedOn + ") turned a weathered bar into "
+							+ name(level.getBlockState(bar).getBlock()) + " instead of " + name(waxed));
+			requirePieces(level.getBlockState(bar),
+					"a copper bar a honeycomb was used on (" + waxedOn + ")", corners);
+		});
+	}
+
 	/** The state a pane is placed with at {@code pos}, asked the way the game asks for it. */
 	private static BlockState paneAt(ServerPlayer player, ServerLevel level, BlockPos pos) {
+		return placedAt(player, level, pos, Blocks.GLASS_PANE);
+	}
+
+	/**
+	 * The state {@code pane} is placed with at {@code pos}, asked the way the game asks for it: a
+	 * click into the empty block with the block's own item in hand, handed to the block's own
+	 * {@code getStateForPlacement}, which is where the connection rules run. A bar is asked the
+	 * same way a pane is, so the copper bars go through the same scenes.
+	 */
+	private static BlockState placedAt(ServerPlayer player, ServerLevel level, BlockPos pos, Block pane) {
 		BlockPlaceContext context = new BlockPlaceContext(player, InteractionHand.MAIN_HAND,
-				new ItemStack(Blocks.GLASS_PANE.asItem()),
+				new ItemStack(pane.asItem()),
 				new BlockHitResult(Vec3.atCenterOf(pos), Direction.UP, pos, false));
 
 		require(context.getClickedPos().equals(pos),
 				"a click into the empty block at " + pos + " aimed at " + context.getClickedPos()
 						+ ", expected the clicked block itself");
 
-		BlockState placed = Blocks.GLASS_PANE.getStateForPlacement(context);
+		BlockState placed = pane.getStateForPlacement(context);
 
 		require(placed != null, "no block state was produced for a pane at " + pos);
 		return placed;
@@ -2327,6 +2417,17 @@ public class MBClientGameTest implements FabricClientGameTest {
 		require(context.getClickedPos().equals(pos),
 				"clicking the open face of a slab aimed at " + context.getClickedPos()
 						+ ", expected the clicked block itself at " + pos);
+
+		// The same click with an item that is not the slab's own completes nothing: the flag this
+		// context decides with is the only gate a placement passes, so a click left in the slab's
+		// own cell would land the foreign block on the slab and take its place. It has to move out
+		// of the cell, the way a click on the other three faces of the slab does.
+		BlockPlaceContext foreign = new BlockPlaceContext(player, InteractionHand.MAIN_HAND,
+				new ItemStack(Items.STONE), new BlockHitResult(hit, face, pos, false));
+
+		require(foreign.getClickedPos().equals(pos.relative(face)),
+				"clicking the open face of a slab with a block that is not the slab aimed at "
+						+ foreign.getClickedPos() + ", expected the cell beyond it at " + pos.relative(face));
 
 		BlockState doubled = slabBlock.getStateForPlacement(context);
 

@@ -29,7 +29,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * <p>The exception is the <em>open</em> face: the plane closing off the empty half, which is the
  * one face a player sees the slab as - half a block, with the cell beside it empty - and is
  * reported by {@link VerticalSlab#openFace}. Pointing there means completing this slab, so the
- * click stays in the same block for the placement rule to double up. The two thin sides, half a
+ * click stays in the same block for the placement rule to double up - but only while the item in
+ * hand is the one the slab is made of, since that is the item that finishes it. With anything else
+ * the click moves out of the cell like the clicks on the other three faces, so that nothing lands
+ * on the slab. The two thin sides, half a
  * block wide, mean the opposite - they are the wall seen end on, and a click there carries it into
  * the cell they look at - and the boundary at the far end of the filled half, which the wall's own
  * next block would stand against, continues the wall the same way. Those three all leave the click
@@ -108,6 +111,15 @@ public abstract class BlockPlaceContextMixin implements PlacementClick {
 	 * false for both kinds of refusal. A handler that could only veto the value left the click on
 	 * the slab in exactly those cases, which is the bug this replaces.
 	 *
+	 * <p>The item in hand is part of the decision, exactly as it is in the slab's own
+	 * {@code canBeReplaced}. Only the slab's own item finishes the slab - the placement that lands
+	 * in the cell is the double state {@code SlabBlock#getStateForPlacement} builds from
+	 * {@code state.is(this)}, and any other item would land there as itself and take the slab's
+	 * place. Nothing downstream would stop that: {@code BlockItem} asks {@code canPlace}, which
+	 * this flag answers on its own, and no later step asks the block whether it wants to be
+	 * replaced. A click with anything else in hand therefore moves out of the cell, the way a
+	 * click on the other three faces does.
+	 *
 	 * <p>{@code replaceClicked} is written as the constructor's last act and read by
 	 * {@code getClickedPos} afterwards, so setting it at the tail rewrites the finished decision
 	 * without touching the bytecode in between.
@@ -121,7 +133,8 @@ public abstract class BlockPlaceContextMixin implements PlacementClick {
 		BlockState clicked = level.getBlockState(hitResult.getBlockPos());
 
 		if (VerticalSlab.isVertical(clicked) && !VerticalSlab.isDouble(clicked)) {
-			this.replaceClicked = hitResult.getDirection() == VerticalSlab.openFace(clicked);
+			this.replaceClicked = hitResult.getDirection() == VerticalSlab.openFace(clicked)
+					&& stack.is(clicked.getBlock().asItem());
 		}
 	}
 }
