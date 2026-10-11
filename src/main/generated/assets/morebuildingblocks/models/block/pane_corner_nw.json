@@ -7,6 +7,7 @@
           "texture": "#pane"
         },
         "north": {
+          "cullface": "north",
           "rotation": 90,
           "texture": "#edge",
           "uv": [
@@ -20,6 +21,7 @@
           "texture": "#pane"
         },
         "west": {
+          "cullface": "west",
           "rotation": 90,
           "texture": "#edge",
           "uv": [

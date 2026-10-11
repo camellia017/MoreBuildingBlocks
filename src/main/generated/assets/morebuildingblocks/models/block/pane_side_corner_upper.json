@@ -13,9 +13,11 @@
           ]
         },
         "north": {
+          "cullface": "north",
           "texture": "#edge"
         },
         "up": {
+          "cullface": "up",
           "texture": "#edge"
         },
         "west": {

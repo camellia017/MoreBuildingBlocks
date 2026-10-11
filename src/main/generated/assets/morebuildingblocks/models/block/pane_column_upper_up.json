@@ -4,6 +4,7 @@
     {
       "faces": {
         "up": {
+          "cullface": "up",
           "texture": "#edge"
         }
       },

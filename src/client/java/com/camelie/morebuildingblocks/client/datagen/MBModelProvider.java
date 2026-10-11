@@ -1236,10 +1236,16 @@ public class MBModelProvider implements DataProvider {
 	 * because a model is chosen as a whole and never a face of it.
 	 *
 	 * <p>Only the faces a piece shows are listed. Its wide faces carry {@code #pane} and its thin
-	 * edges {@code #edge}, and none of them carries a {@code cullface}: the middle of a pane is
-	 * see-through, so a piece hidden behind a neighbour would take the pane with it. A face that
-	 * stands on its own is written as a plane without thickness, the way vanilla's own bars models
-	 * write the faces of their rods.
+	 * edges {@code #edge}. A face that lies on the block's own boundary - the seam it would share
+	 * with the pane next to it - also carries a {@code cullface}, which is what hands it to the
+	 * rule that decides whether the two are one surface: {@code IronBarsBlockMixin} answers
+	 * {@code skipRendering} with {@code MBPaneShapes.hides}, so where the neighbour carries the
+	 * piece that meets this one, both faces drop out of the mesh and the seam is glass rather than
+	 * two thicknesses of it blended together. Vanilla's own panes rely on the same handshake, and
+	 * a solid neighbour takes the face with it as well. Faces inside the block stay silent: the
+	 * middle of a pane is see-through, so a piece hidden behind a neighbour would take the pane
+	 * with it. A face that stands on its own is written as a plane without thickness, the way
+	 * vanilla's own bars models write the faces of their rods.
 	 *
 	 * <p>The two kinds of edge face show that border differently. An upright one is two wide and
 	 * seven tall, which is the shape the border is drawn in, so the client crops the sprite for it
@@ -1528,6 +1534,11 @@ public class MBModelProvider implements DataProvider {
 				}
 
 				json.addProperty("texture", face.texture());
+
+				if (isOnBoundary(box.box(), face.direction())) {
+					json.addProperty("cullface", face.direction());
+				}
+
 				faces.add(face.direction(), json);
 			}
 

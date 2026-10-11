@@ -4,6 +4,7 @@
     {
       "faces": {
         "north": {
+          "cullface": "north",
           "texture": "#edge",
           "uv": [
             7,

@@ -4,6 +4,7 @@
     {
       "faces": {
         "down": {
+          "cullface": "down",
           "texture": "#edge"
         },
         "east": {
@@ -16,6 +17,7 @@
           ]
         },
         "south": {
+          "cullface": "south",
           "texture": "#edge"
         },
         "west": {
