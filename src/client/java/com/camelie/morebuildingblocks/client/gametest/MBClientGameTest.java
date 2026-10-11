@@ -45,6 +45,8 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.ColorCollection;
 import net.minecraft.world.level.block.CrossCollisionBlock;
 import net.minecraft.world.level.block.IronBarsBlock;
+import net.minecraft.world.level.block.Mirror;
+import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.SlabBlock;
 import net.minecraft.world.level.block.StairBlock;
 import net.minecraft.world.level.block.WeatheringCopper;
@@ -298,6 +300,7 @@ public class MBClientGameTest implements FabricClientGameTest {
 			// screenshots above are the evidence for the checks a log cannot make.
 			verifyShapes(server);
 			verifyPaneProperties(server);
+			verifyPaneRotation(server);
 			verifyPaneShapes(server);
 			verifyPaneConnection(server);
 			verifyPaneBars(server);
@@ -839,6 +842,88 @@ public class MBClientGameTest implements FabricClientGameTest {
 							+ name(level.getBlockState(bar).getBlock()) + " instead of " + name(waxed));
 			requirePieces(level.getBlockState(bar),
 					"a copper bar a honeycomb was used on (" + waxedOn + ")", corners);
+		});
+	}
+
+	/**
+	 * Checks that turning a pane turns the eight flags this mod adds along with the four vanilla ones.
+	 *
+	 * <p>Vanilla's own {@code rotate} and {@code mirror} move its four connection booleans - here the
+	 * lower halves of the arms - and nothing else, so without this the upper halves and the corners
+	 * would stay on the faces they were turned away from, and a pane loaded from a rotated structure
+	 * would describe pieces its neighbours do not call for. Every scene turns one state that carries
+	 * one of each kind of piece and checks where the three of them land; the last one turns a fence,
+	 * which is not a pane but shares the block class that does the turning.
+	 */
+	private static void verifyPaneRotation(TestServerContext server) {
+		server.runOnServer(minecraftServer -> {
+			BlockState piece = Blocks.GLASS_PANE.defaultBlockState()
+					.setValue(lowerHalf(Direction.WEST), true)
+					.setValue(upperHalf(Direction.NORTH), true)
+					.setValue(MBPaneProperties.CORNER_NORTH_EAST, true);
+
+			requirePieces(piece, "a pane before it is turned",
+					pieces(lowerHalf(Direction.WEST), upperHalf(Direction.NORTH),
+							MBPaneProperties.CORNER_NORTH_EAST));
+
+			// A quarter turn clockwise: north to east, east to south, west to north.
+			requirePieces(piece.rotate(Rotation.CLOCKWISE_90), "a pane turned a quarter turn clockwise",
+					pieces(lowerHalf(Direction.NORTH), upperHalf(Direction.EAST),
+							MBPaneProperties.CORNER_SOUTH_EAST));
+
+			// The other way round: north to west, west to south, east to north.
+			requirePieces(piece.rotate(Rotation.COUNTERCLOCKWISE_90), "a pane turned the other quarter turn",
+					pieces(lowerHalf(Direction.SOUTH), upperHalf(Direction.WEST),
+							MBPaneProperties.CORNER_NORTH_WEST));
+
+			// Half a turn swaps every arm with the one opposite it.
+			requirePieces(piece.rotate(Rotation.CLOCKWISE_180), "a pane turned half a turn",
+					pieces(lowerHalf(Direction.EAST), upperHalf(Direction.SOUTH),
+							MBPaneProperties.CORNER_SOUTH_WEST));
+
+			// A left-right mirror swaps north with south and leaves east and west alone;
+			// a front-back one does the opposite.
+			requirePieces(piece.mirror(Mirror.LEFT_RIGHT), "a pane mirrored left to right",
+					pieces(lowerHalf(Direction.WEST), upperHalf(Direction.SOUTH),
+							MBPaneProperties.CORNER_SOUTH_EAST));
+			requirePieces(piece.mirror(Mirror.FRONT_BACK), "a pane mirrored front to back",
+					pieces(lowerHalf(Direction.EAST), upperHalf(Direction.NORTH),
+							MBPaneProperties.CORNER_NORTH_WEST));
+
+			// Turning or mirroring and going back has to leave the state that was there before.
+			BlockState turnedBack = piece.rotate(Rotation.CLOCKWISE_90).rotate(Rotation.COUNTERCLOCKWISE_90);
+			require(turnedBack.equals(piece), "a pane turned a quarter turn and back is " + turnedBack
+					+ ", expected " + piece);
+
+			BlockState mirroredBack = piece.mirror(Mirror.LEFT_RIGHT).mirror(Mirror.LEFT_RIGHT);
+			require(mirroredBack.equals(piece), "a pane mirrored twice is " + mirroredBack
+					+ ", expected " + piece);
+
+			// Neither kind of identity touches anything, and a pane with every piece on stays full:
+			// a turn can only move pieces, never turn one on or off.
+			require(piece.rotate(Rotation.NONE).equals(piece), "a pane turned by nothing is "
+					+ piece.rotate(Rotation.NONE) + ", expected " + piece);
+			require(piece.mirror(Mirror.NONE).equals(piece), "a pane mirrored by nothing is "
+					+ piece.mirror(Mirror.NONE) + ", expected " + piece);
+
+			BlockState full = Blocks.GLASS_PANE.defaultBlockState();
+
+			for (Property<Boolean> flag : PANE_PIECES) {
+				full = full.setValue(flag, true);
+			}
+
+			requirePieces(full.rotate(Rotation.CLOCKWISE_90), "a pane with every piece on, turned",
+					PANE_PIECES);
+
+			// A fence is not a pane, so vanilla's own answer for it has to come through untouched.
+			BlockState fence = Blocks.OAK_FENCE.defaultBlockState().setValue(CrossCollisionBlock.NORTH, true);
+			BlockState turnedFence = fence.rotate(Rotation.CLOCKWISE_90);
+
+			require(turnedFence.getValue(CrossCollisionBlock.EAST)
+					&& !turnedFence.getValue(CrossCollisionBlock.NORTH),
+					"a fence turned a quarter turn clockwise has east="
+							+ turnedFence.getValue(CrossCollisionBlock.EAST) + " north="
+							+ turnedFence.getValue(CrossCollisionBlock.NORTH) + ": " + turnedFence);
 		});
 	}
 
