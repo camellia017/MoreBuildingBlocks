@@ -2,6 +2,7 @@ package com.camelie.morebuildingblocks.client;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Predicate;
 
 import com.mojang.math.Quadrant;
 
@@ -23,9 +24,10 @@ import net.fabricmc.fabric.api.client.model.loading.v1.ModelLoadingPlugin;
 
 import com.camelie.morebuildingblocks.MoreBuildingBlocks;
 import com.camelie.morebuildingblocks.block.MBPaneProperties;
+import com.camelie.morebuildingblocks.block.MBPaneShapes;
 
 /**
- * Draws a vanilla pane out of the twelve boxes its switches ask for.
+ * Draws a vanilla pane out of the boxes its twelve switches ask for.
  *
  * <p>Vanilla's own blockstate files cannot describe this mod's panes. They name a
  * post and one arm per connected side, each of them full height, while a pane of this
@@ -37,15 +39,22 @@ import com.camelie.morebuildingblocks.block.MBPaneProperties;
  * is resolved here, the way {@link MBVanillaSlabModelPlugin} supplies the upright
  * states of vanilla slabs.
  *
- * <p>The twelve boxes are handed to vanilla's own {@link MultiPartModel}, one
- * condition per box. It bakes each box once for the block and remembers the set a
- * state selected, so the 4096 states of a pane cost what twelve models cost and not
- * what 4096 of them would.
+ * <p>Some of the boxes answer to more than one switch. A corner is seven pixels of
+ * quadrant, laid out the way vanilla lays out its own pane, and the two pixels that
+ * lead from it to the plate and to the arm belong to both corners on that side, so
+ * each of those edges is shown while either of its pair is on; without it a pane with
+ * two corners side by side would keep a two pixel hole through the joint. The two
+ * pixels where the plate and the arm cross are shown whenever a corner is on at all.
  *
- * <p>Once any box is shown, the pane's own post is not: the twelve boxes are the
- * outline and the collision shape of the pane, and this mod draws the post only while
- * the pane is connected to nothing - which is the state vanilla's own files draw
- * their post in too, so a lone pane looks the same either way.
+ * <p>The boxes are handed to vanilla's own {@link MultiPartModel}, one condition per
+ * box. It bakes each box once for the block and remembers the set a state selected,
+ * so the 4096 states of a pane cost what thirteen models cost and not what 4096 of
+ * them would.
+ *
+ * <p>Once any box is shown, the pane's own post is not: the boxes are the outline and
+ * the collision shape of the pane, and this mod draws the post only while the pane is
+ * connected to nothing - which is the state vanilla's own files draw their post in
+ * too, so a lone pane looks the same either way.
  *
  * <p>Only vanilla's panes are taken over. A pane from another mod carries the same
  * switches - the mixin adds them to every {@code IronBarsBlock} - but nothing ever
@@ -118,6 +127,33 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 			MBPaneProperties.CORNER_NORTH_WEST);
 
 	/**
+	 * The boxes two corners share: the northern and southern two pixels of the plate,
+	 * the eastern and western two pixels of the arm, and the two pixels where the
+	 * plate and the arm cross.
+	 *
+	 * <p>The names are the models {@code MBModelProvider} writes. None of them is
+	 * turned: each already runs along the axis it belongs to.
+	 */
+	private static final List<SharedBox> SHARED_BOXES = List.of(
+			new SharedBox("pane_edge_north",
+					state -> corner(state, MBPaneProperties.CORNER_NORTH_EAST)
+							|| corner(state, MBPaneProperties.CORNER_NORTH_WEST)),
+			new SharedBox("pane_edge_south",
+					state -> corner(state, MBPaneProperties.CORNER_SOUTH_EAST)
+							|| corner(state, MBPaneProperties.CORNER_SOUTH_WEST)),
+			new SharedBox("pane_edge_east",
+					state -> corner(state, MBPaneProperties.CORNER_NORTH_EAST)
+							|| corner(state, MBPaneProperties.CORNER_SOUTH_EAST)),
+			new SharedBox("pane_edge_west",
+					state -> corner(state, MBPaneProperties.CORNER_SOUTH_WEST)
+							|| corner(state, MBPaneProperties.CORNER_NORTH_WEST)),
+			new SharedBox("pane_middle", MBPaneShapes::hasCorner));
+
+	/** One box two corners share, and the states that show it. */
+	private record SharedBox(String template, Predicate<BlockState> shows) {
+	}
+
+	/**
 	 * What a lone glass pane shows: vanilla's post and the four faces it closes it
 	 * with, the five models vanilla's own file names for a pane connected to nothing.
 	 */
@@ -168,8 +204,8 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 	}
 
 	/**
-	 * The twelve boxes of a pane, each conditioned on its switch, plus what the pane
-	 * shows while all twelve are off.
+	 * The boxes of a pane: each of the twelve switches, the boxes two corners share,
+	 * and what the pane shows while all twelve are off.
 	 */
 	private static List<MultiPartModel.Selector<BlockStateModel.Unbaked>> selectors(Identifier paneId) {
 		List<MultiPartModel.Selector<BlockStateModel.Unbaked>> selectors = new ArrayList<>();
@@ -180,8 +216,11 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 		for (int index = 0; index < PIECE_PROPERTIES.size(); index++) {
 			Property<Boolean> property = PIECE_PROPERTIES.get(index);
 			BlockStateModel.Unbaked piece = piece(paneId, index);
-			selectors.add(new MultiPartModel.Selector<>(
-					state -> state.hasProperty(property) && state.getValue(property), piece));
+			selectors.add(new MultiPartModel.Selector<>(state -> corner(state, property), piece));
+		}
+
+		for (SharedBox box : SHARED_BOXES) {
+			selectors.add(new MultiPartModel.Selector<>(box.shows(), sharedPart(paneId, box)));
 		}
 
 		for (StickPart part : bars ? BARS_STICK : GLASS_STICK) {
@@ -208,6 +247,14 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 		return new SingleVariant.Unbaked(variant);
 	}
 
+	/** One shared box of one pane: the copy datagen wrote for that pane. */
+	private static BlockStateModel.Unbaked sharedPart(Identifier paneId, SharedBox box) {
+		Identifier model = Identifier.fromNamespaceAndPath(MoreBuildingBlocks.MOD_ID,
+				"block/" + box.template() + "_" + paneId.getPath());
+
+		return new SingleVariant.Unbaked(new Variant(model));
+	}
+
 	/** One model a pane connected to nothing is drawn from, under vanilla's namespace. */
 	private static BlockStateModel.Unbaked stickPart(String path, StickPart part) {
 		Variant variant = new Variant(
@@ -220,10 +267,15 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 		return new SingleVariant.Unbaked(variant);
 	}
 
+	/** Whether a state shows one of the pane's switches. */
+	private static boolean corner(BlockState state, Property<Boolean> property) {
+		return state.hasProperty(property) && state.getValue(property);
+	}
+
 	/** Whether a state shows none of the twelve boxes. */
 	private static boolean bare(BlockState state) {
 		for (Property<Boolean> property : PIECE_PROPERTIES) {
-			if (state.hasProperty(property) && state.getValue(property)) {
+			if (corner(state, property)) {
 				return false;
 			}
 		}

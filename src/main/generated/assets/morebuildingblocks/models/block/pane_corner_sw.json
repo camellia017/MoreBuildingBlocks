@@ -4,51 +4,25 @@
     {
       "faces": {
         "down": {
-          "texture": "#pane",
-          "uv": [
-            0,
-            0,
-            8,
-            8
-          ]
+          "texture": "#pane"
         },
         "south": {
-          "rotation": 90,
-          "texture": "#edge",
-          "uv": [
-            7,
-            8,
-            9,
-            0
-          ]
+          "texture": "#edge"
         },
         "up": {
-          "texture": "#pane",
-          "uv": [
-            0,
-            8,
-            8,
-            16
-          ]
+          "texture": "#pane"
         },
         "west": {
-          "rotation": 90,
-          "texture": "#edge",
-          "uv": [
-            7,
-            16,
-            9,
-            8
-          ]
+          "texture": "#edge"
         }
       },
       "from": [
         0,
         7,
-        8
+        9
       ],
       "to": [
-        8,
+        7,
         9,
         16
       ]

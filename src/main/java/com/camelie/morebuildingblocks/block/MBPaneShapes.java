@@ -24,6 +24,15 @@ import net.minecraft.world.phys.shapes.VoxelShape;
  * shapes follow: with none of them set the vanilla shape stays untouched, and as soon as one is
  * set the shape is the pieces alone, which is what the models then draw.
  *
+ * <p>A corner is cut the way vanilla's own pane is laid out, seven pixels of corner, two of edge,
+ * seven of corner: the quadrant itself shrinks to seven, and thin boxes fill the two pixels of the
+ * plate and of the arm that lead to it. Those edge boxes are shared - the northern half of the
+ * plate belongs to both the north eastern and the north western corner, the eastern arm to both
+ * the north eastern and the south eastern one - so they are added once for whichever of the pair
+ * is on, and the two pixels where the plate and the arm cross at mid height are filled by one more
+ * box of their own. Without it a cornered pane would keep a two pixel hole in its middle, which is
+ * what the corner used to leave at the plate it reached.
+ *
  * <p>Vanilla asks {@code skipRendering} whether a whole face may be skipped, not whether the
  * pieces on either side of it meet. Two questions have to be answered here: a pane's middle
  * height corners stay visible between stacked panes even though vanilla hides that face outright,
@@ -38,10 +47,26 @@ public final class MBPaneShapes {
 	private static final VoxelShape SOUTH_UPPER = Block.box(7.0, 8.0, 8.0, 9.0, 16.0, 16.0);
 	private static final VoxelShape WEST_LOWER = Block.box(0.0, 0.0, 7.0, 8.0, 8.0, 9.0);
 	private static final VoxelShape WEST_UPPER = Block.box(0.0, 8.0, 7.0, 8.0, 16.0, 9.0);
-	private static final VoxelShape CORNER_NORTH_EAST = Block.box(8.0, 7.0, 0.0, 16.0, 9.0, 8.0);
-	private static final VoxelShape CORNER_SOUTH_EAST = Block.box(8.0, 7.0, 8.0, 16.0, 9.0, 16.0);
-	private static final VoxelShape CORNER_SOUTH_WEST = Block.box(0.0, 7.0, 8.0, 8.0, 9.0, 16.0);
-	private static final VoxelShape CORNER_NORTH_WEST = Block.box(0.0, 7.0, 0.0, 8.0, 9.0, 8.0);
+	/** The seven pixel quadrant of a corner, its outer corner at the block's own corner. */
+	private static final VoxelShape CORNER_NORTH_EAST = Block.box(9.0, 7.0, 0.0, 16.0, 9.0, 7.0);
+	private static final VoxelShape CORNER_SOUTH_EAST = Block.box(9.0, 7.0, 9.0, 16.0, 9.0, 16.0);
+	private static final VoxelShape CORNER_SOUTH_WEST = Block.box(0.0, 7.0, 9.0, 7.0, 9.0, 16.0);
+	private static final VoxelShape CORNER_NORTH_WEST = Block.box(0.0, 7.0, 0.0, 7.0, 9.0, 7.0);
+
+	/**
+	 * The two pixel edges that lead from a corner to the plate and to the arm it joins.
+	 *
+	 * <p>Each is shared by the two corners on its side: the northern and southern one of the plate
+	 * by the two corners north of the middle and south of it, the eastern and western one of the
+	 * arm by the two corners that reach that way.
+	 */
+	private static final VoxelShape EDGE_NORTH = Block.box(7.0, 7.0, 0.0, 9.0, 9.0, 7.0);
+	private static final VoxelShape EDGE_SOUTH = Block.box(7.0, 7.0, 9.0, 9.0, 9.0, 16.0);
+	private static final VoxelShape EDGE_EAST = Block.box(9.0, 7.0, 7.0, 16.0, 9.0, 9.0);
+	private static final VoxelShape EDGE_WEST = Block.box(0.0, 7.0, 7.0, 7.0, 9.0, 9.0);
+
+	/** Where the plate and the arm cross at mid height, two pixels either way. */
+	private static final VoxelShape MIDDLE = Block.box(7.0, 7.0, 7.0, 9.0, 9.0, 9.0);
 
 	/**
 	 * The piece shapes depend on the state alone, so they are cached. An empty shape means the
@@ -198,11 +223,21 @@ public final class MBPaneShapes {
 			}
 		}
 
-		for (Direction[] pair : CORNERS) {
-			if (corner(state, pair[0], pair[1])) {
-				shape = Shapes.or(shape, cornerShape(pair[0], pair[1]));
-			}
-		}
+		boolean northEast = corner(state, Direction.NORTH, Direction.EAST);
+		boolean southEast = corner(state, Direction.SOUTH, Direction.EAST);
+		boolean southWest = corner(state, Direction.SOUTH, Direction.WEST);
+		boolean northWest = corner(state, Direction.NORTH, Direction.WEST);
+
+		shape = Shapes.or(shape,
+				northEast ? CORNER_NORTH_EAST : Shapes.empty(),
+				southEast ? CORNER_SOUTH_EAST : Shapes.empty(),
+				southWest ? CORNER_SOUTH_WEST : Shapes.empty(),
+				northWest ? CORNER_NORTH_WEST : Shapes.empty(),
+				northEast || northWest ? EDGE_NORTH : Shapes.empty(),
+				southEast || southWest ? EDGE_SOUTH : Shapes.empty(),
+				northEast || southEast ? EDGE_EAST : Shapes.empty(),
+				northWest || southWest ? EDGE_WEST : Shapes.empty(),
+				northEast || southEast || southWest || northWest ? MIDDLE : Shapes.empty());
 
 		return shape;
 	}
@@ -225,18 +260,5 @@ public final class MBPaneShapes {
 			case WEST -> WEST_UPPER;
 			default -> throw new IllegalArgumentException("A pane arm points horizontally, not " + direction);
 		};
-	}
-
-	private static VoxelShape cornerShape(final Direction first, final Direction second) {
-		Direction alongX = first.getAxis() == Direction.Axis.X ? first : second;
-		Direction alongZ = alongX == first ? second : first;
-		boolean east = alongX == Direction.EAST;
-		boolean south = alongZ == Direction.SOUTH;
-
-		if (east) {
-			return south ? CORNER_SOUTH_EAST : CORNER_NORTH_EAST;
-		}
-
-		return south ? CORNER_SOUTH_WEST : CORNER_NORTH_WEST;
 	}
 }

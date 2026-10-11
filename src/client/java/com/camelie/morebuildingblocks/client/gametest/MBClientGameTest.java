@@ -395,6 +395,14 @@ public class MBClientGameTest implements FabricClientGameTest {
 					.setValue(CrossCollisionBlock.SOUTH, true)
 					.setValue(MBPaneProperties.SOUTH_UP, true);
 			BlockState corner = plain.setValue(MBPaneProperties.CORNER_NORTH_EAST, true);
+			// Two corners on one side of the plate: the shared edge between them and the middle where
+			// the plate and the arm cross are what close the joint they would otherwise leave open
+			BlockState eastCorners = plain
+					.setValue(MBPaneProperties.CORNER_NORTH_EAST, true)
+					.setValue(MBPaneProperties.CORNER_SOUTH_EAST, true);
+			BlockState westCorners = plain
+					.setValue(MBPaneProperties.CORNER_NORTH_WEST, true)
+					.setValue(MBPaneProperties.CORNER_SOUTH_WEST, true);
 			// The north arm with the corner east of it: it lines up with the pane above and with the
 			// mirrored arm to the north, and its corner must survive the first of those two
 			BlockState armWithCorner = arm.setValue(MBPaneProperties.CORNER_NORTH_EAST, true);
@@ -407,8 +415,16 @@ public class MBClientGameTest implements FabricClientGameTest {
 					"an arm with both halves set is not the vanilla arm on its own");
 			require(sameShape(shapeOf(lower, level), Block.box(7.0, 0.0, 0.0, 9.0, 8.0, 8.0)),
 					"an arm with only its lower half set is not half an arm");
-			require(sameShape(shapeOf(corner, level), Block.box(8.0, 7.0, 0.0, 16.0, 9.0, 8.0)),
+			require(sameShape(shapeOf(corner, level), Shapes.or(
+					Block.box(9.0, 7.0, 0.0, 16.0, 9.0, 7.0),
+					Block.box(7.0, 7.0, 0.0, 9.0, 9.0, 7.0),
+					Block.box(9.0, 7.0, 7.0, 16.0, 9.0, 9.0),
+					Block.box(7.0, 7.0, 7.0, 9.0, 9.0, 9.0))),
 					"a corner piece is not the quadrant it sits in");
+			require(sameShape(shapeOf(eastCorners, level), Block.box(7.0, 7.0, 0.0, 16.0, 9.0, 16.0)),
+					"two corners on the east side do not close the joint between them");
+			require(sameShape(shapeOf(westCorners, level), Block.box(0.0, 7.0, 0.0, 9.0, 9.0, 16.0)),
+					"two corners on the west side do not close the joint between them");
 			require(sameShape(arm.getCollisionShape(level, BlockPos.ZERO), shapeOf(arm, level)),
 					"a pane collides with something other than its outline");
 
