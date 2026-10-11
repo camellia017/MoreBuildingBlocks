@@ -50,16 +50,17 @@ import net.minecraft.world.level.chunk.LevelChunkSection;
  * corner it lit goes with them and draws no arm; a face that never lit one keeps its edge.</li>
  * </ol>
  *
- * <p>What is drawn: every corner connection left after the pruning is one piece, and every horizontal
- * edge connection left draws its arm at full height, both halves, because the pieces cannot show less
- * than the corner the pane really has. A pane the rules leave without a single corner connection - not
- * one left after the pruning - falls back to vanilla's own connections, the four horizontal ones, and
- * shows no corner piece at all: a pane next to a wall, a fence or another shape vanilla would bend
- * around still looks the way vanilla draws it. A pane with even one corner left is drawn from the
- * rules alone and is never asked about vanilla's way: the wall or fence beside it turns no full face
+ * <p>What is drawn: the twelve pieces are the twelve corner connections, so a pane with corners is
+ * drawn from those corners alone. The two halves of an arm are the pieces of the corners below and
+ * above that edge, and an edge that no corner hangs on draws nothing at all - an arm is not a thing
+ * of its own. A pane the rules leave without a single corner connection - not one left after the
+ * pruning - is vanilla's own instead: it falls back to vanilla's four connections and to the full
+ * arms vanilla draws for them, and shows no corner piece anywhere, so a pane next to a wall, a fence
+ * or another shape vanilla would bend around still looks the way vanilla draws it. A pane with even
+ * one corner left is never asked about vanilla's way: the wall or fence beside it turns no full face
  * towards it, so it arms nothing there. Nothing reaches up or down, so the two vertical faces never
- * carry an arm of their own; they
- * only decide which halves of the horizontal arms are on.
+ * carry an arm of their own; they only decide, through their corners, which halves of the horizontal
+ * arms are on.
  *
  * <p>Every rule reads the world and never the pieces a neighbour computed, so a pane's twelve flags
  * are a pure function of its surroundings: the same surroundings always give the same flags, whatever
@@ -254,26 +255,24 @@ public final class MBPaneConnection {
 		}
 
 		// ===== Rule 3: a full face that loses every corner it lit loses its edge as well =====
-		EnumSet<Direction> pruned = EnumSet.noneOf(Direction.class);
+		prune(edges, crossings);
 
-		prune(edges, crossings, pruned);
-
-		// ===== What is drawn: every corner left, and the full arm of every edge that survives =====
-		boolean hasValidCorner = !crossings.isEmpty();
-
+		// ===== What is drawn: the piece of every corner left, and vanilla's arms for a pane the
+		// rules leave without one =====
 		for (Crossing crossing : Crossing.values()) {
 			state = state.setValue(crossing.piece(), crossings.contains(crossing));
 		}
 
-		for (Direction face : ARMS) {
-			// Only a pane with no corner left at all is vanilla's own, connections and all
-			boolean arm = hasValidCorner
-					? edges.get(face) != Edge.NONE && !pruned.contains(face)
-					: connectsTo(pane, level, pos, face);
-
-			if (arm) {
-				state = state.setValue(MBPaneProperties.lower(face), true)
-						.setValue(MBPaneProperties.upper(face), true);
+		// A pane with a corner is drawn from its corners alone: the twelve pieces are the twelve
+		// corners, so an edge that no corner hangs on draws nothing, and the two halves of an arm
+		// are the pieces of the corners below and above it. A pane with no corner left at all is
+		// vanilla's own, and falls back to the full arms vanilla draws for its four connections.
+		if (crossings.isEmpty()) {
+			for (Direction face : ARMS) {
+				if (connectsTo(pane, level, pos, face)) {
+					state = state.setValue(MBPaneProperties.lower(face), true)
+							.setValue(MBPaneProperties.upper(face), true);
+				}
 			}
 		}
 
@@ -316,14 +315,13 @@ public final class MBPaneConnection {
 	 * face. It does not when the pane turns within the plane the face itself lies in - it has
 	 * structure of its own there - and when the far side of the plane the corner lies in holds
 	 * nothing; then that face is a wall the pane leans on, and the corner goes. A face that loses
-	 * every corner it lit goes with it and draws no arm, which is what {@code pruned} collects; a
-	 * face that never lit one is left standing, as is a pane.
+	 * every corner it lit loses those corners and nothing else, and draws nothing for them; a face
+	 * that never lit one is left standing, as is a pane.
 	 *
 	 * <p>One pass over the six faces, and every decision reads the corners as the rule before this
 	 * one left them, so the order the faces are visited in cannot change the answer.
 	 */
-	private static void prune(final Map<Direction, Edge> edges, final EnumSet<Crossing> crossings,
-			final EnumSet<Direction> pruned) {
+	private static void prune(final Map<Direction, Edge> edges, final EnumSet<Crossing> crossings) {
 		EnumSet<Crossing> turning = EnumSet.copyOf(crossings);
 		EnumSet<Crossing> cut = EnumSet.noneOf(Crossing.class);
 
@@ -370,10 +368,6 @@ public final class MBPaneConnection {
 				if (!hanging.isEmpty() && !farSide) {
 					cut.addAll(hanging);
 				}
-			}
-
-			if (cut.containsAll(attached)) {
-				pruned.add(face);
 			}
 		}
 
