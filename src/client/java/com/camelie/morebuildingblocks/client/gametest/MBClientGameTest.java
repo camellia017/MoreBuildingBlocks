@@ -589,6 +589,38 @@ public class MBClientGameTest implements FabricClientGameTest {
 					"a pane flanked by full faces east and west with a pane to its north",
 					pieces(MBPaneProperties.CORNER_NORTH_EAST));
 
+			// The ring of the pruning scenario with the pane below it taken away. The full faces
+			// to the south still light the southern corner above, and the pane still turns in
+			// the plane that corner lies in, but that plane is no longer closed: of its four
+			// edge connections the eastern, the western and the upper one are there and the
+			// lower one is not. The corner is what holds that side up now, so the rule leaves
+			// it, and the pane shows the upper half of its southern arm beside the two upper
+			// corners of the ring.
+			BlockPos openBelow = origin.offset(8, 0, 8);
+			for (int dx = -2; dx <= 2; dx++) {
+				for (int dy = -1; dy <= 1; dy++) {
+					for (int dz = -1; dz <= 2; dz++) {
+						level.setBlockAndUpdate(openBelow.offset(dx, dy, dz), Blocks.AIR.defaultBlockState());
+					}
+				}
+			}
+
+			for (int dx = -1; dx <= 1; dx += 2) {
+				for (int dy = -1; dy <= 1; dy++) {
+					level.setBlockAndUpdate(openBelow.offset(dx, dy, 0),
+							Blocks.GLASS_PANE.defaultBlockState());
+				}
+			}
+
+			level.setBlockAndUpdate(openBelow.above(), Blocks.GLASS_PANE.defaultBlockState());
+			level.setBlockAndUpdate(openBelow.south(), Blocks.STONE.defaultBlockState());
+			level.setBlockAndUpdate(openBelow.south().above(), Blocks.STONE.defaultBlockState());
+			level.setBlockAndUpdate(openBelow.south().below(), Blocks.STONE.defaultBlockState());
+			requirePieces(paneAt(player, level, openBelow),
+					"a pane turning beside a row of full faces with nothing below it",
+					pieces(upperHalf(Direction.EAST), upperHalf(Direction.SOUTH),
+							upperHalf(Direction.WEST)));
+
 			// The fallback is for a pane the rules leave without a corner and for no other
 			// pane, and vanilla's own connection test counts a wall whatever its shape. The
 			// same wall beside the two panes below therefore shows which of the two is being

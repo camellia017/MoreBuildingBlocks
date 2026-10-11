@@ -318,6 +318,11 @@ public final class MBPaneConnection {
 	 * every corner it lit loses those corners and nothing else, and draws nothing for them; a face
 	 * that never lit one is left standing, as is a pane.
 	 *
+	 * <p>The pane also has to be closed in the plane it turns in, which is to say every edge
+	 * connection lying in that plane has to be there: with one of the four missing, the corners the
+	 * full face lit are what holds that side of the pane, and taking them away would leave it
+	 * leaning on a face it does not turn across.
+	 *
 	 * <p>One pass over the six faces, and every decision reads the corners as the rule before this
 	 * one left them, so the order the faces are visited in cannot change the answer.
 	 */
@@ -326,8 +331,10 @@ public final class MBPaneConnection {
 		EnumSet<Crossing> cut = EnumSet.noneOf(Crossing.class);
 
 		for (Direction face : FACES) {
-			// Only a full face can be leaned on, and only while the pane turns in its own plane
-			if (edges.get(face) != Edge.FACE || !plane(turning, face.getAxis())) {
+			// Only a full face can be leaned on, and only while the pane turns in the plane that
+			// face lies in and every edge connection of that plane is there
+			if (edges.get(face) != Edge.FACE || !plane(turning, face.getAxis())
+					|| !closed(edges, face.getAxis())) {
 				continue;
 			}
 
@@ -372,6 +379,22 @@ public final class MBPaneConnection {
 		}
 
 		crossings.removeAll(cut);
+	}
+
+	/**
+	 * Whether every edge connection lying in the plane of that axis is there.
+	 *
+	 * <p>The four connections of such a plane are the ones a pane turning inside it uses; the two
+	 * lying across the plane are the ones the corners of the rule above hang on.
+	 */
+	private static boolean closed(final Map<Direction, Edge> edges, final Direction.Axis axis) {
+		for (Direction direction : FACES) {
+			if (direction.getAxis() != axis && edges.get(direction) == Edge.NONE) {
+				return false;
+			}
+		}
+
+		return true;
 	}
 
 	/** Whether the pane is true in that plane, which is to say some corner lies in it. */
