@@ -46,9 +46,15 @@ import com.camelie.morebuildingblocks.block.MBPaneShapes;
  * two corners side by side would keep a two pixel hole through the joint. The two
  * pixels where the plate and the arm cross are shown whenever a corner is on at all.
  *
- * <p>The boxes are handed to vanilla's own {@link MultiPartModel}, one condition per
- * box. It bakes each box once for the block and remembers the set a state selected,
- * so the 4096 states of a pane cost what thirteen models cost and not what 4096 of
+ * <p>None of those shared boxes is shown while a neighbour covers it, because glass
+ * does not hide what stands behind it: a face drawn inside the arm of its own half,
+ * inside the corner it leads to, or between the two plates of its half is seen through
+ * them as a seam that is not there. So a shared box is one box per half and then one
+ * model per face of it, and each of them answers to the arms as well as to the corners.
+ *
+ * <p>The models are handed to vanilla's own {@link MultiPartModel}, one condition per
+ * model. It bakes each model once for the block and remembers the set a state selected,
+ * so the 4096 states of a pane cost what thirty-eight models cost and not what 4096 of
  * them would.
  *
  * <p>Once any box is shown, the pane's own post is not: the boxes are the outline and
@@ -127,30 +133,103 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 			MBPaneProperties.CORNER_NORTH_WEST);
 
 	/**
-	 * The boxes two corners share: the northern and southern two pixels of the plate,
-	 * the eastern and western two pixels of the arm, and the two pixels where the
-	 * plate and the arm cross.
+	 * The two pixels of plate one side of a corner shares, and the two corners that
+	 * share them.
+	 *
+	 * <p>{@code first} is the corner that reaches along {@code firstFace} and
+	 * {@code second} the one reaching along {@code secondFace}; those are the faces
+	 * the two pixels lead to, and so the names of the models that may close them.
+	 */
+	private record SharedSide(String name, Direction direction, Property<Boolean> first, String firstFace,
+			Property<Boolean> second, String secondFace) {
+	}
+
+	/** The four sides along which a corner shares its two pixels with its neighbour. */
+	private static final List<SharedSide> SHARED_SIDES = List.of(
+			new SharedSide("north", Direction.NORTH, MBPaneProperties.CORNER_NORTH_EAST, "east",
+					MBPaneProperties.CORNER_NORTH_WEST, "west"),
+			new SharedSide("south", Direction.SOUTH, MBPaneProperties.CORNER_SOUTH_EAST, "east",
+					MBPaneProperties.CORNER_SOUTH_WEST, "west"),
+			new SharedSide("east", Direction.EAST, MBPaneProperties.CORNER_NORTH_EAST, "north",
+					MBPaneProperties.CORNER_SOUTH_EAST, "south"),
+			new SharedSide("west", Direction.WEST, MBPaneProperties.CORNER_NORTH_WEST, "north",
+					MBPaneProperties.CORNER_SOUTH_WEST, "south"));
+
+	/**
+	 * The boxes two corners share: the two pixels of plate on each of the four sides,
+	 * the two pixels of arm at the end of each of those, and the two pixels where the
+	 * plate and the arm cross - one box per half and one model per face of it.
 	 *
 	 * <p>The names are the models {@code MBModelProvider} writes. None of them is
 	 * turned: each already runs along the axis it belongs to.
 	 */
-	private static final List<SharedBox> SHARED_BOXES = List.of(
-			new SharedBox("pane_edge_north",
-					state -> corner(state, MBPaneProperties.CORNER_NORTH_EAST)
-							|| corner(state, MBPaneProperties.CORNER_NORTH_WEST)),
-			new SharedBox("pane_edge_south",
-					state -> corner(state, MBPaneProperties.CORNER_SOUTH_EAST)
-							|| corner(state, MBPaneProperties.CORNER_SOUTH_WEST)),
-			new SharedBox("pane_edge_east",
-					state -> corner(state, MBPaneProperties.CORNER_NORTH_EAST)
-							|| corner(state, MBPaneProperties.CORNER_SOUTH_EAST)),
-			new SharedBox("pane_edge_west",
-					state -> corner(state, MBPaneProperties.CORNER_SOUTH_WEST)
-							|| corner(state, MBPaneProperties.CORNER_NORTH_WEST)),
-			new SharedBox("pane_middle", MBPaneShapes::hasCorner));
+	private static final List<SharedBox> SHARED_BOXES = sharedBoxes();
 
 	/** One box two corners share, and the states that show it. */
 	private record SharedBox(String template, Predicate<BlockState> shows) {
+	}
+
+	private static List<SharedBox> sharedBoxes() {
+		List<SharedBox> boxes = new ArrayList<>();
+
+		for (SharedSide side : SHARED_SIDES) {
+			for (boolean upper : new boolean[] { false, true }) {
+				String half = upper ? "upper" : "lower";
+				String edge = "pane_edge_" + side.name() + "_" + half;
+				Predicate<BlockState> arm = arm(side.direction(), upper);
+
+				// The two pixels of plate that lead to both corners of this side. The
+				// arm of this half covers them, so they wait for it to be away.
+				boxes.add(new SharedBox(edge, state -> (shows(state, side.first()) || shows(state, side.second()))
+						&& !arm.test(state)));
+
+				// The wide face that leads to one of the two corners. A corner that is
+				// on closes the seam with its own volume, so the face is shown only
+				// while that corner is away and the other one asks for it.
+				boxes.add(new SharedBox(edge + "_" + side.firstFace(),
+						state -> shows(state, side.second()) && !shows(state, side.first()) && !arm.test(state)));
+				boxes.add(new SharedBox(edge + "_" + side.secondFace(),
+						state -> shows(state, side.first()) && !shows(state, side.second()) && !arm.test(state)));
+			}
+		}
+
+		for (boolean upper : new boolean[] { false, true }) {
+			String half = upper ? "upper" : "lower";
+			Predicate<BlockState> north = arm(Direction.NORTH, upper);
+			Predicate<BlockState> east = arm(Direction.EAST, upper);
+			Predicate<BlockState> south = arm(Direction.SOUTH, upper);
+			Predicate<BlockState> west = arm(Direction.WEST, upper);
+			Predicate<BlockState> plate = state -> north.test(state) && south.test(state);
+			Predicate<BlockState> bar = state -> east.test(state) && west.test(state);
+
+			// The floor or the ceiling of the crossing, shown while the arms of this
+			// half leave a gap there at all.
+			boxes.add(new SharedBox("pane_middle_" + half + (upper ? "_up" : "_down"),
+					state -> MBPaneShapes.hasCorner(state) && !(plate.test(state) || bar.test(state))));
+
+			// Its four sides, each the seam either to the arm of that side or to the
+			// two arms across it.
+			boxes.add(middleBox(half, "north", state -> !(north.test(state) || bar.test(state))));
+			boxes.add(middleBox(half, "south", state -> !(south.test(state) || bar.test(state))));
+			boxes.add(middleBox(half, "west", state -> !(west.test(state) || plate.test(state))));
+			boxes.add(middleBox(half, "east", state -> !(east.test(state) || plate.test(state))));
+		}
+
+		return boxes;
+	}
+
+	/** One side of the two pixels where the plate and the arm cross. */
+	private static SharedBox middleBox(String half, String face, Predicate<BlockState> seam) {
+		return new SharedBox("pane_middle_" + half + "_" + face,
+				state -> MBPaneShapes.hasCorner(state) && seam.test(state));
+	}
+
+	/** Whether a state shows the lower or the upper arm of one side. */
+	private static Predicate<BlockState> arm(Direction direction, boolean upper) {
+		Property<Boolean> property = upper ? MBPaneProperties.upper(direction)
+				: MBPaneProperties.lower(direction);
+
+		return state -> shows(state, property);
 	}
 
 	/**
@@ -216,7 +295,7 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 		for (int index = 0; index < PIECE_PROPERTIES.size(); index++) {
 			Property<Boolean> property = PIECE_PROPERTIES.get(index);
 			BlockStateModel.Unbaked piece = piece(paneId, index);
-			selectors.add(new MultiPartModel.Selector<>(state -> corner(state, property), piece));
+			selectors.add(new MultiPartModel.Selector<>(state -> shows(state, property), piece));
 		}
 
 		for (SharedBox box : SHARED_BOXES) {
@@ -268,14 +347,14 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 	}
 
 	/** Whether a state shows one of the pane's switches. */
-	private static boolean corner(BlockState state, Property<Boolean> property) {
+	private static boolean shows(BlockState state, Property<Boolean> property) {
 		return state.hasProperty(property) && state.getValue(property);
 	}
 
 	/** Whether a state shows none of the twelve boxes. */
 	private static boolean bare(BlockState state) {
 		for (Property<Boolean> property : PIECE_PROPERTIES) {
-			if (corner(state, property)) {
+			if (shows(state, property)) {
 				return false;
 			}
 		}

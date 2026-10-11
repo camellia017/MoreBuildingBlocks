@@ -1209,7 +1209,7 @@ public class MBModelProvider implements DataProvider {
 	// -------------------------------------------------------------------- panes
 
 	/**
-	 * The thirteen boxes a pane is drawn from, in the order of the twelve switches that show them.
+	 * The boxes a pane is drawn from, in the order of the twelve switches that show them.
 	 *
 	 * <p>A side piece is one arm of the pane. The northern and southern arm of each half are boxes
 	 * here; the eastern and western arms are those same boxes turned a quarter, which the resolver
@@ -1225,11 +1225,20 @@ public class MBModelProvider implements DataProvider {
 	 * the arm cross, the last two pixels are a box of their own, shown whenever a corner is on at
 	 * all; without it a cornered pane would keep a hole in its middle.
 	 *
+	 * <p>Those shared boxes are split along y=8 and then taken apart face by face, because glass
+	 * does not hide what stands behind it: a face drawn inside the arm of its own half, inside the
+	 * corner it leads to, or between the two plates of its half is seen through them as a seam that
+	 * is not there, and two faces that meet on the same plane darken it. So the two pixels of a
+	 * plate's half are one box and its two wide faces are planes of their own, and the middle is one
+	 * plane for its floor or its ceiling and four for its sides. {@code MBPaneModelPlugin} holds the
+	 * conditions; each of them needs a model of its own, because a model is chosen as a whole and
+	 * never a face of it.
+	 *
 	 * <p>Only the faces a piece shows are listed. Its wide faces carry {@code #pane} and its thin
 	 * edges {@code #edge}, and none of them carries a {@code cullface}: the middle of a pane is
-	 * see-through, so a piece hidden behind a neighbour would take the pane with it. The edge boxes
-	 * carry both kinds, the faces along the plate's own thickness reading {@code #pane} and the
-	 * faces that cut it across reading {@code #edge}.
+	 * see-through, so a piece hidden behind a neighbour would take the pane with it. A face that
+	 * stands on its own is written as a plane without thickness, the way vanilla's own bars models
+	 * write the faces of their rods.
 	 *
 	 * <p>The sprites the slots name below are placeholders, the ones a template shows on its own;
 	 * every copy of it - {@link #generatePanes()} writes one per vanilla pane - replaces both.
@@ -1283,42 +1292,90 @@ public class MBModelProvider implements DataProvider {
 							PaneFace.full("down", "#pane"),
 							PaneFace.full("north", "#edge"),
 							PaneFace.full("west", "#edge")))),
-			new PaneTemplate("pane_edge_north", List.of(
-					paneBox(7, 7, 0, 9, 9, 7,
-							PaneFace.full("up", "#pane"),
-							PaneFace.full("down", "#pane"),
+			new PaneTemplate("pane_edge_north_lower", List.of(
+					paneBox(7, 7, 0, 9, 8, 7,
 							PaneFace.full("north", "#edge"),
-							PaneFace.cut("west", "#pane", 16, 7, 9, 9),
-							PaneFace.cut("east", "#pane", 9, 7, 16, 9)))),
-			new PaneTemplate("pane_edge_south", List.of(
-					paneBox(7, 7, 9, 9, 9, 16,
-							PaneFace.full("up", "#pane"),
-							PaneFace.full("down", "#pane"),
+							PaneFace.full("down", "#pane")))),
+			new PaneTemplate("pane_edge_north_upper", List.of(
+					paneBox(7, 8, 0, 9, 9, 7,
+							PaneFace.full("north", "#edge"),
+							PaneFace.full("up", "#pane")))),
+			new PaneTemplate("pane_edge_north_lower_west", List.of(
+					paneBox(7, 7, 0, 7, 8, 7, PaneFace.cut("west", "#pane", 16, 8, 9, 9)))),
+			new PaneTemplate("pane_edge_north_lower_east", List.of(
+					paneBox(9, 7, 0, 9, 8, 7, PaneFace.cut("east", "#pane", 9, 8, 16, 9)))),
+			new PaneTemplate("pane_edge_north_upper_west", List.of(
+					paneBox(7, 8, 0, 7, 9, 7, PaneFace.cut("west", "#pane", 16, 7, 9, 8)))),
+			new PaneTemplate("pane_edge_north_upper_east", List.of(
+					paneBox(9, 8, 0, 9, 9, 7, PaneFace.cut("east", "#pane", 9, 7, 16, 8)))),
+			new PaneTemplate("pane_edge_south_lower", List.of(
+					paneBox(7, 7, 9, 9, 8, 16,
 							PaneFace.full("south", "#edge"),
-							PaneFace.cut("west", "#pane", 7, 7, 0, 9),
-							PaneFace.cut("east", "#pane", 0, 7, 7, 9)))),
-			new PaneTemplate("pane_edge_east", List.of(
-					paneBox(9, 7, 7, 16, 9, 9,
-							PaneFace.full("up", "#pane"),
-							PaneFace.full("down", "#pane"),
+							PaneFace.full("down", "#pane")))),
+			new PaneTemplate("pane_edge_south_upper", List.of(
+					paneBox(7, 8, 9, 9, 9, 16,
+							PaneFace.full("south", "#edge"),
+							PaneFace.full("up", "#pane")))),
+			new PaneTemplate("pane_edge_south_lower_west", List.of(
+					paneBox(7, 7, 9, 7, 8, 16, PaneFace.cut("west", "#pane", 7, 8, 0, 9)))),
+			new PaneTemplate("pane_edge_south_lower_east", List.of(
+					paneBox(9, 7, 9, 9, 8, 16, PaneFace.cut("east", "#pane", 0, 8, 7, 9)))),
+			new PaneTemplate("pane_edge_south_upper_west", List.of(
+					paneBox(7, 8, 9, 7, 9, 16, PaneFace.cut("west", "#pane", 7, 7, 0, 8)))),
+			new PaneTemplate("pane_edge_south_upper_east", List.of(
+					paneBox(9, 8, 9, 9, 9, 16, PaneFace.cut("east", "#pane", 0, 7, 7, 8)))),
+			new PaneTemplate("pane_edge_east_lower", List.of(
+					paneBox(9, 7, 7, 16, 8, 9,
 							PaneFace.full("east", "#edge"),
-							PaneFace.cut("north", "#pane", 9, 7, 16, 9),
-							PaneFace.cut("south", "#pane", 9, 7, 16, 9)))),
-			new PaneTemplate("pane_edge_west", List.of(
-					paneBox(0, 7, 7, 7, 9, 9,
-							PaneFace.full("up", "#pane"),
-							PaneFace.full("down", "#pane"),
+							PaneFace.full("down", "#pane")))),
+			new PaneTemplate("pane_edge_east_upper", List.of(
+					paneBox(9, 8, 7, 16, 9, 9,
+							PaneFace.full("east", "#edge"),
+							PaneFace.full("up", "#pane")))),
+			new PaneTemplate("pane_edge_east_lower_north", List.of(
+					paneBox(9, 7, 7, 16, 8, 7, PaneFace.cut("north", "#pane", 9, 8, 16, 9)))),
+			new PaneTemplate("pane_edge_east_lower_south", List.of(
+					paneBox(9, 7, 9, 16, 8, 9, PaneFace.cut("south", "#pane", 9, 8, 16, 9)))),
+			new PaneTemplate("pane_edge_east_upper_north", List.of(
+					paneBox(9, 8, 7, 16, 9, 7, PaneFace.cut("north", "#pane", 9, 7, 16, 8)))),
+			new PaneTemplate("pane_edge_east_upper_south", List.of(
+					paneBox(9, 8, 9, 16, 9, 9, PaneFace.cut("south", "#pane", 9, 7, 16, 8)))),
+			new PaneTemplate("pane_edge_west_lower", List.of(
+					paneBox(0, 7, 7, 7, 8, 9,
 							PaneFace.full("west", "#edge"),
-							PaneFace.cut("north", "#pane", 0, 7, 7, 9),
-							PaneFace.cut("south", "#pane", 0, 7, 7, 9)))),
-			new PaneTemplate("pane_middle", List.of(
-					paneBox(7, 7, 7, 9, 9, 9,
-							PaneFace.full("up", "#pane"),
-							PaneFace.full("down", "#pane"),
-							PaneFace.full("north", "#edge"),
-							PaneFace.full("south", "#edge"),
-							PaneFace.cut("west", "#pane", 9, 7, 7, 9),
-							PaneFace.cut("east", "#pane", 7, 7, 9, 9)))));
+							PaneFace.full("down", "#pane")))),
+			new PaneTemplate("pane_edge_west_upper", List.of(
+					paneBox(0, 8, 7, 7, 9, 9,
+							PaneFace.full("west", "#edge"),
+							PaneFace.full("up", "#pane")))),
+			new PaneTemplate("pane_edge_west_lower_north", List.of(
+					paneBox(0, 7, 7, 7, 8, 7, PaneFace.cut("north", "#pane", 0, 8, 7, 9)))),
+			new PaneTemplate("pane_edge_west_lower_south", List.of(
+					paneBox(0, 7, 9, 7, 8, 9, PaneFace.cut("south", "#pane", 0, 8, 7, 9)))),
+			new PaneTemplate("pane_edge_west_upper_north", List.of(
+					paneBox(0, 8, 7, 7, 9, 7, PaneFace.cut("north", "#pane", 0, 7, 7, 8)))),
+			new PaneTemplate("pane_edge_west_upper_south", List.of(
+					paneBox(0, 8, 9, 7, 9, 9, PaneFace.cut("south", "#pane", 0, 7, 7, 8)))),
+			new PaneTemplate("pane_middle_lower_down", List.of(
+					paneBox(7, 7, 7, 9, 7, 9, PaneFace.full("down", "#pane")))),
+			new PaneTemplate("pane_middle_upper_up", List.of(
+					paneBox(7, 9, 7, 9, 9, 9, PaneFace.full("up", "#pane")))),
+			new PaneTemplate("pane_middle_lower_north", List.of(
+					paneBox(7, 7, 7, 9, 8, 7, PaneFace.cut("north", "#pane", 7, 8, 9, 9)))),
+			new PaneTemplate("pane_middle_lower_south", List.of(
+					paneBox(7, 7, 9, 9, 8, 9, PaneFace.cut("south", "#pane", 7, 8, 9, 9)))),
+			new PaneTemplate("pane_middle_lower_west", List.of(
+					paneBox(7, 7, 7, 7, 8, 9, PaneFace.cut("west", "#pane", 9, 8, 7, 9)))),
+			new PaneTemplate("pane_middle_lower_east", List.of(
+					paneBox(9, 7, 7, 9, 8, 9, PaneFace.cut("east", "#pane", 7, 8, 9, 9)))),
+			new PaneTemplate("pane_middle_upper_north", List.of(
+					paneBox(7, 8, 7, 9, 9, 7, PaneFace.cut("north", "#pane", 7, 7, 9, 8)))),
+			new PaneTemplate("pane_middle_upper_south", List.of(
+					paneBox(7, 8, 9, 9, 9, 9, PaneFace.cut("south", "#pane", 7, 7, 9, 8)))),
+			new PaneTemplate("pane_middle_upper_west", List.of(
+					paneBox(7, 8, 7, 7, 9, 9, PaneFace.cut("west", "#pane", 9, 7, 7, 8)))),
+			new PaneTemplate("pane_middle_upper_east", List.of(
+					paneBox(9, 8, 7, 9, 9, 9, PaneFace.cut("east", "#pane", 7, 7, 9, 8)))));
 
 	/** One box of a template, in whole pixels. */
 	private static PaneBox paneBox(int x1, int y1, int z1, int x2, int y2, int z2, PaneFace... faces) {
@@ -1350,7 +1407,7 @@ public class MBModelProvider implements DataProvider {
 	}
 
 	/**
-	 * The thirteen template models and one textured copy of each for every vanilla pane.
+	 * The thirty-eight template models and one textured copy of each for every vanilla pane.
 	 *
 	 * <p>26 vanilla blocks draw panes: the seventeen glass panes - plain and dyed - the iron bars
 	 * and the eight copper bars. A glass pane takes its glass from its own name with {@code _pane}

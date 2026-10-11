@@ -1,0 +1,13 @@
+{
+  "parent": "morebuildingblocks:block/pane_middle_upper_east",
+  "textures": {
+    "edge": {
+      "force_translucent": true,
+      "sprite": "minecraft:block/glass_pane_top"
+    },
+    "pane": {
+      "force_translucent": true,
+      "sprite": "minecraft:block/glass"
+    }
+  }
+}

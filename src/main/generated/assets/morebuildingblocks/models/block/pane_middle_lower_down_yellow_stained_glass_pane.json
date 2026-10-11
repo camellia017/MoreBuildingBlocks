@@ -1,0 +1,13 @@
+{
+  "parent": "morebuildingblocks:block/pane_middle_lower_down",
+  "textures": {
+    "edge": {
+      "force_translucent": true,
+      "sprite": "minecraft:block/yellow_stained_glass_pane_top"
+    },
+    "pane": {
+      "force_translucent": true,
+      "sprite": "minecraft:block/yellow_stained_glass"
+    }
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "parent": "morebuildingblocks:block/pane_edge_south_lower",
+  "textures": {
+    "edge": "minecraft:block/iron_bars",
+    "pane": "minecraft:block/iron_bars"
+  }
+}
