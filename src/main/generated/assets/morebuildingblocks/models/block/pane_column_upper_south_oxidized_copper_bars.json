@@ -1,0 +1,7 @@
+{
+  "parent": "morebuildingblocks:block/pane_column_upper_south",
+  "textures": {
+    "edge": "minecraft:block/oxidized_copper_bars",
+    "pane": "minecraft:block/oxidized_copper_bars"
+  }
+}

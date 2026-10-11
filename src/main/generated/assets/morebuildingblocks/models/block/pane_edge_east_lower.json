@@ -3,9 +3,6 @@
   "elements": [
     {
       "faces": {
-        "down": {
-          "texture": "#pane"
-        },
         "east": {
           "texture": "#edge"
         }

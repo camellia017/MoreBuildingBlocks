@@ -24,38 +24,38 @@ import net.fabricmc.fabric.api.client.model.loading.v1.ModelLoadingPlugin;
 
 import com.camelie.morebuildingblocks.MoreBuildingBlocks;
 import com.camelie.morebuildingblocks.block.MBPaneProperties;
-import com.camelie.morebuildingblocks.block.MBPaneShapes;
 
 /**
  * Draws a vanilla pane out of the boxes its twelve switches ask for.
  *
  * <p>Vanilla's own blockstate files cannot describe this mod's panes. They name a
  * post and one arm per connected side, each of them full height, while a pane of this
- * mod splits every arm into a lower and an upper half, adds a wedge for each diagonal
- * connection, and carries the twelve switches that say which of them to show in its
- * own blockstate. Restating vanilla's 26 pane files would also mean restating every
- * model they name, so the boxes are written once by datagen - one template each, plus
- * one copy per vanilla pane for that pane's sprites - and which of them a state shows
- * is resolved here, the way {@link MBVanillaSlabModelPlugin} supplies the upright
- * states of vanilla slabs.
+ * mod lays out twelve corners - a lower and an upper one for each of the four sides,
+ * and one for each of the four diagonals - and carries the twelve switches that say
+ * which of them to show in its own blockstate. Restating vanilla's 26 pane files would
+ * also mean restating every model they name, so the boxes are written once by datagen -
+ * one template each, plus one copy per vanilla pane for that pane's sprites - and which
+ * of them a state shows is resolved here, the way {@link MBVanillaSlabModelPlugin}
+ * supplies the upright states of vanilla slabs.
  *
- * <p>Some of the boxes answer to more than one switch. A corner is seven pixels of
- * quadrant, laid out the way vanilla lays out its own pane, and the two pixels that
- * lead from it to the plate and to the arm belong to both corners on that side, so
- * each of those edges is shown while either of its pair is on; without it a pane with
- * two corners side by side would keep a two pixel hole through the joint. The two
- * pixels where the plate and the arm cross are shown whenever a corner is on at all.
+ * <p>Every one of those corners is seven pixels of its quadrant or of its half, two
+ * pixels thick, laid out the way vanilla lays out its own pane: seven of corner, two of
+ * edge, seven of corner. The two pixels between one corner and the next belong to both
+ * of them, so each of those boxes is shown for every corner that asks for it - the band
+ * of a side and the two wide faces that lead out of it, the column of a half, and the
+ * middle the twelve corners of the pane meet in - and a pane with two corners side by
+ * side keeps no hole through the joint.
  *
  * <p>None of those shared boxes is shown while a neighbour covers it, because glass
- * does not hide what stands behind it: a face drawn inside the arm of its own half,
- * inside the corner it leads to, or between the two plates of its half is seen through
+ * does not hide what stands behind it: a face drawn inside the corner of its own half,
+ * inside the corner beside it, or between the two corners of its half is seen through
  * them as a seam that is not there. So a shared box is one box per half and then one
- * model per face of it, and each of them answers to the arms as well as to the corners.
+ * model per face of it, and each of them answers to every corner of its side or half.
  *
  * <p>The models are handed to vanilla's own {@link MultiPartModel}, one condition per
  * model. It bakes each model once for the block and remembers the set a state selected,
- * so the 4096 states of a pane cost what thirty-eight models cost and not what 4096 of
- * them would.
+ * so the 4096 states of a pane cost what sixty models cost and not what 4096 of them
+ * would.
  *
  * <p>Once any box is shown, the pane's own post is not: the boxes are the outline and
  * the collision shape of the pane, and this mod draws the post only while the pane is
@@ -74,19 +74,21 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 	 * The box of each of the twelve switches, in the order of
 	 * {@link #PIECE_PROPERTIES}.
 	 *
-	 * <p>The names are the models {@code MBModelProvider} writes. An arm exists as a
-	 * northern and a southern box only, so the eastern and western arms name the
-	 * northern and southern box again and are turned a quarter in {@link #piece}.
+	 * <p>Every switch is a corner of the pane, and the eight upright ones are seven
+	 * pixels of a half by seven of a quadrant. The names are the models
+	 * {@code MBModelProvider} writes. A corner exists as a northern and a southern box
+	 * only, so the eastern and western corners name the northern and southern box again
+	 * and are turned a quarter in {@link #piece}.
 	 */
 	private static final List<String> PIECE_TEMPLATES = List.of(
-			"pane_side_lower",
-			"pane_side_upper",
-			"pane_side_lower",
-			"pane_side_upper",
-			"pane_side_lower_alt",
-			"pane_side_upper_alt",
-			"pane_side_lower_alt",
-			"pane_side_upper_alt",
+			"pane_side_corner_lower",
+			"pane_side_corner_upper",
+			"pane_side_corner_lower",
+			"pane_side_corner_upper",
+			"pane_side_corner_lower_alt",
+			"pane_side_corner_upper_alt",
+			"pane_side_corner_lower_alt",
+			"pane_side_corner_upper_alt",
 			"pane_corner",
 			"pane_corner_se",
 			"pane_corner_sw",
@@ -94,7 +96,7 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 
 	/**
 	 * Whether the box of a piece is one of the northern or southern pair, which has to
-	 * be turned a quarter to show an eastern or western arm.
+	 * be turned a quarter to show an eastern or western corner.
 	 */
 	private static final List<Boolean> PIECE_TURNED = List.of(
 			false,
@@ -111,12 +113,12 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 			false);
 
 	/**
-	 * The switch each box answers to: the lower and upper arm of north, east, south
-	 * and west in turn, then the four corners.
+	 * The switch each box answers to: the lower and upper corner of north, east, south
+	 * and west in turn, then the four corners of the diagonals.
 	 *
 	 * <p>The lower four are vanilla's own connection properties - the pane mixin adds
-	 * the other eight and leaves those where they were - so an arm is drawn exactly
-	 * when the pane is connected that way.
+	 * the other eight and leaves those where they were - so the lower corner of a side
+	 * is drawn exactly when the pane is connected that way.
 	 */
 	private static final List<Property<Boolean>> PIECE_PROPERTIES = List.of(
 			MBPaneProperties.lower(Direction.NORTH),
@@ -133,111 +135,119 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 			MBPaneProperties.CORNER_NORTH_WEST);
 
 	/**
-	 * The two pixels of plate one side of a corner shares, and the two corners that
-	 * share them.
+	 * The two pixels of band one side of a pane owns, and the corners that share them.
 	 *
-	 * <p>{@code first} is the corner that reaches along {@code firstFace} and
+	 * <p>{@code first} is the level corner that reaches along {@code firstFace} and
 	 * {@code second} the one reaching along {@code secondFace}; those are the faces
-	 * the two pixels lead to, and so the names of the models that may close them.
+	 * the two pixels lead to, and so the names of the models that may close them. The
+	 * two upright corners of the side, above and below those pixels, share them too.
 	 */
-	private record SharedSide(String name, Direction direction, Property<Boolean> first, String firstFace,
-			Property<Boolean> second, String secondFace) {
-		/** Whether a state shows either of the two corners that share this side. */
+	private record SharedSide(String name, Direction direction, Property<Boolean> lower, Property<Boolean> upper,
+			Property<Boolean> first, String firstFace, Property<Boolean> second, String secondFace) {
+		/** Whether a state shows the upright corner of this side in one half. */
+		private boolean plated(BlockState state, boolean half) {
+			return shows(state, half ? this.upper : this.lower);
+		}
+
+		/** Whether a state shows any of the four corners that share this side's band. */
 		private boolean cornered(BlockState state) {
-			return shows(state, first) || shows(state, second);
+			return shows(state, first) || shows(state, second) || shows(state, lower) || shows(state, upper);
 		}
 	}
 
 	/** The four sides along which a corner shares its two pixels with its neighbour. */
 	private static final SharedSide NORTH = new SharedSide("north", Direction.NORTH,
+			MBPaneProperties.lower(Direction.NORTH), MBPaneProperties.upper(Direction.NORTH),
 			MBPaneProperties.CORNER_NORTH_EAST, "east", MBPaneProperties.CORNER_NORTH_WEST, "west");
 	private static final SharedSide SOUTH = new SharedSide("south", Direction.SOUTH,
+			MBPaneProperties.lower(Direction.SOUTH), MBPaneProperties.upper(Direction.SOUTH),
 			MBPaneProperties.CORNER_SOUTH_EAST, "east", MBPaneProperties.CORNER_SOUTH_WEST, "west");
 	private static final SharedSide EAST = new SharedSide("east", Direction.EAST,
+			MBPaneProperties.lower(Direction.EAST), MBPaneProperties.upper(Direction.EAST),
 			MBPaneProperties.CORNER_NORTH_EAST, "north", MBPaneProperties.CORNER_SOUTH_EAST, "south");
 	private static final SharedSide WEST = new SharedSide("west", Direction.WEST,
+			MBPaneProperties.lower(Direction.WEST), MBPaneProperties.upper(Direction.WEST),
 			MBPaneProperties.CORNER_NORTH_WEST, "north", MBPaneProperties.CORNER_SOUTH_WEST, "south");
 	private static final List<SharedSide> SHARED_SIDES = List.of(NORTH, SOUTH, EAST, WEST);
 
 	/**
-	 * The boxes two corners share: the two pixels of plate on each of the four sides,
-	 * the two pixels of arm at the end of each of those, and the two pixels where the
-	 * plate and the arm cross - one box per half and one model per face of it.
+	 * The boxes the corners share: the two pixels of band on each of the four sides,
+	 * the two pixels of column at the end of each of those, and the two pixels where
+	 * the band and the column cross - one box per half and one model per face of it.
 	 *
 	 * <p>The names are the models {@code MBModelProvider} writes. None of them is
 	 * turned: each already runs along the axis it belongs to.
 	 */
 	private static final List<SharedBox> SHARED_BOXES = sharedBoxes();
 
-	/** One box two corners share, and the states that show it. */
+	/** One box the corners share, and the states that show it. */
 	private record SharedBox(String template, Predicate<BlockState> shows) {
 	}
 
 	private static List<SharedBox> sharedBoxes() {
 		List<SharedBox> boxes = new ArrayList<>();
+		boolean[] halves = { false, true };
 
 		for (SharedSide side : SHARED_SIDES) {
-			for (boolean upper : new boolean[] { false, true }) {
-				String half = upper ? "upper" : "lower";
-				String edge = "pane_edge_" + side.name() + "_" + half;
-				Predicate<BlockState> arm = arm(side.direction(), upper);
+			for (boolean half : halves) {
+				String edge = "pane_edge_" + side.name() + (half ? "_upper" : "_lower");
 
-				// The two pixels of plate that lead to both corners of this side. The
-				// arm of this half covers them, so they wait for it to be away.
-				boxes.add(new SharedBox(edge, state -> side.cornered(state) && !arm.test(state)));
+				// The two pixels of band that lead to every corner of this side. The
+				// corner of this half covers their end, so that end is a model of its
+				// own and waits for the corner to be away.
+				boxes.add(new SharedBox(edge, side::cornered));
+				boxes.add(new SharedBox(edge + (half ? "_up" : "_down"),
+						state -> side.cornered(state) && !side.plated(state, half)));
 
-				// The wide face that leads to one of the two corners. A corner that is
-				// on closes the seam with its own volume, so the face is shown only
-				// while that corner is away and the other one asks for it.
+				// The wide face that leads to one of the two level corners. A corner
+				// that is on closes the seam with its own plate, so the face is shown
+				// only while that corner is away and the other one asks for it.
 				boxes.add(new SharedBox(edge + "_" + side.firstFace(),
-						state -> shows(state, side.second()) && !shows(state, side.first()) && !arm.test(state)));
+						state -> shows(state, side.second()) && !shows(state, side.first())));
 				boxes.add(new SharedBox(edge + "_" + side.secondFace(),
-						state -> shows(state, side.first()) && !shows(state, side.second()) && !arm.test(state)));
+						state -> shows(state, side.first()) && !shows(state, side.second())));
 			}
 		}
 
-		for (boolean upper : new boolean[] { false, true }) {
-			String half = upper ? "upper" : "lower";
-			Predicate<BlockState> north = arm(Direction.NORTH, upper);
-			Predicate<BlockState> east = arm(Direction.EAST, upper);
-			Predicate<BlockState> south = arm(Direction.SOUTH, upper);
-			Predicate<BlockState> west = arm(Direction.WEST, upper);
-			Predicate<BlockState> plate = state -> north.test(state) && south.test(state);
-			Predicate<BlockState> bar = state -> east.test(state) && west.test(state);
+		for (boolean half : halves) {
+			String column = "pane_column_" + (half ? "upper" : "lower");
+			String middle = "pane_middle_" + (half ? "upper" : "lower");
 
-			// The floor or the ceiling of the crossing, shown while the arms of this
-			// half leave a gap there at all.
-			boxes.add(new SharedBox("pane_middle_" + half + (upper ? "_up" : "_down"),
-					state -> MBPaneShapes.hasCorner(state) && !(plate.test(state) || bar.test(state))));
+			// The two pixels of column of this half. Every upright corner of the half
+			// asks for them, and each of its four sides is hidden by the corner it
+			// leads to. Its end has no corner behind it - the pane ends at the face of
+			// the block - so nothing but an absent column hides that.
+			boxes.add(new SharedBox(column + (half ? "_up" : "_down"), state -> column(state, half)));
 
-			// Its four sides, each the seam to whatever covers it: the arm of that
-			// side, the two pixels the corners of that side share, or - across the
-			// crossing - the two arms of the other plate.
-			boxes.add(middleBox(half, "north", state -> !(north.test(state) || bar.test(state)
-					|| NORTH.cornered(state))));
-			boxes.add(middleBox(half, "south", state -> !(south.test(state) || bar.test(state)
-					|| SOUTH.cornered(state))));
-			boxes.add(middleBox(half, "west", state -> !(west.test(state) || plate.test(state)
-					|| WEST.cornered(state))));
-			boxes.add(middleBox(half, "east", state -> !(east.test(state) || plate.test(state)
-					|| EAST.cornered(state))));
+			for (SharedSide side : SHARED_SIDES) {
+				boxes.add(new SharedBox(column + "_" + side.name(),
+						state -> column(state, half) && !side.plated(state, half)));
+			}
+
+			// The floor or the ceiling of the crossing, shown while the column of this
+			// half leaves a gap there at all, and its four sides, which the band of the
+			// side that covers them turns away with the corners it answers to.
+			boxes.add(new SharedBox(middle + (half ? "_up" : "_down"),
+					state -> !bare(state) && !column(state, half)));
+
+			for (SharedSide side : SHARED_SIDES) {
+				boxes.add(new SharedBox(middle + "_" + side.name(),
+						state -> !bare(state) && !side.cornered(state)));
+			}
 		}
 
 		return boxes;
 	}
 
-	/** One side of the two pixels where the plate and the arm cross. */
-	private static SharedBox middleBox(String half, String face, Predicate<BlockState> seam) {
-		return new SharedBox("pane_middle_" + half + "_" + face,
-				state -> MBPaneShapes.hasCorner(state) && seam.test(state));
-	}
+	/** Whether a state shows the column of one half, which any upright corner asks for. */
+	private static boolean column(BlockState state, boolean half) {
+		for (SharedSide side : SHARED_SIDES) {
+			if (side.plated(state, half)) {
+				return true;
+			}
+		}
 
-	/** Whether a state shows the lower or the upper arm of one side. */
-	private static Predicate<BlockState> arm(Direction direction, boolean upper) {
-		Property<Boolean> property = upper ? MBPaneProperties.upper(direction)
-				: MBPaneProperties.lower(direction);
-
-		return state -> shows(state, property);
+		return false;
 	}
 
 	/**
@@ -291,7 +301,7 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 	}
 
 	/**
-	 * The boxes of a pane: each of the twelve switches, the boxes two corners share,
+	 * The boxes of a pane: each of the twelve switches, the boxes the corners share,
 	 * and what the pane shows while all twelve are off.
 	 */
 	private static List<MultiPartModel.Selector<BlockStateModel.Unbaked>> selectors(Identifier paneId) {

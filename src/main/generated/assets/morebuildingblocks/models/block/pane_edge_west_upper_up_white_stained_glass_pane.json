@@ -1,0 +1,13 @@
+{
+  "parent": "morebuildingblocks:block/pane_edge_west_upper_up",
+  "textures": {
+    "edge": {
+      "force_translucent": true,
+      "sprite": "minecraft:block/white_stained_glass_pane_top"
+    },
+    "pane": {
+      "force_translucent": true,
+      "sprite": "minecraft:block/white_stained_glass"
+    }
+  }
+}

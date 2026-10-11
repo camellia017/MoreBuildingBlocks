@@ -5,9 +5,6 @@
       "faces": {
         "east": {
           "texture": "#edge"
-        },
-        "up": {
-          "texture": "#pane"
         }
       },
       "from": [
