@@ -3,8 +3,11 @@ package com.camelie.morebuildingblocks.block;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
+import java.util.EnumMap;
+import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -19,36 +22,46 @@ import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.chunk.LevelChunkSection;
 
 /**
- * The six rules that decide which of a pane's twelve pieces are on, and the three ways the mod keeps
- * them up to date.
+ * Which of a pane's twelve pieces are on, decided from the six edge connections and the twelve
+ * corner connections it has with the world around it.
  *
- * <p>The twelve pieces are the four vanilla connection booleans, which here mean the lower half of
- * each arm, the mod's four {@code *_up} flags for the upper halves, and the four corner flags, see
- * {@link MBPaneProperties}. A rule turns one or more pieces on or off; the rules in the order they
- * are applied, each one seeing what the previous ones left behind:
+ * <p>The framework first, the pieces after. A pane has six faces, and each face either holds an
+ * edge connection or does not: it holds one when the block next to it is another pane - panes always
+ * connect to each other - or when that block turns a full 1x1 face towards the pane. A half slab's
+ * 1x0.5 side is not a full face, and neither is a step or one of the mod's own eighth blocks, which
+ * is the point of the distinction: a pane leans on full faces only.
+ *
+ * <p>The twelve pieces are the corner connections. Each of the three planes through a pane - the one
+ * spanned by east/west and north/south, the one by east/west and up/down, the one by north/south and
+ * up/down - holds four of them, and each joins two of the pane's faces. A corner connection is there
+ * when both of its faces are satisfied, and a face is satisfied when the block next to it turns a
+ * full face towards the pane, or when that block is a pane which connects towards the corner's
+ * diagonal space itself. Two full faces meet in a corner whether or not that space holds anything; a
+ * pair of panes only meets there when something connectable lies between them.
+ *
+ * <p>Three rules, in order:
  *
  * <ol>
- * <li>Two adjacent directions hold a block, and the space between them does not: the corner is off.
- * This has the last word, so a corner the next two rules lit is put out again.</li>
- * <li>Two adjacent directions hold a block that is not a pane, and so does the space between them:
- * that piece is on.</li>
- * <li>Two adjacent directions are panes, and the diagonal space between them is a pane too: that
- * piece is on.</li>
- * <li>No diagonal pane anywhere, and some horizontal direction holds a block: that direction's arm
- * is at full height, both halves on.</li>
- * <li>Exactly one of the two vertical neighbours holds a block that is not a pane: the arms are
- * copied from that side to the other, upper half from lower half or the other way round - this is a
- * copy, so an arm half can go out again here. Corners stay as they are.</li>
- * <li>Nothing lit anything, and both the space above and the space below are air: all twelve pieces
- * are on, which is what makes a lone pane hanging in the air a full window instead of a post.</li>
+ * <li>Edge connections: panes and full faces, as above.</li>
+ * <li>Corner connections: as above, one per pair of faces.</li>
+ * <li>Pruning: a corner connection that hangs on a full face is dropped when the pane is true in the
+ * one plane that does not contain that face, and the far side of the plane the corner lies in holds
+ * nothing at all - the pane leans on that face instead of turning round it. A face that loses every
+ * corner it lit goes with them and draws no arm; a face that never lit one keeps its edge.</li>
  * </ol>
  *
- * <p>Every rule reads the world - the block at each neighbour position, or whether that block is a
- * pane - and never the pieces a neighbour computed. A pane's twelve flags are therefore a pure
- * function of its surroundings: the same surroundings always give the same flags, whatever order
- * blocks were placed in, and one pass is enough to settle a pane. That is what
- * {@code docs/refit-pane-spec.md} promised, and why the queue in {@link #refreshChunk} is only
- * insurance rather than a fixpoint iteration.
+ * <p>What is drawn: every corner connection left after the pruning is one piece, and every horizontal
+ * edge connection left draws its arm at full height, both halves, because the pieces cannot show less
+ * than the corner the pane really has. A pane that no corner connection hangs on at all falls back to
+ * vanilla's own connections, the four horizontal ones - so a pane next to a wall, a fence or another
+ * shape vanilla would bend around still looks the way vanilla draws it - and shows no corner piece at
+ * all. Nothing reaches up or down, so the two vertical faces never carry an arm of their own; they
+ * only decide which halves of the horizontal arms are on.
+ *
+ * <p>Every rule reads the world and never the pieces a neighbour computed, so a pane's twelve flags
+ * are a pure function of its surroundings: the same surroundings always give the same flags, whatever
+ * order blocks were placed in, and one pass settles a pane. That is why the queue in
+ * {@link #refreshChunk} is only insurance rather than a fixpoint iteration.
  *
  * <p>Nothing outside {@code minecraft}'s own panes is touched: {@link MBPaneShapes#isPane} turns
  * away every other block, and the callers of {@link #update} leave those blocks as they are.
@@ -71,10 +84,108 @@ public final class MBPaneConnection {
 	}
 
 	/**
+	 * The six faces of a pane, in a fixed order so that the pruning pass visits them the same way
+	 * every time.
+	 */
+	private static final Direction[] FACES = {
+		Direction.DOWN, Direction.UP, Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST
+	};
+
+	/** The four faces an arm can point at; a pane has no piece that reaches up or down. */
+	private static final Direction[] ARMS = {
+		Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST
+	};
+
+	/** What one of a pane's six faces finds next to it. */
+	private enum Edge {
+		/** Air, or a shape that does not offer a full 1x1 face, such as a slab's thin side. */
+		NONE,
+		/** Another pane: the two always connect, whatever either of them draws. */
+		PANE,
+		/** A block that turns a full 1x1 face towards the pane. */
+		FACE
+	}
+
+	/**
+	 * One of the twelve corner connections, named by the two faces it joins, and the piece it draws.
+	 * A corner between two horizontal faces is a corner piece; a corner between a horizontal face and
+	 * the vertical one above or below it is the upper or the lower half of that arm.
+	 */
+	private enum Crossing {
+		EAST_UP(Direction.EAST, Direction.UP),
+		EAST_DOWN(Direction.EAST, Direction.DOWN),
+		WEST_UP(Direction.WEST, Direction.UP),
+		WEST_DOWN(Direction.WEST, Direction.DOWN),
+		EAST_SOUTH(Direction.EAST, Direction.SOUTH),
+		EAST_NORTH(Direction.EAST, Direction.NORTH),
+		WEST_SOUTH(Direction.WEST, Direction.SOUTH),
+		WEST_NORTH(Direction.WEST, Direction.NORTH),
+		UP_SOUTH(Direction.UP, Direction.SOUTH),
+		UP_NORTH(Direction.UP, Direction.NORTH),
+		DOWN_SOUTH(Direction.DOWN, Direction.SOUTH),
+		DOWN_NORTH(Direction.DOWN, Direction.NORTH);
+
+		private final Direction first;
+		private final Direction second;
+		private final Direction.Axis plane;
+
+		Crossing(final Direction first, final Direction second) {
+			this.first = first;
+			this.second = second;
+			this.plane = missing(first, second);
+		}
+
+		/** The axis neither face uses, which is what names the plane the two of them span. */
+		private static Direction.Axis missing(final Direction first, final Direction second) {
+			for (Direction.Axis axis : Direction.Axis.values()) {
+				if (axis != first.getAxis() && axis != second.getAxis()) {
+					return axis;
+				}
+			}
+
+			throw new IllegalStateException(first + " and " + second + " do not span a plane");
+		}
+
+		/** The plane this corner lies in, named by the axis it does not span. */
+		Direction.Axis plane() {
+			return this.plane;
+		}
+
+		/** Whether this corner hangs on that face of the pane. */
+		boolean hangs(final Direction face) {
+			return this.first == face || this.second == face;
+		}
+
+		/** The piece this corner draws. */
+		Property<Boolean> piece() {
+			return switch (this) {
+				case EAST_UP -> MBPaneProperties.upper(Direction.EAST);
+				case EAST_DOWN -> MBPaneProperties.lower(Direction.EAST);
+				case WEST_UP -> MBPaneProperties.upper(Direction.WEST);
+				case WEST_DOWN -> MBPaneProperties.lower(Direction.WEST);
+				case EAST_SOUTH -> MBPaneProperties.CORNER_SOUTH_EAST;
+				case EAST_NORTH -> MBPaneProperties.CORNER_NORTH_EAST;
+				case WEST_SOUTH -> MBPaneProperties.CORNER_SOUTH_WEST;
+				case WEST_NORTH -> MBPaneProperties.CORNER_NORTH_WEST;
+				case UP_SOUTH -> MBPaneProperties.upper(Direction.SOUTH);
+				case UP_NORTH -> MBPaneProperties.upper(Direction.NORTH);
+				case DOWN_SOUTH -> MBPaneProperties.lower(Direction.SOUTH);
+				case DOWN_NORTH -> MBPaneProperties.lower(Direction.NORTH);
+			};
+		}
+
+		/** Whether both faces of this corner are satisfied, see {@link #side}. */
+		boolean on(final BlockGetter level, final BlockPos pos, final Map<Direction, Edge> edges) {
+			return side(level, pos, edges, this.first, this.second)
+					&& side(level, pos, edges, this.second, this.first);
+		}
+	}
+
+	/**
 	 * The offsets that can affect a pane: the six orthogonal neighbours plus the twelve diagonal
 	 * spaces between two of them - four in the same horizontal plane, eight above and below an arm.
-	 * Rules 2 to 5 read nothing outside this table, so a change to the rules that reaches further
-	 * has to extend it.
+	 * The corner connections read nothing outside this table, so a rule that reaches further has to
+	 * extend it.
 	 */
 	private static final int[][] NEIGHBOUR_OFFSETS = {
 		{0, 0, -1}, {1, 0, 0}, {0, 0, 1}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0},
@@ -111,7 +222,7 @@ public final class MBPaneConnection {
 	 * The twelve flags this pane should have, given the world around it. Anything that is not one of
 	 * our panes comes back unchanged.
 	 */
-	public static BlockState update(final BlockState state, final BlockGetter level, final BlockPos pos) {
+	public static BlockState update(BlockState state, final BlockGetter level, final BlockPos pos) {
 		if (!MBPaneShapes.isPane(state)
 				|| !state.hasProperty(MBPaneProperties.CORNER_NORTH_EAST)
 				|| !(state.getBlock() instanceof IronBarsBlock pane)) {
@@ -123,179 +234,164 @@ public final class MBPaneConnection {
 			touchedPane = true;
 		}
 
-		// ===== The six directions: is it a block a vanilla pane connects to, and is it a pane =====
-		boolean north = connectsTo(pane, level, pos, Direction.NORTH);
-		boolean east = connectsTo(pane, level, pos, Direction.EAST);
-		boolean south = connectsTo(pane, level, pos, Direction.SOUTH);
-		boolean west = connectsTo(pane, level, pos, Direction.WEST);
-		boolean up = connectsTo(pane, level, pos, Direction.UP);
-		boolean down = connectsTo(pane, level, pos, Direction.DOWN);
-		boolean paneNorth = isPaneBlock(level, pos.north());
-		boolean paneEast = isPaneBlock(level, pos.east());
-		boolean paneSouth = isPaneBlock(level, pos.south());
-		boolean paneWest = isPaneBlock(level, pos.west());
-		BlockState aboveState = level.getBlockState(pos.above());
-		BlockState belowState = level.getBlockState(pos.below());
-		boolean paneUp = aboveState.getBlock() instanceof IronBarsBlock;
-		boolean paneDown = belowState.getBlock() instanceof IronBarsBlock;
-		// Rule 6 wants "no block at all" above and below, which is air and not e.g. a fence
-		boolean airAbove = aboveState.isAir();
-		boolean airBelow = belowState.isAir();
-		// A connectable block that is not a pane: a full block, a wall, a slab pressed against us
-		boolean solidNorth = north && !paneNorth;
-		boolean solidEast = east && !paneEast;
-		boolean solidSouth = south && !paneSouth;
-		boolean solidWest = west && !paneWest;
-		boolean solidUp = up && !paneUp;
-		boolean solidDown = down && !paneDown;
+		// ===== The six edge connections: another pane, a full face, or nothing =====
+		Map<Direction, Edge> edges = new EnumMap<>(Direction.class);
 
-		// ===== The four horizontal diagonals: a diagonal has no single face, so either side counts =====
-		boolean diagonalNorthEast = connectsToDiagonal(pane, level, pos, 1, -1);
-		boolean diagonalSouthEast = connectsToDiagonal(pane, level, pos, 1, 1);
-		boolean diagonalSouthWest = connectsToDiagonal(pane, level, pos, -1, 1);
-		boolean diagonalNorthWest = connectsToDiagonal(pane, level, pos, -1, -1);
+		for (Direction face : FACES) {
+			edges.put(face, edge(level, pos, face));
+		}
 
-		// ===== Rule 2, twelve times: both directions hold a block that is not a pane =====
-		boolean solidPairNorthEast = solidNorth && solidEast;
-		boolean solidPairSouthEast = solidSouth && solidEast;
-		boolean solidPairSouthWest = solidSouth && solidWest;
-		boolean solidPairNorthWest = solidNorth && solidWest;
-		boolean solidPairDownNorth = solidDown && solidNorth;
-		boolean solidPairDownEast = solidDown && solidEast;
-		boolean solidPairDownSouth = solidDown && solidSouth;
-		boolean solidPairDownWest = solidDown && solidWest;
-		boolean solidPairUpNorth = solidUp && solidNorth;
-		boolean solidPairUpEast = solidUp && solidEast;
-		boolean solidPairUpSouth = solidUp && solidSouth;
-		boolean solidPairUpWest = solidUp && solidWest;
-		boolean rule2Hit = solidPairNorthEast || solidPairSouthEast || solidPairSouthWest || solidPairNorthWest
-				|| solidPairDownNorth || solidPairDownEast || solidPairDownSouth || solidPairDownWest
-				|| solidPairUpNorth || solidPairUpEast || solidPairUpSouth || solidPairUpWest;
+		// ===== The twelve corner connections: both of the faces they join have to be satisfied =====
+		EnumSet<Crossing> crossings = EnumSet.noneOf(Crossing.class);
 
-		// ===== Rule 3, twelve times: both directions are panes, and so is the space between them =====
-		// Two horizontal arms meet in the corner of the same plane; an arm above or below meets a
-		// horizontal one in the diagonal that is one step up or down
-		boolean panePairNorthEast = paneNorth && paneEast && isPaneAt(level, pos, 1, 0, -1);
-		boolean panePairSouthEast = paneSouth && paneEast && isPaneAt(level, pos, 1, 0, 1);
-		boolean panePairSouthWest = paneSouth && paneWest && isPaneAt(level, pos, -1, 0, 1);
-		boolean panePairNorthWest = paneNorth && paneWest && isPaneAt(level, pos, -1, 0, -1);
-		boolean panePairDownNorth = paneDown && paneNorth && isPaneAt(level, pos, 0, -1, -1);
-		boolean panePairDownEast = paneDown && paneEast && isPaneAt(level, pos, 1, -1, 0);
-		boolean panePairDownSouth = paneDown && paneSouth && isPaneAt(level, pos, 0, -1, 1);
-		boolean panePairDownWest = paneDown && paneWest && isPaneAt(level, pos, -1, -1, 0);
-		boolean panePairUpNorth = paneUp && paneNorth && isPaneAt(level, pos, 0, 1, -1);
-		boolean panePairUpEast = paneUp && paneEast && isPaneAt(level, pos, 1, 1, 0);
-		boolean panePairUpSouth = paneUp && paneSouth && isPaneAt(level, pos, 0, 1, 1);
-		boolean panePairUpWest = paneUp && paneWest && isPaneAt(level, pos, -1, 1, 0);
-		boolean rule3Hit = panePairNorthEast || panePairSouthEast || panePairSouthWest || panePairNorthWest
-				|| panePairDownNorth || panePairDownEast || panePairDownSouth || panePairDownWest
-				|| panePairUpNorth || panePairUpEast || panePairUpSouth || panePairUpWest;
-
-		// ----- Rules 2 and 3 both only turn pieces on, so a piece either of them lit stays lit -----
-		boolean northEast = solidPairNorthEast || panePairNorthEast;
-		boolean southEast = solidPairSouthEast || panePairSouthEast;
-		boolean southWest = solidPairSouthWest || panePairSouthWest;
-		boolean northWest = solidPairNorthWest || panePairNorthWest;
-		boolean northLower = solidPairDownNorth || panePairDownNorth;
-		boolean eastLower = solidPairDownEast || panePairDownEast;
-		boolean southLower = solidPairDownSouth || panePairDownSouth;
-		boolean westLower = solidPairDownWest || panePairDownWest;
-		boolean northUpper = solidPairUpNorth || panePairUpNorth;
-		boolean eastUpper = solidPairUpEast || panePairUpEast;
-		boolean southUpper = solidPairUpSouth || panePairUpSouth;
-		boolean westUpper = solidPairUpWest || panePairUpWest;
-
-		// ----- Rule 4: no diagonal pane anywhere, and this direction holds a block, so the arm is
-		// full height. Runs after rules 2 and 3 and only turns pieces on, so their corners stay -----
-		boolean rule4Hit = !rule3Hit && (north || east || south || west);
-		if (!rule3Hit) {
-			if (north) {
-				northLower = true;
-				northUpper = true;
-			}
-			if (east) {
-				eastLower = true;
-				eastUpper = true;
-			}
-			if (south) {
-				southLower = true;
-				southUpper = true;
-			}
-			if (west) {
-				westLower = true;
-				westUpper = true;
+		for (Crossing crossing : Crossing.values()) {
+			if (crossing.on(level, pos, edges)) {
+				crossings.add(crossing);
 			}
 		}
 
-		// ----- Rule 1, first say and last word: two adjacent directions hold a block and the space
-		// between them does not, so the corner goes out again even if rule 2 or 3 just lit it -----
-		boolean rule1Hit = (north && east && !diagonalNorthEast)
-				|| (south && east && !diagonalSouthEast)
-				|| (south && west && !diagonalSouthWest)
-				|| (north && west && !diagonalNorthWest);
-		if (north && east && !diagonalNorthEast) {
-			northEast = false;
-		}
-		if (south && east && !diagonalSouthEast) {
-			southEast = false;
-		}
-		if (south && west && !diagonalSouthWest) {
-			southWest = false;
-		}
-		if (north && west && !diagonalNorthWest) {
-			northWest = false;
+		// ===== Rule 3: a full face that loses every corner it lit loses its edge as well =====
+		EnumSet<Direction> pruned = EnumSet.noneOf(Direction.class);
+
+		prune(edges, crossings, pruned);
+
+		// ===== What is drawn: every corner left, and the full arm of every edge that survives =====
+		boolean cornered = !crossings.isEmpty();
+
+		for (Crossing crossing : Crossing.values()) {
+			state = state.setValue(crossing.piece(), crossings.contains(crossing));
 		}
 
-		// ----- Rule 5: exactly one of the two vertical neighbours holds a block that is not a pane,
-		// so the arms copy that side's halves - a copy, so a half can go out again. Corners stay -----
-		boolean nonPaneBlockAbove = !airAbove && !paneUp;
-		boolean nonPaneBlockBelow = !airBelow && !paneDown;
-		boolean rule5Hit = nonPaneBlockAbove ^ nonPaneBlockBelow;
-		if (nonPaneBlockAbove && !nonPaneBlockBelow) {
-			northUpper = northLower;
-			eastUpper = eastLower;
-			southUpper = southLower;
-			westUpper = westLower;
-		} else if (nonPaneBlockBelow && !nonPaneBlockAbove) {
-			northLower = northUpper;
-			eastLower = eastUpper;
-			southLower = southUpper;
-			westLower = westUpper;
+		for (Direction face : ARMS) {
+			// With no corner at all this pane is vanilla's own, connections and all
+			boolean arm = cornered
+					? edges.get(face) != Edge.NONE && !pruned.contains(face)
+					: connectsTo(pane, level, pos, face);
+
+			if (arm) {
+				state = state.setValue(MBPaneProperties.lower(face), true)
+						.setValue(MBPaneProperties.upper(face), true);
+			}
 		}
 
-		// ----- Rule 6, the fallback: air above and below and no other rule had anything to say, so
-		// a pane hanging in the air is the full window vanilla would draw, not the bare post -----
-		if (airAbove && airBelow && !(rule1Hit || rule2Hit || rule3Hit || rule4Hit || rule5Hit)) {
-			northLower = true;
-			eastLower = true;
-			southLower = true;
-			westLower = true;
-			northUpper = true;
-			eastUpper = true;
-			southUpper = true;
-			westUpper = true;
-			northEast = true;
-			southEast = true;
-			southWest = true;
-			northWest = true;
-		}
-
-		return state
-				.setValue(MBPaneProperties.lower(Direction.NORTH), northLower)
-				.setValue(MBPaneProperties.lower(Direction.EAST), eastLower)
-				.setValue(MBPaneProperties.lower(Direction.SOUTH), southLower)
-				.setValue(MBPaneProperties.lower(Direction.WEST), westLower)
-				.setValue(MBPaneProperties.upper(Direction.NORTH), northUpper)
-				.setValue(MBPaneProperties.upper(Direction.EAST), eastUpper)
-				.setValue(MBPaneProperties.upper(Direction.SOUTH), southUpper)
-				.setValue(MBPaneProperties.upper(Direction.WEST), westUpper)
-				.setValue(corner(1, -1), northEast)
-				.setValue(corner(1, 1), southEast)
-				.setValue(corner(-1, 1), southWest)
-				.setValue(corner(-1, -1), northWest);
+		return state;
 	}
 
-	/** The same connection test vanilla uses: panes, walls, or a full face turned towards us. */
+	/** What one face of a pane finds next to it. */
+	private static Edge edge(final BlockGetter level, final BlockPos pos, final Direction face) {
+		BlockPos neighborPos = pos.relative(face);
+		BlockState neighbor = level.getBlockState(neighborPos);
+
+		if (neighbor.getBlock() instanceof IronBarsBlock) {
+			return Edge.PANE;
+		}
+
+		return neighbor.isFaceSturdy(level, neighborPos, face.getOpposite()) ? Edge.FACE : Edge.NONE;
+	}
+
+	/**
+	 * Whether one face of a corner connection is satisfied: the block next to it turns a full face
+	 * towards the pane, or it is a pane that connects towards the corner's diagonal space itself -
+	 * which it only does when something connectable lies in that space.
+	 *
+	 * @param face     the pane's own face, which the corner hangs on
+	 * @param diagonal the direction from that neighbour towards the corner's diagonal space
+	 */
+	private static boolean side(final BlockGetter level, final BlockPos pos, final Map<Direction, Edge> edges,
+			final Direction face, final Direction diagonal) {
+		return switch (edges.get(face)) {
+			case FACE -> true;
+			case PANE -> edge(level, pos.relative(face), diagonal) != Edge.NONE;
+			case NONE -> false;
+		};
+	}
+
+	/**
+	 * The pruning rule.
+	 *
+	 * <p>A corner connection that hangs on a full face is only real while the pane turns across that
+	 * face. It does not when the pane turns within the plane the face itself lies in - it has
+	 * structure of its own there - and when the far side of the plane the corner lies in holds
+	 * nothing; then that face is a wall the pane leans on, and the corner goes. A face that loses
+	 * every corner it lit goes with it and draws no arm, which is what {@code pruned} collects; a
+	 * face that never lit one is left standing, as is a pane.
+	 *
+	 * <p>One pass over the six faces, and every decision reads the corners as the rule before this
+	 * one left them, so the order the faces are visited in cannot change the answer.
+	 */
+	private static void prune(final Map<Direction, Edge> edges, final EnumSet<Crossing> crossings,
+			final EnumSet<Direction> pruned) {
+		EnumSet<Crossing> turning = EnumSet.copyOf(crossings);
+		EnumSet<Crossing> cut = EnumSet.noneOf(Crossing.class);
+
+		for (Direction face : FACES) {
+			// Only a full face can be leaned on, and only while the pane turns in its own plane
+			if (edges.get(face) != Edge.FACE || !plane(turning, face.getAxis())) {
+				continue;
+			}
+
+			EnumSet<Crossing> attached = EnumSet.noneOf(Crossing.class);
+
+			for (Crossing crossing : turning) {
+				if (crossing.hangs(face)) {
+					attached.add(crossing);
+				}
+			}
+
+			// Nothing hangs on this face, so this rule has no corner of its to take away
+			if (attached.isEmpty()) {
+				continue;
+			}
+
+			// The two planes that do contain this face; the third one is the one asked about above
+			for (Direction.Axis axis : Direction.Axis.values()) {
+				if (axis == face.getAxis()) {
+					continue;
+				}
+
+				EnumSet<Crossing> hanging = EnumSet.noneOf(Crossing.class);
+				boolean farSide = false;
+
+				for (Crossing crossing : turning) {
+					if (crossing.plane() != axis) {
+						continue;
+					}
+
+					if (crossing.hangs(face)) {
+						hanging.add(crossing);
+					}
+
+					farSide |= crossing.hangs(face.getOpposite());
+				}
+
+				if (!hanging.isEmpty() && !farSide) {
+					cut.addAll(hanging);
+				}
+			}
+
+			if (cut.containsAll(attached)) {
+				pruned.add(face);
+			}
+		}
+
+		crossings.removeAll(cut);
+	}
+
+	/** Whether the pane is true in that plane, which is to say some corner lies in it. */
+	private static boolean plane(final EnumSet<Crossing> crossings, final Direction.Axis axis) {
+		for (Crossing crossing : crossings) {
+			if (crossing.plane() == axis) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * The same connection test vanilla uses, for the fallback of a pane no corner hangs on: panes,
+	 * walls, or a full face turned towards us.
+	 */
 	private static boolean connectsTo(final IronBarsBlock pane, final BlockGetter level, final BlockPos pos,
 			final Direction direction) {
 		return attachesTo(pane, level, pos.relative(direction), direction.getOpposite());
@@ -312,38 +408,6 @@ public final class MBPaneConnection {
 			final Direction faceTowardUs) {
 		BlockState neighbor = level.getBlockState(neighborPos);
 		return pane.attachsTo(neighbor, neighbor.isFaceSturdy(level, neighborPos, faceTowardUs));
-	}
-
-	/**
-	 * Whether the diagonal space at a horizontal offset counts as holding a block. A diagonal has no
-	 * single face, so either of the two sides that look at us is enough. A full block, a pane and a
-	 * wall all count; a stair, which is only half a face tall, does not.
-	 */
-	private static boolean connectsToDiagonal(final IronBarsBlock pane, final BlockGetter level, final BlockPos pos,
-			final int dx, final int dz) {
-		BlockPos diagonal = pos.offset(dx, 0, dz);
-		Direction backX = dx > 0 ? Direction.WEST : Direction.EAST;
-		Direction backZ = dz > 0 ? Direction.NORTH : Direction.SOUTH;
-		return attachesTo(pane, level, diagonal, backX) || attachesTo(pane, level, diagonal, backZ);
-	}
-
-	/** Whether that position holds a pane or iron bars, the family of blocks we cut into pieces. */
-	private static boolean isPaneBlock(final BlockGetter level, final BlockPos pos) {
-		return level.getBlockState(pos).getBlock() instanceof IronBarsBlock;
-	}
-
-	/** The same question for an offset position; rule 3 asks it about twelve diagonals. */
-	private static boolean isPaneAt(final BlockGetter level, final BlockPos pos, final int dx, final int dy, final int dz) {
-		return isPaneBlock(level, pos.offset(dx, dy, dz));
-	}
-
-	/** The corner flag of the quadrant between two horizontal offsets, named by their signs. */
-	private static Property<Boolean> corner(final int dx, final int dz) {
-		if (dx > 0) {
-			return dz > 0 ? MBPaneProperties.CORNER_SOUTH_EAST : MBPaneProperties.CORNER_NORTH_EAST;
-		}
-
-		return dz > 0 ? MBPaneProperties.CORNER_SOUTH_WEST : MBPaneProperties.CORNER_NORTH_WEST;
 	}
 
 	/**
@@ -411,8 +475,8 @@ public final class MBPaneConnection {
 			// 16 = UPDATE_KNOWN_SHAPE: skip vanilla's shape cascade, the queue here settles instead
 			level.setBlock(pos, next, 2 | 16);
 
-			// The four horizontal diagonals have to be queued too: vanilla's cascade never reaches
-			// them, and the rules read whether a diagonal holds a block
+			// The twelve diagonal spaces have to be queued too: vanilla's cascade never reaches
+			// them, and the corner connections read whether they hold something connectable
 			for (int[] offset : NEIGHBOUR_OFFSETS) {
 				BlockPos neighbor = pos.offset(offset[0], offset[1], offset[2]);
 
@@ -426,7 +490,7 @@ public final class MBPaneConnection {
 	/**
 	 * Tells the panes in the twelve diagonal spaces around a change that their surroundings moved.
 	 *
-	 * <p>Rules 2, 3 and 5 read diagonals, and {@code BlockStateBase#updateNeighbourShapes} only
+	 * <p>The corner connections read diagonals, and {@code BlockStateBase#updateNeighbourShapes} only
 	 * wakes the six orthogonal neighbours, so a block placed or broken diagonally to a pane would
 	 * leave that pane alone - which shows up as a pane that only updates once a block is placed next
 	 * to it. Vanilla's redstone wire has the same problem and solves it in its indirect neighbour

@@ -429,18 +429,20 @@ public class MBClientGameTest implements FabricClientGameTest {
 	 * The connection rules, checked on a real level.
 	 *
 	 * <p>{@link #verifyPaneShapes} proves that the twelve pieces build the shape they
-	 * should; this proves the rules that switch them on, which is where a wrong reading of
-	 * vanilla's own connection test, of a diagonal or of a vertical neighbour shows up. The
-	 * scenarios follow the rules of {@code MBPaneConnection}: the pane hanging in the air
-	 * (rule 6), the pane wedged between two blocks with and without the block in the corner
-	 * between them (rules 1 and 2), four panes meeting in a square (rules 3 and 4) and a
-	 * pane whose two halves copy each other (rule 5).
+	 * should; this proves the rules that switch them on, which is where a wrong reading of a
+	 * full face, of a corner partner or of a vertical neighbour shows up. The scenarios
+	 * follow the framework of {@code MBPaneConnection}: a pane with nothing to lean on, which
+	 * is vanilla's own fallback, a pane between two full faces, a pane whose corner partners
+	 * are panes, four panes meeting in a square, a pane whose pieces hang on a partner above
+	 * it, and the pruning rule, where a pane that turns inside a ring of panes beside a row
+	 * of full faces keeps two arms and loses the rest, and a pane flanked by full faces east
+	 * and west, whose western arm stands on an edge no corner hangs on.
 	 *
 	 * <p>States are asked for the way the game asks for them, through {@code
-	 * getStateForPlacement}, which is one of the entry points. Two of the scenarios then
-	 * read the world back, because they need the change to travel: through a neighbour of
-	 * the pane (the direct shape update) and through a block in the corner, which is no
-	 * neighbour of the pane at all.
+	 * getStateForPlacement}, which is one of the entry points. Three of the scenarios then
+	 * read the world back, because they need the change to travel: through a neighbour of the
+	 * pane (the direct shape update) and through a block in a corner, which is no neighbour
+	 * of the pane at all.
 	 */
 	private static void verifyPaneConnection(TestServerContext server) {
 		server.runOnServer(minecraftServer -> {
@@ -450,12 +452,12 @@ public class MBClientGameTest implements FabricClientGameTest {
 
 			clearPanes(level, origin);
 
-			// Rule 6: a pane with air above and below it is the full window. The stone that
-			// is put north of it and taken away again travels the direct shape update: a
-			// neighbour that connects but is no pane lights both halves of that arm instead
-			// (rule 4) and takes the fallback away.
+			// The fallback: a pane no corner hangs on is vanilla's own pane, drawn from its
+			// four connections. In the air it has nothing to connect to, so all twelve
+			// pieces stay off and the block is drawn the way vanilla draws a lone pane. The
+			// stone put north of it and taken away again travels the direct shape update.
 			BlockPos lone = origin;
-			requirePieces(paneAt(player, level, lone), "a pane hanging in the air", PANE_PIECES);
+			requirePieces(paneAt(player, level, lone), "a pane hanging in the air", pieces());
 
 			level.setBlockAndUpdate(lone, paneAt(player, level, lone));
 			level.setBlockAndUpdate(lone.north(), Blocks.STONE.defaultBlockState());
@@ -464,66 +466,130 @@ public class MBClientGameTest implements FabricClientGameTest {
 
 			level.setBlockAndUpdate(lone.north(), Blocks.AIR.defaultBlockState());
 			requirePieces(level.getBlockState(lone), "a pane whose northern block was taken away",
-					PANE_PIECES);
+					pieces());
 
-			// Rules 1, 2 and 4: a pane between two blocks. Both arms stand full height
-			// because no pane took the corner over, and the corner between them stays shut
-			// while the block in it is air: two blocks meeting at a pane only bend it round
-			// the corner once the space between them is filled.
-			BlockPos wedged = origin.offset(4, 0, 0);
-			level.setBlockAndUpdate(wedged.north(), Blocks.STONE.defaultBlockState());
-			level.setBlockAndUpdate(wedged.east(), Blocks.STONE.defaultBlockState());
-			requirePieces(paneAt(player, level, wedged),
-					"a pane with blocks north and east of it and air between them",
-					pieces(lowerHalf(Direction.NORTH), upperHalf(Direction.NORTH),
-							lowerHalf(Direction.EAST), upperHalf(Direction.EAST)));
-
-			level.setBlockAndUpdate(wedged.north().east(), Blocks.STONE.defaultBlockState());
-			requirePieces(paneAt(player, level, wedged),
-					"a pane with the block between its two neighbours filled in",
+			// Two full faces meet in a corner whether or not the space between them holds
+			// anything, so this pane arms both ways and turns the corner. A thin side such
+			// as a slab's would not count here: only a full 1x1 face does.
+			BlockPos cornered = origin.offset(4, 0, 0);
+			level.setBlockAndUpdate(cornered.north(), Blocks.STONE.defaultBlockState());
+			level.setBlockAndUpdate(cornered.east(), Blocks.STONE.defaultBlockState());
+			requirePieces(paneAt(player, level, cornered),
+					"a pane with full faces north and east of it and air between them",
 					pieces(lowerHalf(Direction.NORTH), upperHalf(Direction.NORTH),
 							lowerHalf(Direction.EAST), upperHalf(Direction.EAST),
 							MBPaneProperties.CORNER_NORTH_EAST));
 
-			// The block in the corner is no neighbour of the pane, so taking it away only
-			// reaches the pane through the indirect shape update the mod adds: without it
-			// the corner would stay behind.
-			level.setBlockAndUpdate(wedged, paneAt(player, level, wedged));
-			level.setBlockAndUpdate(wedged.north().east(), Blocks.AIR.defaultBlockState());
-			requirePieces(level.getBlockState(wedged), "a pane whose corner block was taken away",
+			// A corner is only there while both of the blocks beside it reach across: with
+			// panes north, east and between them, the pane's two arms turn that corner. The
+			// third pane is no neighbour of this one, so taking it away reaches the pane
+			// only through the indirect shape update the mod adds; without it the corner
+			// would stay behind.
+			BlockPos partners = origin.offset(8, 0, 0);
+			level.setBlockAndUpdate(partners.north(), Blocks.GLASS_PANE.defaultBlockState());
+			level.setBlockAndUpdate(partners.east(), Blocks.GLASS_PANE.defaultBlockState());
+			level.setBlockAndUpdate(partners.north().east(), Blocks.GLASS_PANE.defaultBlockState());
+			requirePieces(paneAt(player, level, partners),
+					"a pane with partners north, east and in the corner between them",
+					pieces(lowerHalf(Direction.NORTH), upperHalf(Direction.NORTH),
+							lowerHalf(Direction.EAST), upperHalf(Direction.EAST),
+							MBPaneProperties.CORNER_NORTH_EAST));
+
+			level.setBlockAndUpdate(partners, paneAt(player, level, partners));
+			level.setBlockAndUpdate(partners.north().east(), Blocks.AIR.defaultBlockState());
+			requirePieces(level.getBlockState(partners), "a pane whose corner partner was taken away",
 					pieces(lowerHalf(Direction.NORTH), upperHalf(Direction.NORTH),
 							lowerHalf(Direction.EAST), upperHalf(Direction.EAST)));
 
-			// Rules 3 and 4: four panes meeting in a square. Each of them shares an edge
-			// with two of the others and meets the fourth one in the corner, so each lights
-			// the single corner that faces the middle of the square and leaves the arms to
-			// the blocks around it.
-			BlockPos square = origin.offset(8, 0, 0);
+			// Four panes meeting in a square: each of them shares an edge with two of the
+			// others and meets the fourth one in the corner, so each turns that corner and
+			// arms both ways towards the partners it shares an edge with.
+			BlockPos square = origin.offset(0, 0, 4);
 			level.setBlockAndUpdate(square, Blocks.GLASS_PANE.defaultBlockState());
 			level.setBlockAndUpdate(square.east(), Blocks.GLASS_PANE.defaultBlockState());
 			level.setBlockAndUpdate(square.south(), Blocks.GLASS_PANE.defaultBlockState());
 			level.setBlockAndUpdate(square.south().east(), paneAt(player, level, square.south().east()));
 
 			requirePieces(level.getBlockState(square), "the north-western pane of four in a square",
-					pieces(MBPaneProperties.CORNER_SOUTH_EAST));
+					pieces(lowerHalf(Direction.EAST), upperHalf(Direction.EAST),
+							lowerHalf(Direction.SOUTH), upperHalf(Direction.SOUTH),
+							MBPaneProperties.CORNER_SOUTH_EAST));
 			requirePieces(level.getBlockState(square.east()), "the north-eastern pane of four",
-					pieces(MBPaneProperties.CORNER_SOUTH_WEST));
+					pieces(lowerHalf(Direction.WEST), upperHalf(Direction.WEST),
+							lowerHalf(Direction.SOUTH), upperHalf(Direction.SOUTH),
+							MBPaneProperties.CORNER_SOUTH_WEST));
 			requirePieces(level.getBlockState(square.south()), "the south-western pane of four",
-					pieces(MBPaneProperties.CORNER_NORTH_EAST));
+					pieces(lowerHalf(Direction.EAST), upperHalf(Direction.EAST),
+							lowerHalf(Direction.NORTH), upperHalf(Direction.NORTH),
+							MBPaneProperties.CORNER_NORTH_EAST));
 			requirePieces(level.getBlockState(square.south().east()), "the south-eastern pane of four",
-					pieces(MBPaneProperties.CORNER_NORTH_WEST));
+					pieces(lowerHalf(Direction.WEST), upperHalf(Direction.WEST),
+							lowerHalf(Direction.NORTH), upperHalf(Direction.NORTH),
+							MBPaneProperties.CORNER_NORTH_WEST));
 
-			// Rule 5: when exactly one of the two vertical neighbours holds a block that is
-			// no pane, the two halves of an arm copy each other. This pane has a partner
-			// above and to the north, which lights its upper northern half through rule 3,
-			// and the stone below it copies that half down.
-			BlockPos copied = origin.offset(0, 0, 6);
-			level.setBlockAndUpdate(copied.below(), Blocks.STONE.defaultBlockState());
-			level.setBlockAndUpdate(copied.north(), Blocks.GLASS_PANE.defaultBlockState());
-			level.setBlockAndUpdate(copied.above(), Blocks.GLASS_PANE.defaultBlockState());
-			level.setBlockAndUpdate(copied.above().north(), Blocks.GLASS_PANE.defaultBlockState());
-			requirePieces(paneAt(player, level, copied), "a pane under a partner with a block below it",
+			// A vertical partner reaches the halves of an arm, never a piece of its own: this
+			// pane has panes above and to the north, and the third one above and north fills
+			// the space both of them reach towards, so the northern arm stands full height.
+			BlockPos vertical = origin.offset(5, 0, 4);
+			level.setBlockAndUpdate(vertical.below(), Blocks.STONE.defaultBlockState());
+			level.setBlockAndUpdate(vertical.north(), Blocks.GLASS_PANE.defaultBlockState());
+			level.setBlockAndUpdate(vertical.above(), Blocks.GLASS_PANE.defaultBlockState());
+			level.setBlockAndUpdate(vertical.above().north(), Blocks.GLASS_PANE.defaultBlockState());
+			requirePieces(paneAt(player, level, vertical), "a pane under a partner with a block below it",
 					pieces(lowerHalf(Direction.NORTH), upperHalf(Direction.NORTH)));
+
+			// The pruning rule, and the example the framework was written around: this pane
+			// turns inside a ring of panes with a full face to its south. The pane is true in
+			// the plane its ring lies in, which does not hold that face, while the far side of
+			// the plane the face does lie in holds nothing, so the two southern corners the
+			// face lit are dropped and the southern arm with them. The two arms of the ring
+			// stay.
+			BlockPos turned = origin.offset(8, 0, 4);
+			for (int dx = -1; dx <= 1; dx += 2) {
+				for (int dy = -1; dy <= 1; dy++) {
+					level.setBlockAndUpdate(turned.offset(dx, dy, 0),
+							Blocks.GLASS_PANE.defaultBlockState());
+				}
+			}
+
+			level.setBlockAndUpdate(turned.above(), Blocks.GLASS_PANE.defaultBlockState());
+			level.setBlockAndUpdate(turned.below(), Blocks.GLASS_PANE.defaultBlockState());
+			level.setBlockAndUpdate(turned.south(), Blocks.STONE.defaultBlockState());
+			level.setBlockAndUpdate(turned.south().above(), Blocks.STONE.defaultBlockState());
+			level.setBlockAndUpdate(turned.south().below(), Blocks.STONE.defaultBlockState());
+			requirePieces(paneAt(player, level, turned),
+					"a pane turning inside a ring of panes beside a row of full faces",
+					pieces(lowerHalf(Direction.EAST), upperHalf(Direction.EAST),
+							lowerHalf(Direction.WEST), upperHalf(Direction.WEST)));
+
+			// An edge that survives the pruning draws its arm whether or not a corner hangs
+			// on it: this pane is flanked by full faces east and west, and turns the corner
+			// between its northern pane and the eastern face. The corner hangs on the east
+			// and north faces only, and the pruning leaves it alone because the pane turns
+			// across both of them rather than within the plane of either, so the eastern
+			// face keeps the corner while the western face keeps its edge and no more: its
+			// arm reaches the wall at full height all the same. The box is swept clean first
+			// because this is the one scenario wired outside the ground the others cleared,
+			// and a face left lying beside it would arm it the wrong way.
+			BlockPos flanked = origin.offset(5, 0, 8);
+			for (int dx = -2; dx <= 2; dx++) {
+				for (int dy = -1; dy <= 1; dy++) {
+					for (int dz = -1; dz <= 2; dz++) {
+						level.setBlockAndUpdate(flanked.offset(dx, dy, dz), Blocks.AIR.defaultBlockState());
+					}
+				}
+			}
+
+			level.setBlockAndUpdate(flanked.east(), Blocks.STONE.defaultBlockState());
+			level.setBlockAndUpdate(flanked.west(), Blocks.STONE.defaultBlockState());
+			level.setBlockAndUpdate(flanked.north(), Blocks.GLASS_PANE.defaultBlockState());
+			level.setBlockAndUpdate(flanked.north().east(), Blocks.STONE.defaultBlockState());
+			requirePieces(paneAt(player, level, flanked),
+					"a pane flanked by full faces east and west with a pane to its north",
+					pieces(lowerHalf(Direction.EAST), upperHalf(Direction.EAST),
+							lowerHalf(Direction.WEST), upperHalf(Direction.WEST),
+							lowerHalf(Direction.NORTH), upperHalf(Direction.NORTH),
+							MBPaneProperties.CORNER_NORTH_EAST));
 		});
 	}
 
