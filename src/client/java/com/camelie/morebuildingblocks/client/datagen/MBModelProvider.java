@@ -1209,78 +1209,61 @@ public class MBModelProvider implements DataProvider {
 	// -------------------------------------------------------------------- panes
 
 	/**
-	 * The nine boxes a pane is drawn from, in the order of the twelve switches that show them.
+	 * The eight boxes a pane is drawn from, in the order of the twelve switches that show them.
 	 *
 	 * <p>A side piece is one arm of the pane. The northern and southern arm of each half are boxes
 	 * here; the eastern and western arms are those same boxes turned a quarter, which the resolver
 	 * asks for with {@code Variant#withYRot} rather than with four more boxes that would have to be
-	 * kept in step with these. A corner piece is the wedge that reaches the diagonal neighbour. The
-	 * ninth box is the post: not one of the twelve pieces, but the column they are drawn around.
-	 *
-	 * <p>No two of the nine overlap. An arm stops a pixel short of the middle of the block and a
-	 * wedge stops at the side of the post, which is how vanilla lays its own files out as well: its
-	 * {@code template_glass_pane_side} runs from the edge of the block to z 7 and its
-	 * {@code template_glass_pane_post} covers 7 to 9. Drawing every piece a pixel further in would
-	 * close the middle of a pane whose arm turns into a corner, but it would also lay two
-	 * translucent faces over each other wherever two pieces meet, which shows as a darker seam.
+	 * kept in step with these. A corner piece is the wedge that reaches the diagonal neighbour.
 	 *
 	 * <p>Only the faces a piece shows are listed. Its wide faces carry {@code #pane} and its thin
 	 * edges {@code #edge}, and none of them carries a {@code cullface}: the middle of a pane is
-	 * see-through, so a piece hidden behind a neighbour would take the pane with it. A face that
-	 * names no rectangle takes its sprite straight off the box, which is what keeps a sprite from
-	 * being stretched over a piece that covers only part of a block face.
+	 * see-through, so a piece hidden behind a neighbour would take the pane with it.
 	 *
 	 * <p>The sprites the slots name below are placeholders, the ones a template shows on its own;
 	 * every copy of it - {@link #generatePanes()} writes one per vanilla pane - replaces both.
 	 */
 	private static final List<PaneTemplate> PANE_TEMPLATES = List.of(
-			new PaneTemplate("pane_side_lower", new Box(7, 0, 0, 9, 8, 7), List.of(
+			new PaneTemplate("pane_side_lower", new Box(7, 0, 0, 9, 8, 8), List.of(
 					PaneFace.full("north", "#edge"),
 					PaneFace.full("down", "#edge"),
-					PaneFace.cut("west", "#pane", 16, 8, 9, 16),
-					PaneFace.cut("east", "#pane", 9, 8, 16, 16))),
-			new PaneTemplate("pane_side_lower_alt", new Box(7, 0, 9, 9, 8, 16), List.of(
+					PaneFace.cut("west", "#pane", 16, 8, 8, 16),
+					PaneFace.cut("east", "#pane", 8, 8, 16, 16))),
+			new PaneTemplate("pane_side_lower_alt", new Box(7, 0, 8, 9, 8, 16), List.of(
 					PaneFace.full("south", "#edge"),
 					PaneFace.full("down", "#edge"),
-					PaneFace.cut("west", "#pane", 7, 8, 0, 16),
-					PaneFace.cut("east", "#pane", 0, 8, 7, 16))),
-			new PaneTemplate("pane_side_upper", new Box(7, 8, 0, 9, 16, 7), List.of(
+					PaneFace.cut("west", "#pane", 8, 8, 0, 16),
+					PaneFace.cut("east", "#pane", 0, 8, 8, 16))),
+			new PaneTemplate("pane_side_upper", new Box(7, 8, 0, 9, 16, 8), List.of(
 					PaneFace.full("north", "#edge"),
 					PaneFace.full("up", "#edge"),
-					PaneFace.cut("west", "#pane", 16, 0, 9, 8),
-					PaneFace.cut("east", "#pane", 9, 0, 16, 8))),
-			new PaneTemplate("pane_side_upper_alt", new Box(7, 8, 9, 9, 16, 16), List.of(
+					PaneFace.cut("west", "#pane", 16, 0, 8, 8),
+					PaneFace.cut("east", "#pane", 8, 0, 16, 8))),
+			new PaneTemplate("pane_side_upper_alt", new Box(7, 8, 8, 9, 16, 16), List.of(
 					PaneFace.full("south", "#edge"),
 					PaneFace.full("up", "#edge"),
-					PaneFace.cut("west", "#pane", 7, 0, 0, 8),
-					PaneFace.cut("east", "#pane", 0, 0, 7, 8))),
-			new PaneTemplate("pane_post", new Box(7, 0, 7, 9, 16, 9), List.of(
-					PaneFace.full("down", "#edge"),
-					PaneFace.full("up", "#edge"),
-					PaneFace.cut("north", "#pane", 9, 0, 7, 16),
-					PaneFace.cut("south", "#pane", 7, 0, 9, 16),
-					PaneFace.cut("west", "#pane", 9, 0, 7, 16),
-					PaneFace.cut("east", "#pane", 7, 0, 9, 16))),
-			new PaneTemplate("pane_corner", new Box(9, 7, 0, 16, 9, 8), List.of(
+					PaneFace.cut("west", "#pane", 8, 0, 0, 8),
+					PaneFace.cut("east", "#pane", 0, 0, 8, 8))),
+			new PaneTemplate("pane_corner", new Box(8, 7, 0, 16, 9, 8), List.of(
 					PaneFace.full("down", "#pane"),
 					PaneFace.full("up", "#pane"),
-					PaneFace.turned("north", "#edge", 7, 9, 9, 16),
+					PaneFace.turned("north", "#edge", 7, 8, 9, 16),
 					PaneFace.turned("east", "#edge", 7, 0, 9, 8))),
-			new PaneTemplate("pane_corner_se", new Box(9, 7, 8, 16, 9, 16), List.of(
-					PaneFace.full("up", "#pane"),
-					PaneFace.full("down", "#pane"),
+			new PaneTemplate("pane_corner_se", new Box(8, 7, 8, 16, 9, 16), List.of(
+					PaneFace.cut("up", "#pane", 8, 8, 16, 16),
+					PaneFace.cut("down", "#pane", 8, 0, 16, 8),
 					PaneFace.turned("east", "#edge", 7, 8, 9, 16),
-					PaneFace.turned("south", "#edge", 7, 16, 9, 9))),
-			new PaneTemplate("pane_corner_sw", new Box(0, 7, 8, 7, 9, 16), List.of(
-					PaneFace.full("up", "#pane"),
-					PaneFace.full("down", "#pane"),
+					PaneFace.turned("south", "#edge", 7, 16, 9, 8))),
+			new PaneTemplate("pane_corner_sw", new Box(0, 7, 8, 8, 9, 16), List.of(
+					PaneFace.cut("up", "#pane", 0, 8, 8, 16),
+					PaneFace.cut("down", "#pane", 0, 0, 8, 8),
 					PaneFace.turned("west", "#edge", 7, 16, 9, 8),
-					PaneFace.turned("south", "#edge", 7, 7, 9, 0))),
-			new PaneTemplate("pane_corner_nw", new Box(0, 7, 0, 7, 9, 8), List.of(
-					PaneFace.full("up", "#pane"),
-					PaneFace.full("down", "#pane"),
+					PaneFace.turned("south", "#edge", 7, 8, 9, 0))),
+			new PaneTemplate("pane_corner_nw", new Box(0, 7, 0, 8, 9, 8), List.of(
+					PaneFace.cut("up", "#pane", 0, 0, 8, 8),
+					PaneFace.cut("down", "#pane", 0, 8, 8, 16),
 					PaneFace.turned("west", "#edge", 7, 8, 9, 0),
-					PaneFace.turned("north", "#edge", 7, 0, 9, 7))));
+					PaneFace.turned("north", "#edge", 7, 0, 9, 8))));
 
 	/** One box of a pane, with the faces it shows. */
 	private record PaneTemplate(String name, Box box, List<PaneFace> faces) {
@@ -1311,7 +1294,7 @@ public class MBModelProvider implements DataProvider {
 	}
 
 	/**
-	 * The nine template models and one textured copy of each for every vanilla pane.
+	 * The eight template models and one textured copy of each for every vanilla pane.
 	 *
 	 * <p>26 vanilla blocks draw panes: the seventeen glass panes - plain and dyed - the iron bars
 	 * and the eight copper bars. A glass pane takes its glass from its own name with {@code _pane}

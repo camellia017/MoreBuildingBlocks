@@ -4,20 +4,32 @@
     {
       "faces": {
         "down": {
-          "texture": "#pane"
+          "texture": "#pane",
+          "uv": [
+            0,
+            0,
+            8,
+            8
+          ]
         },
         "south": {
           "rotation": 90,
           "texture": "#edge",
           "uv": [
             7,
-            7,
+            8,
             9,
             0
           ]
         },
         "up": {
-          "texture": "#pane"
+          "texture": "#pane",
+          "uv": [
+            0,
+            8,
+            8,
+            16
+          ]
         },
         "west": {
           "rotation": 90,
@@ -36,7 +48,7 @@
         8
       ],
       "to": [
-        7,
+        8,
         9,
         16
       ]

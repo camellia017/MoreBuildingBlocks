@@ -1,7 +1,0 @@
-{
-  "parent": "morebuildingblocks:block/pane_post",
-  "textures": {
-    "edge": "minecraft:block/copper_bars",
-    "pane": "minecraft:block/copper_bars"
-  }
-}
