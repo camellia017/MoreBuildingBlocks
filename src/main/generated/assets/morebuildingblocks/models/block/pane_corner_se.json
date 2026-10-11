@@ -8,7 +8,7 @@
         },
         "east": {
           "cullface": "east",
-          "rotation": 270,
+          "rotation": 90,
           "texture": "#edge",
           "uv": [
             7,
@@ -19,7 +19,7 @@
         },
         "south": {
           "cullface": "south",
-          "rotation": 90,
+          "rotation": 270,
           "texture": "#edge",
           "uv": [
             7,
