@@ -12,12 +12,15 @@ import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
 /**
- * The twelve pieces a pane is made of, and the shapes they add up to.
+ * The twelve corner plates a pane is made of, and the shapes they add up to.
  *
- * <p>A pane gains up to twelve pieces: eight upright halves, two per horizontal direction (the
- * lower half is the vanilla connection boolean, the upper one is this mod's {@code *_up} flag),
- * and four horizontal corners at mid height, one per quadrant. A piece is two pixels thick, so
- * the outline and the collision box are the same shape.
+ * <p>A pane gains up to twelve pieces: eight upright plates, two per horizontal direction (the
+ * lower one is the vanilla connection boolean, the upper one is this mod's {@code *_up} flag), and
+ * four horizontal plates at mid height, one per quadrant. Every piece is a corner of the pane:
+ * seven pixels of the quadrant its two directions share, two pixels thick, so the outline and the
+ * collision box are the same shape. No piece reaches past the eight pixel line into the quadrant
+ * beside it - the two pixels of band left open there, and the two pixel column through the middle,
+ * are the shared boxes below.
  *
  * <p>The stick - the two pixel column through the middle plus the post faces - stands for a pane
  * that connects to nothing, and the models only draw it while all twelve flags are false. The
@@ -25,13 +28,15 @@ import net.minecraft.world.phys.shapes.VoxelShape;
  * set the shape is the pieces alone, which is what the models then draw.
  *
  * <p>A corner is cut the way vanilla's own pane is laid out, seven pixels of corner, two of edge,
- * seven of corner: the quadrant itself shrinks to seven, and thin boxes fill the two pixels of the
- * plate and of the arm that lead to it. Those edge boxes are shared - the northern half of the
- * plate belongs to both the north eastern and the north western corner, the eastern arm to both
- * the north eastern and the south eastern one - so they are added once for whichever of the pair
- * is on, and the two pixels where the plate and the arm cross at mid height are filled by one more
- * box of their own. Without it a cornered pane would keep a two pixel hole in its middle, which is
- * what the corner used to leave at the plate it reached.
+ * seven of corner: the quadrant itself is seven, and thin boxes fill the two pixels of the plate
+ * and of the arm that lead to it. Those boxes are shared - the northern half of the plate belongs
+ * to the north eastern and the north western corner both, the eastern arm to the north eastern and
+ * the south eastern one - so each is added once for whichever of the pair, or of the two upright
+ * plates on that side, is on. The two pixels where the plate and the arm cross at mid height are
+ * filled by one more box of their own, and the two pixel column through the middle by one box per
+ * half, for each half that carries an upright plate. Without them a cornered pane would keep a hole
+ * between its quadrants, which is what a plate that stops at the eight pixel line leaves on its
+ * own.
  *
  * <p>Vanilla asks {@code skipRendering} whether a whole face may be skipped, not whether the
  * pieces on either side of it meet. Two questions have to be answered here: a pane's middle
@@ -39,14 +44,21 @@ import net.minecraft.world.phys.shapes.VoxelShape;
  * and a piece facing air has to be drawn even when the neighbour carries an arm.
  */
 public final class MBPaneShapes {
-	private static final VoxelShape NORTH_LOWER = Block.box(7.0, 0.0, 0.0, 9.0, 8.0, 8.0);
-	private static final VoxelShape NORTH_UPPER = Block.box(7.0, 8.0, 0.0, 9.0, 16.0, 8.0);
-	private static final VoxelShape EAST_LOWER = Block.box(8.0, 0.0, 7.0, 16.0, 8.0, 9.0);
-	private static final VoxelShape EAST_UPPER = Block.box(8.0, 8.0, 7.0, 16.0, 16.0, 9.0);
-	private static final VoxelShape SOUTH_LOWER = Block.box(7.0, 0.0, 8.0, 9.0, 8.0, 16.0);
-	private static final VoxelShape SOUTH_UPPER = Block.box(7.0, 8.0, 8.0, 9.0, 16.0, 16.0);
-	private static final VoxelShape WEST_LOWER = Block.box(0.0, 0.0, 7.0, 8.0, 8.0, 9.0);
-	private static final VoxelShape WEST_UPPER = Block.box(0.0, 8.0, 7.0, 8.0, 16.0, 9.0);
+	/**
+	 * The upright plates of an arm: the corner of the quadrant it points into, seven pixels along
+	 * the arm, seven pixels tall and two pixels thick, so it stops at the eight pixel line.
+	 */
+	private static final VoxelShape NORTH_LOWER = Block.box(7.0, 0.0, 0.0, 9.0, 7.0, 7.0);
+	private static final VoxelShape NORTH_UPPER = Block.box(7.0, 9.0, 0.0, 9.0, 16.0, 7.0);
+	private static final VoxelShape EAST_LOWER = Block.box(9.0, 0.0, 7.0, 16.0, 7.0, 9.0);
+	private static final VoxelShape EAST_UPPER = Block.box(9.0, 9.0, 7.0, 16.0, 16.0, 9.0);
+	private static final VoxelShape SOUTH_LOWER = Block.box(7.0, 0.0, 9.0, 9.0, 7.0, 16.0);
+	private static final VoxelShape SOUTH_UPPER = Block.box(7.0, 9.0, 9.0, 9.0, 16.0, 16.0);
+	private static final VoxelShape WEST_LOWER = Block.box(0.0, 0.0, 7.0, 7.0, 7.0, 9.0);
+	private static final VoxelShape WEST_UPPER = Block.box(0.0, 9.0, 7.0, 7.0, 16.0, 9.0);
+	/** The two pixel column through the middle, in the two halves the upright plates leave open. */
+	private static final VoxelShape COLUMN_LOWER = Block.box(7.0, 0.0, 7.0, 9.0, 7.0, 9.0);
+	private static final VoxelShape COLUMN_UPPER = Block.box(7.0, 9.0, 7.0, 9.0, 16.0, 9.0);
 	/** The seven pixel quadrant of a corner, its outer corner at the block's own corner. */
 	private static final VoxelShape CORNER_NORTH_EAST = Block.box(9.0, 7.0, 0.0, 16.0, 9.0, 7.0);
 	private static final VoxelShape CORNER_SOUTH_EAST = Block.box(9.0, 7.0, 9.0, 16.0, 9.0, 16.0);
@@ -54,11 +66,12 @@ public final class MBPaneShapes {
 	private static final VoxelShape CORNER_NORTH_WEST = Block.box(0.0, 7.0, 0.0, 7.0, 9.0, 7.0);
 
 	/**
-	 * The two pixel edges that lead from a corner to the plate and to the arm it joins.
+	 * The two pixels of band that lead from a plate to the middle of the block.
 	 *
-	 * <p>Each is shared by the two corners on its side: the northern and southern one of the plate
-	 * by the two corners north of the middle and south of it, the eastern and western one of the
-	 * arm by the two corners that reach that way.
+	 * <p>Each is shared by the corners on its side: the northern band by the north eastern and the
+	 * north western corner and by the two upright plates of the north arm, the eastern one by the
+	 * corners east of the middle and by the plates of the east arm. It is added once for whichever
+	 * of them is on.
 	 */
 	private static final VoxelShape EDGE_NORTH = Block.box(7.0, 7.0, 0.0, 9.0, 9.0, 7.0);
 	private static final VoxelShape EDGE_SOUTH = Block.box(7.0, 7.0, 9.0, 9.0, 9.0, 16.0);
@@ -173,12 +186,12 @@ public final class MBPaneShapes {
 			&& corner(state, right, direction) == corner(neighbour, right, opposite);
 	}
 
-	/** The vanilla connection boolean of this arm, which is also its lower half. */
+	/** The vanilla connection boolean of this arm, which is also its lower plate. */
 	public static boolean lower(final BlockState state, final Direction direction) {
 		return state.getValue(MBPaneProperties.lower(direction));
 	}
 
-	/** The upper half of this arm. */
+	/** This mod's own flag for the upper plate of this arm. */
 	public static boolean upper(final BlockState state, final Direction direction) {
 		return state.getValue(MBPaneProperties.upper(direction));
 	}
@@ -227,19 +240,37 @@ public final class MBPaneShapes {
 		boolean southEast = corner(state, Direction.SOUTH, Direction.EAST);
 		boolean southWest = corner(state, Direction.SOUTH, Direction.WEST);
 		boolean northWest = corner(state, Direction.NORTH, Direction.WEST);
+		// A band runs along its side, so every corner of that side turns it on: the two quadrants
+		// beside it in the plate, and the upright plate of the arm it leads into
+		boolean north = northEast || northWest || plated(state, Direction.NORTH);
+		boolean south = southEast || southWest || plated(state, Direction.SOUTH);
+		boolean east = northEast || southEast || plated(state, Direction.EAST);
+		boolean west = northWest || southWest || plated(state, Direction.WEST);
+		// The column is left open between the plates of the two halves, so it follows them alone
+		boolean column = lower(state, Direction.NORTH) || lower(state, Direction.EAST)
+				|| lower(state, Direction.SOUTH) || lower(state, Direction.WEST);
+		boolean cap = upper(state, Direction.NORTH) || upper(state, Direction.EAST)
+				|| upper(state, Direction.SOUTH) || upper(state, Direction.WEST);
 
 		shape = Shapes.or(shape,
 				northEast ? CORNER_NORTH_EAST : Shapes.empty(),
 				southEast ? CORNER_SOUTH_EAST : Shapes.empty(),
 				southWest ? CORNER_SOUTH_WEST : Shapes.empty(),
 				northWest ? CORNER_NORTH_WEST : Shapes.empty(),
-				northEast || northWest ? EDGE_NORTH : Shapes.empty(),
-				southEast || southWest ? EDGE_SOUTH : Shapes.empty(),
-				northEast || southEast ? EDGE_EAST : Shapes.empty(),
-				northWest || southWest ? EDGE_WEST : Shapes.empty(),
-				northEast || southEast || southWest || northWest ? MIDDLE : Shapes.empty());
+				north ? EDGE_NORTH : Shapes.empty(),
+				south ? EDGE_SOUTH : Shapes.empty(),
+				east ? EDGE_EAST : Shapes.empty(),
+				west ? EDGE_WEST : Shapes.empty(),
+				column ? COLUMN_LOWER : Shapes.empty(),
+				cap ? COLUMN_UPPER : Shapes.empty(),
+				north || south || east || west ? MIDDLE : Shapes.empty());
 
 		return shape;
+	}
+
+	/** Whether either plate of this arm is on, the lower one or the upper one. */
+	private static boolean plated(final BlockState state, final Direction direction) {
+		return lower(state, direction) || upper(state, direction);
 	}
 
 	private static VoxelShape lowerShape(final Direction direction) {

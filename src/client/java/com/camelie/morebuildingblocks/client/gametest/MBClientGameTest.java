@@ -372,17 +372,18 @@ public class MBClientGameTest implements FabricClientGameTest {
 	}
 
 	/**
-	 * Checks that the twelve pieces add up to the shapes they should.
+	 * Checks that the twelve plates add up to the shapes they should.
 	 *
 	 * <p>The stick - the post and its faces - is what the models draw while every flag is false, so
-	 * only an untouched pane is the vanilla post. A connection boolean is the lower half of an arm
-	 * and the mod's {@code *_up} flag is its upper half, so a state with both halves set is the
-	 * vanilla arm on its own and a state with only the lower half set is half an arm.
+	 * only an untouched pane is the vanilla post. A connection boolean is the lower plate of an arm
+	 * and the mod's {@code *_up} flag is its upper one, so a state with both set is the arm's
+	 * quadrant, its band and the column: nine pixels deep, the full height of the pane. A state with
+	 * only the lower plate set is the lower half of all that.
 	 *
 	 * <p>The rest cover the reason the mod answers {@code skipRendering} itself: two panes hide the
-	 * face between them only where the pieces on either side of that face meet, so a half arm facing
+	 * face between them only where the pieces on either side of that face meet, so a plate facing
 	 * air stays visible, and a corner - which sits at mid height - keeps its up and down faces even
-	 * when a pane without an arm stands above it.
+	 * when a pane without a plate there stands above it.
 	 */
 	private static void verifyPaneShapes(TestServerContext server) {
 		server.runOnServer(minecraftServer -> {
@@ -411,10 +412,10 @@ public class MBClientGameTest implements FabricClientGameTest {
 
 			require(sameShape(shapeOf(plain, level), post),
 					"a pane with no pieces set is not the vanilla post");
-			require(sameShape(shapeOf(arm, level), Block.box(7.0, 0.0, 0.0, 9.0, 16.0, 8.0)),
-					"an arm with both halves set is not the vanilla arm on its own");
-			require(sameShape(shapeOf(lower, level), Block.box(7.0, 0.0, 0.0, 9.0, 8.0, 8.0)),
-					"an arm with only its lower half set is not half an arm");
+			require(sameShape(shapeOf(arm, level), Block.box(7.0, 0.0, 0.0, 9.0, 16.0, 9.0)),
+					"an arm with both plates set is not the arm, its band and the column");
+			require(sameShape(shapeOf(lower, level), Block.box(7.0, 0.0, 0.0, 9.0, 9.0, 9.0)),
+					"an arm with only its lower plate set is not the lower half of the pane");
 			require(sameShape(shapeOf(corner, level), Shapes.or(
 					Block.box(9.0, 7.0, 0.0, 16.0, 9.0, 7.0),
 					Block.box(7.0, 7.0, 0.0, 9.0, 9.0, 7.0),
