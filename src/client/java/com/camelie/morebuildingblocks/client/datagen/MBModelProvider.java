@@ -1241,6 +1241,13 @@ public class MBModelProvider implements DataProvider {
 	 * stands on its own is written as a plane without thickness, the way vanilla's own bars models
 	 * write the faces of their rods.
 	 *
+	 * <p>The two kinds of edge face show that border differently. An upright one is two wide and
+	 * seven tall, which is the shape the border is drawn in, so the client crops the sprite for it
+	 * the way vanilla does and it names no rectangle. A level corner plate's edge face is seven by
+	 * two - the same two pixels of border seen from the side - and the crop the client would work
+	 * out for it falls on the transparent part of the sprite, so those name the border's two pixel
+	 * column and read it a quarter turn round ({@link PaneFace#turned}).
+	 *
 	 * <p>The sprites the slots name below are placeholders, the ones a template shows on its own;
 	 * every copy of it - {@link #generatePanes()} writes one per vanilla pane - replaces both.
 	 */
@@ -1273,26 +1280,26 @@ public class MBModelProvider implements DataProvider {
 					paneBox(9, 7, 0, 16, 9, 7,
 							PaneFace.full("up", "#pane"),
 							PaneFace.full("down", "#pane"),
-							PaneFace.full("north", "#edge"),
-							PaneFace.full("east", "#edge")))),
+							PaneFace.turned("north", "#edge", 7, 0, 9, 7, 90),
+							PaneFace.turned("east", "#edge", 7, 0, 9, 7, 90)))),
 			new PaneTemplate("pane_corner_se", List.of(
 					paneBox(9, 7, 9, 16, 9, 16,
 							PaneFace.full("up", "#pane"),
 							PaneFace.full("down", "#pane"),
-							PaneFace.full("south", "#edge"),
-							PaneFace.full("east", "#edge")))),
+							PaneFace.turned("south", "#edge", 7, 0, 9, 7, 90),
+							PaneFace.turned("east", "#edge", 7, 0, 9, 7, 90)))),
 			new PaneTemplate("pane_corner_sw", List.of(
 					paneBox(0, 7, 9, 7, 9, 16,
 							PaneFace.full("up", "#pane"),
 							PaneFace.full("down", "#pane"),
-							PaneFace.full("south", "#edge"),
-							PaneFace.full("west", "#edge")))),
+							PaneFace.turned("south", "#edge", 7, 0, 9, 7, 90),
+							PaneFace.turned("west", "#edge", 7, 0, 9, 7, 90)))),
 			new PaneTemplate("pane_corner_nw", List.of(
 					paneBox(0, 7, 0, 7, 9, 7,
 							PaneFace.full("up", "#pane"),
 							PaneFace.full("down", "#pane"),
-							PaneFace.full("north", "#edge"),
-							PaneFace.full("west", "#edge")))),
+							PaneFace.turned("north", "#edge", 7, 0, 9, 7, 90),
+							PaneFace.turned("west", "#edge", 7, 0, 9, 7, 90)))),
 			new PaneTemplate("pane_edge_north_lower", List.of(
 					paneBox(7, 7, 0, 9, 8, 7,
 							PaneFace.cut("north", "#edge", 7, 9, 9, 10)))),
@@ -1421,17 +1428,30 @@ public class MBModelProvider implements DataProvider {
 
 	/**
 	 * One face of a piece: the slot it reads its sprite from and, when it covers only part of that
-	 * sprite, the rectangle it has to name.
+	 * sprite, the rectangle it has to name and the quarter turn it is read through.
 	 */
-	private record PaneFace(String direction, String texture, int[] uv) {
+	private record PaneFace(String direction, String texture, int[] uv, int rotation) {
 		/** A face that names no rectangle, so the client crops its sprite the way vanilla does. */
 		private static PaneFace full(String direction, String texture) {
-			return new PaneFace(direction, texture, null);
+			return new PaneFace(direction, texture, null, 0);
 		}
 
 		/** A face that covers part of its sprite and names that part. */
 		private static PaneFace cut(String direction, String texture, int minU, int minV, int maxU, int maxV) {
-			return new PaneFace(direction, texture, new int[] { minU, minV, maxU, maxV });
+			return new PaneFace(direction, texture, new int[] { minU, minV, maxU, maxV }, 0);
+		}
+
+		/**
+		 * A face whose sprite is read a quarter turn round, for a rectangle that is not the shape of
+		 * the face: a pane's border is two pixels wide and sixteen long, and the border faces of the
+		 * level corner plates are seven long and two wide, so the rectangle has to be laid along the
+		 * face rather than across it. {@code rotation} turns which of the rectangle's corners each
+		 * vertex of the quad takes - the rectangle's own bounds are not turned - so the seven rows
+		 * run along the face's seven and the two columns along its two, one texture pixel each.
+		 */
+		private static PaneFace turned(String direction, String texture, int minU, int minV, int maxU, int maxV,
+				int rotation) {
+			return new PaneFace(direction, texture, new int[] { minU, minV, maxU, maxV }, rotation);
 		}
 	}
 
@@ -1501,6 +1521,10 @@ public class MBModelProvider implements DataProvider {
 
 				if (face.uv() != null) {
 					json.add("uv", uv(face.uv()[0], face.uv()[1], face.uv()[2], face.uv()[3]));
+				}
+
+				if (face.rotation() != 0) {
+					json.addProperty("rotation", face.rotation());
 				}
 
 				json.addProperty("texture", face.texture());

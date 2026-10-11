@@ -7,10 +7,24 @@
           "texture": "#pane"
         },
         "east": {
-          "texture": "#edge"
+          "rotation": 90,
+          "texture": "#edge",
+          "uv": [
+            7,
+            0,
+            9,
+            7
+          ]
         },
         "south": {
-          "texture": "#edge"
+          "rotation": 90,
+          "texture": "#edge",
+          "uv": [
+            7,
+            0,
+            9,
+            7
+          ]
         },
         "up": {
           "texture": "#pane"
