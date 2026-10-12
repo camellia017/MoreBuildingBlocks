@@ -1,5 +1,6 @@
 package com.camelie.morebuildingblocks.client.datagen;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -1476,13 +1477,14 @@ public class MBModelProvider implements DataProvider {
 	 *
 	 * <p>The copies are what the client asks for by name - {@code <template>_<pane>} - so the
 	 * geometry is written once per template and only the two sprites differ from pane to pane. A
-	 * bars copy reads the template's {@code _bars} twin instead, written from the same geometry, so
-	 * the bars may be read on their own - their own uv, their own faces - while the panes stay put.
+	 * bars copy reads the template's {@code _bars} twin instead, which draws the same pieces with
+	 * its upright ones standing in the plane through the block's centre - the way vanilla draws its
+	 * own bars - so the bars may be read on their own while the panes stay put.
 	 */
 	private void generatePanes() {
 		for (PaneTemplate template : PANE_TEMPLATES) {
-			this.models.put(paneModelId(template.name()), modelInstance(paneGeometry(template)));
-			this.models.put(paneModelId(barsTwin(template)), modelInstance(paneGeometry(template)));
+			this.models.put(paneModelId(template.name()), modelInstance(paneGeometry(template.boxes())));
+			this.models.put(paneModelId(barsTwin(template)), modelInstance(paneGeometry(barsBoxes(template))));
 		}
 
 		for (Block block : BuiltInRegistries.BLOCK) {
@@ -1514,14 +1516,80 @@ public class MBModelProvider implements DataProvider {
 
 	/**
 	 * The twin of one template that the bars read: {@code <template>_bars}. It is written from the
-	 * same geometry as the template, so the two may drift apart later without a pane noticing.
+	 * template's own boxes with {@link #barsBoxes} applied, so the two may drift apart without a
+	 * pane noticing.
 	 */
 	private static String barsTwin(PaneTemplate template) {
 		return template.name() + "_bars";
 	}
 
-	/** The geometry of one pane template: an element per box, the faces it shows and the two slots. */
-	private static JsonObject paneGeometry(PaneTemplate template) {
+	/**
+	 * The boxes of one piece as the bars draw it.
+	 *
+	 * <p>An upright piece of the bars stands in the plane that runs through the block's centre, the
+	 * way vanilla draws its own bars: the faces that read the bars' sprite leave the box they are
+	 * drawn round and are written as a plane of no thickness, while the border the piece carries at
+	 * the edge of the block stays on the box it was written on. Every level piece - the band, the
+	 * crossing and the four plates - keeps the geometry the pane draws it from.
+	 */
+	private static List<PaneBox> barsBoxes(PaneTemplate template) {
+		if (!upright(template.name())) {
+			return template.boxes();
+		}
+
+		List<PaneBox> boxes = new ArrayList<>();
+
+		for (PaneBox piece : template.boxes()) {
+			List<PaneFace> sprites = new ArrayList<>();
+			List<PaneFace> border = new ArrayList<>();
+
+			for (PaneFace face : piece.faces()) {
+				if ("#pane".equals(face.texture())) {
+					sprites.add(face);
+				} else {
+					border.add(face);
+				}
+			}
+
+			if (sprites.isEmpty()) {
+				boxes.add(piece);
+				continue;
+			}
+
+			if (!border.isEmpty()) {
+				boxes.add(new PaneBox(piece.box(), border));
+			}
+
+			for (PaneFace face : sprites) {
+				boxes.add(new PaneBox(centrePlane(piece.box(), face.direction()), List.of(face)));
+			}
+		}
+
+		return boxes;
+	}
+
+	/** Whether the bars draw a piece upright, in the plane that runs through the block's centre. */
+	private static boolean upright(String name) {
+		return switch (name) {
+			case "pane_side_corner_lower", "pane_side_corner_lower_alt", "pane_side_corner_upper",
+					"pane_side_corner_upper_alt", "pane_column_lower_north", "pane_column_lower_south",
+					"pane_column_lower_west", "pane_column_lower_east", "pane_column_upper_north",
+					"pane_column_upper_south", "pane_column_upper_west", "pane_column_upper_east" -> true;
+			default -> false;
+		};
+	}
+
+	/** The same box, laid flat in the plane through the block's centre that the face looks along. */
+	private static Box centrePlane(Box box, String direction) {
+		return switch (direction) {
+			case "west", "east" -> new Box(8, box.y1(), box.z1(), 8, box.y2(), box.z2());
+			case "north", "south" -> new Box(box.x1(), box.y1(), 8, box.x2(), box.y2(), 8);
+			default -> box;
+		};
+	}
+
+	/** The geometry of one set of boxes: an element per box, the faces it shows and the two slots. */
+	private static JsonObject paneGeometry(List<PaneBox> boxes) {
 		JsonObject root = new JsonObject();
 		root.addProperty("ambientocclusion", false);
 
@@ -1533,7 +1601,7 @@ public class MBModelProvider implements DataProvider {
 
 		JsonArray elements = new JsonArray();
 
-		for (PaneBox box : template.boxes()) {
+		for (PaneBox box : boxes) {
 			JsonObject element = boxElement(box.box());
 			JsonObject faces = new JsonObject();
 

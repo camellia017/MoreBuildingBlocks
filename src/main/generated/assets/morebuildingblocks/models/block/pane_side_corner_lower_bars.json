@@ -7,19 +7,24 @@
           "cullface": "down",
           "texture": "#edge"
         },
-        "east": {
-          "texture": "#pane",
-          "uv": [
-            9,
-            9,
-            16,
-            16
-          ]
-        },
         "north": {
           "cullface": "north",
           "texture": "#edge"
-        },
+        }
+      },
+      "from": [
+        7,
+        0,
+        0
+      ],
+      "to": [
+        9,
+        7,
+        7
+      ]
+    },
+    {
+      "faces": {
         "west": {
           "texture": "#pane",
           "uv": [
@@ -31,12 +36,35 @@
         }
       },
       "from": [
-        7,
+        8,
         0,
         0
       ],
       "to": [
-        9,
+        8,
+        7,
+        7
+      ]
+    },
+    {
+      "faces": {
+        "east": {
+          "texture": "#pane",
+          "uv": [
+            9,
+            9,
+            16,
+            16
+          ]
+        }
+      },
+      "from": [
+        8,
+        0,
+        0
+      ],
+      "to": [
+        8,
         7,
         7
       ]
