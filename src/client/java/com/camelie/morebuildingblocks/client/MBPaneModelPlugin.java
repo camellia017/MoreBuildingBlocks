@@ -329,7 +329,11 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 		}
 
 		for (SharedBox box : SHARED_BOXES) {
-			if (bars && (acrossMiddle(box.template()) || columnEnd(box.template()))) {
+			// Both families draw the faces of the middle: the bars reach the middle of the block
+			// with their arms as well, and the two pixels they show at the end of those arms are
+			// the same two pixels a pane shows there. Only the ends of the column are left to the
+			// family that draws them, which for the bars is vanilla's own post ends.
+			if (bars && columnEnd(box.template())) {
 				continue;
 			}
 
@@ -347,17 +351,6 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 		}
 
 		return selectors;
-	}
-
-	/**
-	 * Whether one of the shared boxes lies across the middle of the block: the sides of the column
-	 * and of the crossing, which carry the two pixels on the far side of the plane an arm stands in.
-	 * The bars draw those two pixels from the arms, which reach the middle of the block, so the
-	 * copies of these boxes are left to the panes, which keep them in the glass they belong to.
-	 */
-	private static boolean acrossMiddle(String template) {
-		return (template.startsWith("pane_column_") || template.startsWith("pane_middle_"))
-				&& !template.endsWith("_down") && !template.endsWith("_up");
 	}
 
 	/**
