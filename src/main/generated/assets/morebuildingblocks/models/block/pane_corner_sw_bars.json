@@ -1,0 +1,52 @@
+{
+  "ambientocclusion": false,
+  "elements": [
+    {
+      "faces": {
+        "down": {
+          "texture": "#pane"
+        },
+        "south": {
+          "cullface": "south",
+          "rotation": 270,
+          "texture": "#edge",
+          "uv": [
+            7,
+            0,
+            9,
+            7
+          ]
+        },
+        "up": {
+          "texture": "#pane"
+        },
+        "west": {
+          "cullface": "west",
+          "rotation": 90,
+          "texture": "#edge",
+          "uv": [
+            7,
+            0,
+            9,
+            7
+          ]
+        }
+      },
+      "from": [
+        0,
+        7,
+        9
+      ],
+      "to": [
+        7,
+        9,
+        16
+      ]
+    }
+  ],
+  "textures": {
+    "edge": "minecraft:block/glass_pane_top",
+    "pane": "minecraft:block/glass",
+    "particle": "#pane"
+  }
+}

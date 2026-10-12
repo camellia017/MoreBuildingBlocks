@@ -1465,7 +1465,8 @@ public class MBModelProvider implements DataProvider {
 	}
 
 	/**
-	 * The sixty template models and one textured copy of each for every vanilla pane.
+	 * The sixty template models, the bars' twin of each, and one textured copy of each for
+	 * every vanilla pane.
 	 *
 	 * <p>26 vanilla blocks draw panes: the seventeen glass panes - plain and dyed - the iron bars
 	 * and the eight copper bars. A glass pane takes its glass from its own name with {@code _pane}
@@ -1474,11 +1475,14 @@ public class MBModelProvider implements DataProvider {
 	 * draws and the model vanilla's own blockstate names for it.
 	 *
 	 * <p>The copies are what the client asks for by name - {@code <template>_<pane>} - so the
-	 * geometry is written once per template and only the two sprites differ from pane to pane.
+	 * geometry is written once per template and only the two sprites differ from pane to pane. A
+	 * bars copy reads the template's {@code _bars} twin instead, written from the same geometry, so
+	 * the bars may be read on their own - their own uv, their own faces - while the panes stay put.
 	 */
 	private void generatePanes() {
 		for (PaneTemplate template : PANE_TEMPLATES) {
 			this.models.put(paneModelId(template.name()), modelInstance(paneGeometry(template)));
+			this.models.put(paneModelId(barsTwin(template)), modelInstance(paneGeometry(template)));
 		}
 
 		for (Block block : BuiltInRegistries.BLOCK) {
@@ -1506,6 +1510,14 @@ public class MBModelProvider implements DataProvider {
 	/** {@code morebuildingblocks:block/<path>}: a pane template or one of its copies. */
 	private static Identifier paneModelId(String path) {
 		return Identifier.fromNamespaceAndPath(MoreBuildingBlocks.MOD_ID, "block/" + path);
+	}
+
+	/**
+	 * The twin of one template that the bars read: {@code <template>_bars}. It is written from the
+	 * same geometry as the template, so the two may drift apart later without a pane noticing.
+	 */
+	private static String barsTwin(PaneTemplate template) {
+		return template.name() + "_bars";
 	}
 
 	/** The geometry of one pane template: an element per box, the faces it shows and the two slots. */
@@ -1559,10 +1571,13 @@ public class MBModelProvider implements DataProvider {
 	 * <p>A glass pane draws translucent glass, so its sprites are written the way 26.3 writes a
 	 * translucent texture - {@code {"force_translucent": true, "sprite": ...}} - which a bare
 	 * sprite string cannot say. The bars are cut out instead, so theirs stay bare strings.
+	 *
+	 * <p>A pane reads the template itself; the bars read its {@code _bars} twin, which draws the
+	 * same geometry today and may draw their own later.
 	 */
 	private static JsonObject paneCopy(PaneTemplate template, String base, boolean glass) {
 		JsonObject root = new JsonObject();
-		root.addProperty("parent", paneModelId(template.name()).toString());
+		root.addProperty("parent", paneModelId(glass ? template.name() : barsTwin(template)).toString());
 
 		JsonObject textures = new JsonObject();
 		paneSprite(textures, "pane", "block/" + base, glass);
