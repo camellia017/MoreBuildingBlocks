@@ -31,6 +31,46 @@
     },
     {
       "faces": {
+        "south": {
+          "texture": "#edge"
+        }
+      },
+      "from": [
+        7,
+        9,
+        0
+      ],
+      "to": [
+        9,
+        16,
+        0
+      ]
+    },
+    {
+      "faces": {
+        "down": {
+          "texture": "#edge",
+          "uv": [
+            9,
+            0,
+            7,
+            7
+          ]
+        }
+      },
+      "from": [
+        7,
+        16,
+        0
+      ],
+      "to": [
+        9,
+        16,
+        7
+      ]
+    },
+    {
+      "faces": {
         "west": {
           "texture": "#pane",
           "uv": [

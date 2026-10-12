@@ -3,6 +3,15 @@
   "elements": [
     {
       "faces": {
+        "down": {
+          "texture": "#edge",
+          "uv": [
+            9,
+            7,
+            7,
+            9
+          ]
+        },
         "up": {
           "cullface": "up",
           "texture": "#edge",

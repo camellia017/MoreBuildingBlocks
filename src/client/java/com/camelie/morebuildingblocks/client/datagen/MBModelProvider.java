@@ -1536,12 +1536,12 @@ public class MBModelProvider implements DataProvider {
 	 * The faces of a wall and of the band are carried on to the middle of the block, where the two
 	 * planes of a corner meet; the sides of the post and of the crossing, which lie across it, are
 	 * left where the pane put them and are drawn by the panes alone.
+	 *
+	 * <p>Every border face of the bars is drawn on both sides, whether its piece belongs on a centre
+	 * plane or not, so that the frame shows whichever side of it is looked at.
 	 */
 	private static List<PaneBox> barsBoxes(PaneTemplate template) {
-		if (!onCentrePlane(template.name())) {
-			return template.boxes();
-		}
-
+		boolean centre = onCentrePlane(template.name());
 		List<PaneBox> boxes = new ArrayList<>();
 
 		for (PaneBox piece : template.boxes()) {
@@ -1556,21 +1556,94 @@ public class MBModelProvider implements DataProvider {
 				}
 			}
 
-			if (sprites.isEmpty()) {
-				boxes.add(piece);
-				continue;
-			}
+			boxes.addAll(bothWays(piece.box(), centre ? List.of() : sprites, barsEdge(template.name(), border)));
 
-			if (!border.isEmpty()) {
-				boxes.add(new PaneBox(piece.box(), barsEdge(template.name(), border)));
-			}
-
-			for (PaneFace face : sprites) {
-				boxes.add(centrePlanePiece(piece.box(), face));
+			if (centre) {
+				for (PaneFace face : sprites) {
+					boxes.add(centrePlanePiece(piece.box(), face));
+				}
 			}
 		}
 
 		return boxes;
+	}
+
+	/**
+	 * One box of a piece, with the faces it keeps and its border drawn on both sides.
+	 *
+	 * <p>Every border face is written where the pane puts it and again the other way round in the
+	 * same place, reading the same pixels mirrored, so that the frame is drawn whichever side of it
+	 * is looked at. A piece with no thickness along a face reads its plane twice out of the one box;
+	 * where the piece is thick the far side of a face is written on a plate of its own, spread over
+	 * that face and of no thickness, so that the frame of a plate lies in the plane of the plate
+	 * rather than on its back. The faces the piece keeps are written on its own box, ahead of the
+	 * border; a box left with nothing to draw is not written at all.
+	 */
+	private static List<PaneBox> bothWays(Box box, List<PaneFace> kept, List<PaneFace> border) {
+		List<PaneBox> pieces = new ArrayList<>();
+		List<PaneFace> faces = new ArrayList<>(kept);
+
+		for (PaneFace face : border) {
+			faces.add(face);
+
+			PaneFace back = otherWay(face);
+
+			if (noThickness(box, face.direction())) {
+				faces.add(back);
+			} else {
+				pieces.add(new PaneBox(facePlane(box, face.direction()), List.of(back)));
+			}
+		}
+
+		if (!faces.isEmpty()) {
+			pieces.add(0, new PaneBox(box, faces));
+		}
+
+		return pieces;
+	}
+
+	/** The same face looking the other way, over the same pixels read left to right the other way. */
+	private static PaneFace otherWay(PaneFace face) {
+		int[] uv = face.uv();
+
+		return new PaneFace(oppositeDirection(face.direction()), face.texture(),
+				uv == null ? null : new int[] { uv[2], uv[1], uv[0], uv[3] }, face.rotation());
+	}
+
+	/** The direction that looks back at this one. */
+	private static String oppositeDirection(String direction) {
+		return switch (direction) {
+			case "north" -> "south";
+			case "south" -> "north";
+			case "west" -> "east";
+			case "east" -> "west";
+			case "down" -> "up";
+			case "up" -> "down";
+			default -> direction;
+		};
+	}
+
+	/** Whether the box has no thickness along the axis this face looks along. */
+	private static boolean noThickness(Box box, String direction) {
+		return switch (direction) {
+			case "north", "south" -> box.z1() == box.z2();
+			case "west", "east" -> box.x1() == box.x2();
+			case "down", "up" -> box.y1() == box.y2();
+			default -> false;
+		};
+	}
+
+	/** The box of a piece flattened on to the plane one of its faces looks along. */
+	private static Box facePlane(Box box, String direction) {
+		return switch (direction) {
+			case "north" -> new Box(box.x1(), box.y1(), box.z1(), box.x2(), box.y2(), box.z1());
+			case "south" -> new Box(box.x1(), box.y1(), box.z2(), box.x2(), box.y2(), box.z2());
+			case "west" -> new Box(box.x1(), box.y1(), box.z1(), box.x1(), box.y2(), box.z2());
+			case "east" -> new Box(box.x2(), box.y1(), box.z1(), box.x2(), box.y2(), box.z2());
+			case "down" -> new Box(box.x1(), box.y1(), box.z1(), box.x2(), box.y1(), box.z2());
+			case "up" -> new Box(box.x1(), box.y2(), box.z1(), box.x2(), box.y2(), box.z2());
+			default -> box;
+		};
 	}
 
 	/**
