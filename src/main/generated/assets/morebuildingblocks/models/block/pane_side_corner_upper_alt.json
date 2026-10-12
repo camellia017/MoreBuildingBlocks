@@ -18,7 +18,13 @@
         },
         "up": {
           "cullface": "up",
-          "texture": "#edge"
+          "texture": "#edge",
+          "uv": [
+            7,
+            0,
+            9,
+            7
+          ]
         },
         "west": {
           "texture": "#pane",

@@ -1265,25 +1265,25 @@ public class MBModelProvider implements DataProvider {
 			new PaneTemplate("pane_side_corner_lower", List.of(
 					paneBox(7, 0, 0, 9, 7, 7,
 							PaneFace.full("north", "#edge"),
-							PaneFace.full("down", "#edge"),
+							PaneFace.cut("down", "#edge", 7, 0, 9, 7),
 							PaneFace.cut("west", "#pane", 16, 9, 9, 16),
 							PaneFace.cut("east", "#pane", 9, 9, 16, 16)))),
 			new PaneTemplate("pane_side_corner_lower_alt", List.of(
 					paneBox(7, 0, 9, 9, 7, 16,
 							PaneFace.full("south", "#edge"),
-							PaneFace.full("down", "#edge"),
+							PaneFace.cut("down", "#edge", 7, 0, 9, 7),
 							PaneFace.cut("west", "#pane", 7, 9, 0, 16),
 							PaneFace.cut("east", "#pane", 0, 9, 7, 16)))),
 			new PaneTemplate("pane_side_corner_upper", List.of(
 					paneBox(7, 9, 0, 9, 16, 7,
 							PaneFace.full("north", "#edge"),
-							PaneFace.full("up", "#edge"),
+							PaneFace.cut("up", "#edge", 7, 0, 9, 7),
 							PaneFace.cut("west", "#pane", 16, 0, 9, 7),
 							PaneFace.cut("east", "#pane", 9, 0, 16, 7)))),
 			new PaneTemplate("pane_side_corner_upper_alt", List.of(
 					paneBox(7, 9, 9, 9, 16, 16,
 							PaneFace.full("south", "#edge"),
-							PaneFace.full("up", "#edge"),
+							PaneFace.cut("up", "#edge", 7, 0, 9, 7),
 							PaneFace.cut("west", "#pane", 7, 0, 0, 7),
 							PaneFace.cut("east", "#pane", 0, 0, 7, 7)))),
 			new PaneTemplate("pane_corner", List.of(
@@ -1312,12 +1312,12 @@ public class MBModelProvider implements DataProvider {
 							PaneFace.turned("west", "#edge", 7, 0, 9, 7, 90)))),
 			new PaneTemplate("pane_edge_north_lower", List.of(
 					paneBox(7, 7, 0, 9, 8, 7,
-							PaneFace.cut("north", "#edge", 7, 9, 9, 10)))),
+							PaneFace.cut("north", "#edge", 7, 8, 9, 9)))),
 			new PaneTemplate("pane_edge_north_lower_down", List.of(
 					paneBox(7, 7, 0, 9, 7, 7, PaneFace.full("down", "#pane")))),
 			new PaneTemplate("pane_edge_north_upper", List.of(
 					paneBox(7, 8, 0, 9, 9, 7,
-							PaneFace.cut("north", "#edge", 7, 6, 9, 7)))),
+							PaneFace.cut("north", "#edge", 7, 7, 9, 8)))),
 			new PaneTemplate("pane_edge_north_upper_up", List.of(
 					paneBox(7, 9, 0, 9, 9, 7, PaneFace.full("up", "#pane")))),
 			new PaneTemplate("pane_edge_north_lower_west", List.of(
@@ -1330,12 +1330,12 @@ public class MBModelProvider implements DataProvider {
 					paneBox(9, 8, 0, 9, 9, 7, PaneFace.cut("east", "#pane", 9, 7, 16, 8)))),
 			new PaneTemplate("pane_edge_south_lower", List.of(
 					paneBox(7, 7, 9, 9, 8, 16,
-							PaneFace.cut("south", "#edge", 7, 9, 9, 10)))),
+							PaneFace.cut("south", "#edge", 7, 8, 9, 9)))),
 			new PaneTemplate("pane_edge_south_lower_down", List.of(
 					paneBox(7, 7, 9, 9, 7, 16, PaneFace.full("down", "#pane")))),
 			new PaneTemplate("pane_edge_south_upper", List.of(
 					paneBox(7, 8, 9, 9, 9, 16,
-							PaneFace.cut("south", "#edge", 7, 6, 9, 7)))),
+							PaneFace.cut("south", "#edge", 7, 7, 9, 8)))),
 			new PaneTemplate("pane_edge_south_upper_up", List.of(
 					paneBox(7, 9, 9, 9, 9, 16, PaneFace.full("up", "#pane")))),
 			new PaneTemplate("pane_edge_south_lower_west", List.of(
@@ -1348,12 +1348,12 @@ public class MBModelProvider implements DataProvider {
 					paneBox(9, 8, 9, 9, 9, 16, PaneFace.cut("east", "#pane", 0, 7, 7, 8)))),
 			new PaneTemplate("pane_edge_east_lower", List.of(
 					paneBox(9, 7, 7, 16, 8, 9,
-							PaneFace.cut("east", "#edge", 7, 9, 9, 10)))),
+							PaneFace.cut("east", "#edge", 9, 8, 7, 9)))),
 			new PaneTemplate("pane_edge_east_lower_down", List.of(
 					paneBox(9, 7, 7, 16, 7, 9, PaneFace.full("down", "#pane")))),
 			new PaneTemplate("pane_edge_east_upper", List.of(
 					paneBox(9, 8, 7, 16, 9, 9,
-							PaneFace.cut("east", "#edge", 7, 6, 9, 7)))),
+							PaneFace.cut("east", "#edge", 9, 7, 7, 8)))),
 			new PaneTemplate("pane_edge_east_upper_up", List.of(
 					paneBox(9, 9, 7, 16, 9, 9, PaneFace.full("up", "#pane")))),
 			new PaneTemplate("pane_edge_east_lower_north", List.of(
@@ -1366,12 +1366,12 @@ public class MBModelProvider implements DataProvider {
 					paneBox(9, 8, 9, 16, 9, 9, PaneFace.cut("south", "#pane", 9, 7, 16, 8)))),
 			new PaneTemplate("pane_edge_west_lower", List.of(
 					paneBox(0, 7, 7, 7, 8, 9,
-							PaneFace.cut("west", "#edge", 7, 9, 9, 10)))),
+							PaneFace.cut("west", "#edge", 9, 8, 7, 9)))),
 			new PaneTemplate("pane_edge_west_lower_down", List.of(
 					paneBox(0, 7, 7, 7, 7, 9, PaneFace.full("down", "#pane")))),
 			new PaneTemplate("pane_edge_west_upper", List.of(
 					paneBox(0, 8, 7, 7, 9, 9,
-							PaneFace.cut("west", "#edge", 7, 6, 9, 7)))),
+							PaneFace.cut("west", "#edge", 9, 7, 7, 8)))),
 			new PaneTemplate("pane_edge_west_upper_up", List.of(
 					paneBox(0, 9, 7, 7, 9, 9, PaneFace.full("up", "#pane")))),
 			new PaneTemplate("pane_edge_west_lower_north", List.of(
@@ -1411,7 +1411,7 @@ public class MBModelProvider implements DataProvider {
 			new PaneTemplate("pane_column_lower_east", List.of(
 					paneBox(9, 0, 7, 9, 7, 9, PaneFace.cut("east", "#pane", 7, 9, 9, 16)))),
 			new PaneTemplate("pane_column_lower_down", List.of(
-					paneBox(7, 0, 7, 9, 0, 9, PaneFace.full("down", "#edge")))),
+					paneBox(7, 0, 7, 9, 0, 9, PaneFace.cut("down", "#edge", 7, 7, 9, 9)))),
 			new PaneTemplate("pane_column_upper_north", List.of(
 					paneBox(7, 9, 7, 9, 16, 7, PaneFace.cut("north", "#pane", 7, 0, 9, 7)))),
 			new PaneTemplate("pane_column_upper_south", List.of(
@@ -1421,7 +1421,7 @@ public class MBModelProvider implements DataProvider {
 			new PaneTemplate("pane_column_upper_east", List.of(
 					paneBox(9, 9, 7, 9, 16, 9, PaneFace.cut("east", "#pane", 7, 0, 9, 7)))),
 			new PaneTemplate("pane_column_upper_up", List.of(
-					paneBox(7, 16, 7, 9, 16, 9, PaneFace.full("up", "#edge")))));
+					paneBox(7, 16, 7, 9, 16, 9, PaneFace.cut("up", "#edge", 7, 7, 9, 9)))));
 
 	/** One box of a template, in whole pixels. */
 	private static PaneBox paneBox(int x1, int y1, int z1, int x2, int y2, int z2, PaneFace... faces) {
@@ -1535,9 +1535,7 @@ public class MBModelProvider implements DataProvider {
 	 * corner plates and the two end plates of the post - keeps the geometry the pane draws it from.
 	 * The faces of a wall and of the band are carried on to the middle of the block, where the two
 	 * planes of a corner meet; the sides of the post and of the crossing, which lie across it, are
-	 * left where the pane put them and are drawn by the panes alone. The end faces of the band run
-	 * into the middle head on and are read the other way round along u for it, so that the two
-	 * planes of a corner mirror one another there the way the two walls of a corner do.
+	 * left where the pane put them and are drawn by the panes alone.
 	 */
 	private static List<PaneBox> barsBoxes(PaneTemplate template) {
 		if (!onCentrePlane(template.name())) {
@@ -1545,7 +1543,6 @@ public class MBModelProvider implements DataProvider {
 		}
 
 		List<PaneBox> boxes = new ArrayList<>();
-		boolean mirrored = bandEndFace(template.name());
 
 		for (PaneBox piece : template.boxes()) {
 			List<PaneFace> sprites = new ArrayList<>();
@@ -1565,11 +1562,11 @@ public class MBModelProvider implements DataProvider {
 			}
 
 			if (!border.isEmpty()) {
-				boxes.add(new PaneBox(piece.box(), border));
+				boxes.add(new PaneBox(piece.box(), barsEdge(template.name(), border)));
 			}
 
 			for (PaneFace face : sprites) {
-				boxes.add(centrePlanePiece(piece.box(), face, mirrored));
+				boxes.add(centrePlanePiece(piece.box(), face));
 			}
 		}
 
@@ -1621,12 +1618,8 @@ public class MBModelProvider implements DataProvider {
 	 * themselves, which reach the middle, so the face is carried on by the one pixel and reads its
 	 * sprite one column further along, the column the middle of the block already stands on. The two
 	 * planes of a corner then meet at the line through the middle instead of crossing over it.
-	 *
-	 * <p>The end faces of the band are read the other way round along u, which {@code mirrored}
-	 * asks for: their sprite runs the way the arm beside them runs rather than the way the wall
-	 * they belong to runs.
 	 */
-	private static PaneBox centrePlanePiece(Box piece, PaneFace face, boolean mirrored) {
+	private static PaneBox centrePlanePiece(Box piece, PaneFace face) {
 		Box plane = centrePlane(piece, face.direction());
 		PaneFace read = barsFace(face, piece);
 		int[] uv = read.uv();
@@ -1637,7 +1630,7 @@ public class MBModelProvider implements DataProvider {
 		boolean above = low >= 9;
 
 		if (uv == null || (!below && !above)) {
-			return new PaneBox(plane, List.of(mirrored ? mirroredFace(read) : read));
+			return new PaneBox(plane, List.of(read));
 		}
 
 		// The end that meets the middle is the far one on either side of it, and the column of the
@@ -1658,41 +1651,32 @@ public class MBModelProvider implements DataProvider {
 
 		PaneFace widened = new PaneFace(read.direction(), read.texture(), wider, read.rotation());
 
-		return new PaneBox(reached, List.of(mirrored ? mirroredFace(widened) : widened));
+		return new PaneBox(reached, List.of(widened));
 	}
 
 	/**
-	 * Whether the piece is one of the band's end faces: the ones that carry a wall into the post and
-	 * the crossing at the middle of the block, and are read the other way round for it.
-	 */
-	private static boolean bandEndFace(String name) {
-		return switch (name) {
-			case "pane_edge_north_lower_west", "pane_edge_north_lower_east", "pane_edge_north_upper_west",
-					"pane_edge_north_upper_east", "pane_edge_south_lower_west", "pane_edge_south_lower_east",
-					"pane_edge_south_upper_west", "pane_edge_south_upper_east", "pane_edge_east_lower_north",
-					"pane_edge_east_lower_south", "pane_edge_east_upper_north", "pane_edge_east_upper_south",
-					"pane_edge_west_lower_north", "pane_edge_west_lower_south", "pane_edge_west_upper_north",
-					"pane_edge_west_upper_south" -> true;
-			default -> false;
-		};
-	}
-
-	/**
-	 * The same face with its window read the other way round along u.
+	 * The border of a piece the bars draw on a centre plane, read the way vanilla reads the plate
+	 * that piece ends in.
 	 *
-	 * <p>The band's end faces are read the other way round from the wall they belong to: their sprite
-	 * runs the way the arm beside them runs, so the two planes of a corner are mirror images of one
-	 * another across the middle of the block, as the two walls of a corner are.
+	 * <p>Vanilla draws a bar arm as one full height plate and gives its floor and ceiling windows of
+	 * their own: the arm's own pixels run one way along the wall and the other way along the south
+	 * of it, and the window of a plate follows the wall it stands in. Our pieces stop at the level
+	 * band, so each half names the rows of its own half and the arms vanilla turns out of these
+	 * pieces follow from the two readings.
 	 */
-	private static PaneFace mirroredFace(PaneFace face) {
-		int[] uv = face.uv();
+	private static List<PaneFace> barsEdge(String template, List<PaneFace> faces) {
+		List<PaneFace> edges = new ArrayList<>();
 
-		if (uv == null) {
-			return face;
+		for (PaneFace face : faces) {
+			edges.add(switch (template + "/" + face.direction()) {
+				case "pane_side_corner_lower/down" -> PaneFace.cut("down", "#edge", 9, 0, 7, 7);
+				case "pane_side_corner_lower_alt/down" -> PaneFace.cut("down", "#edge", 9, 9, 7, 16);
+				case "pane_side_corner_upper_alt/up" -> PaneFace.cut("up", "#edge", 7, 9, 9, 16);
+				default -> face;
+			});
 		}
 
-		return new PaneFace(face.direction(), face.texture(),
-				new int[] {16 - uv[0], uv[1], 16 - uv[2], uv[3]}, face.rotation());
+		return edges;
 	}
 
 	/**

@@ -7,10 +7,10 @@
           "cullface": "west",
           "texture": "#edge",
           "uv": [
+            9,
+            8,
             7,
-            9,
-            9,
-            10
+            9
           ]
         }
       },

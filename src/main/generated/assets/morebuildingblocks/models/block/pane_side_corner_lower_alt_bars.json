@@ -5,7 +5,13 @@
       "faces": {
         "down": {
           "cullface": "down",
-          "texture": "#edge"
+          "texture": "#edge",
+          "uv": [
+            9,
+            9,
+            7,
+            16
+          ]
         },
         "south": {
           "cullface": "south",

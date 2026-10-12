@@ -9,7 +9,13 @@
         },
         "up": {
           "cullface": "up",
-          "texture": "#edge"
+          "texture": "#edge",
+          "uv": [
+            7,
+            9,
+            9,
+            16
+          ]
         }
       },
       "from": [

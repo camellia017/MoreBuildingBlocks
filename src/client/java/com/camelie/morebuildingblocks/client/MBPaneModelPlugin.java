@@ -264,12 +264,17 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 			new StickPart("_noside", Quadrant.R270));
 
 	/**
-	 * What a lone bars block shows. Vanilla draws the ends of its bars at every state
-	 * and their post only while they are connected to nothing, which is this one.
+	 * What a lone bars block shows: vanilla draws the ends of its bars at every state and
+	 * their post only while they are connected to nothing.
 	 */
 	private static final List<StickPart> BARS_STICK = List.of(
-			new StickPart("_post_ends", Quadrant.R0),
 			new StickPart("_post", Quadrant.R0));
+
+	/**
+	 * The ends of the bars, which vanilla draws at every state: their two pixels at the floor
+	 * and the ceiling of the block, in the middle of it.
+	 */
+	private static final StickPart BARS_POST_ENDS = new StickPart("_post_ends", Quadrant.R0);
 
 	/** One of the models a pane connected to nothing is drawn from, and its turn. */
 	private record StickPart(String suffix, Quadrant rotation) {
@@ -329,6 +334,10 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 		for (StickPart part : bars ? BARS_STICK : GLASS_STICK) {
 			BlockStateModel.Unbaked model = stickPart(bare, part);
 			selectors.add(new MultiPartModel.Selector<>(MBPaneModelPlugin::bare, model));
+		}
+
+		if (bars) {
+			selectors.add(new MultiPartModel.Selector<>(state -> true, stickPart(bare, BARS_POST_ENDS)));
 		}
 
 		return selectors;

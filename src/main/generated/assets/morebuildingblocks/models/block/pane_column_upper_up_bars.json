@@ -5,7 +5,13 @@
       "faces": {
         "up": {
           "cullface": "up",
-          "texture": "#edge"
+          "texture": "#edge",
+          "uv": [
+            7,
+            7,
+            9,
+            9
+          ]
         }
       },
       "from": [
