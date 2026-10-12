@@ -1477,9 +1477,10 @@ public class MBModelProvider implements DataProvider {
 	 *
 	 * <p>The copies are what the client asks for by name - {@code <template>_<pane>} - so the
 	 * geometry is written once per template and only the two sprites differ from pane to pane. A
-	 * bars copy reads the template's {@code _bars} twin instead, which draws the same pieces with
-	 * its upright ones standing in the plane through the block's centre - the way vanilla draws its
-	 * own bars - so the bars may be read on their own while the panes stay put.
+	 * bars copy reads the template's {@code _bars} twin instead, which draws the pieces that stand in
+	 * a plane through the block's centre - the uprights, the band's end faces and the crossing's
+	 * sides - in that plane, the way vanilla draws its own bars, so the bars may be read on their own
+	 * while the panes stay put.
 	 */
 	private void generatePanes() {
 		for (PaneTemplate template : PANE_TEMPLATES) {
@@ -1526,14 +1527,15 @@ public class MBModelProvider implements DataProvider {
 	/**
 	 * The boxes of one piece as the bars draw it.
 	 *
-	 * <p>An upright piece of the bars stands in the plane that runs through the block's centre, the
-	 * way vanilla draws its own bars: the faces that read the bars' sprite leave the box they are
-	 * drawn round and are written as a plane of no thickness, while the border the piece carries at
-	 * the edge of the block stays on the box it was written on. Every level piece - the band, the
-	 * crossing and the four plates - keeps the geometry the pane draws it from.
+	 * <p>A piece of the bars that belongs in the plane running through the block's centre is drawn
+	 * there the way vanilla draws its own bars: the faces that read the bars' sprite leave the box
+	 * they are drawn round and are written as a plane of no thickness, while the border the piece
+	 * carries at the edge of the block stays on the box it was written on. Every piece that lies
+	 * level in the band - its box, the plates under and over it, the crossing's own plates, the four
+	 * corner plates and the two end plates of the post - keeps the geometry the pane draws it from.
 	 */
 	private static List<PaneBox> barsBoxes(PaneTemplate template) {
-		if (!upright(template.name())) {
+		if (!onCentrePlane(template.name())) {
 			return template.boxes();
 		}
 
@@ -1568,13 +1570,28 @@ public class MBModelProvider implements DataProvider {
 		return boxes;
 	}
 
-	/** Whether the bars draw a piece upright, in the plane that runs through the block's centre. */
-	private static boolean upright(String name) {
+	/**
+	 * Whether the bars draw a piece in the plane that runs through the block's centre: the uprights,
+	 * the end faces of the level band and the four sides of the crossing.
+	 */
+	private static boolean onCentrePlane(String name) {
 		return switch (name) {
+			// The uprights: the two sides of a wall and one rod for every direction it runs to.
 			case "pane_side_corner_lower", "pane_side_corner_lower_alt", "pane_side_corner_upper",
 					"pane_side_corner_upper_alt", "pane_column_lower_north", "pane_column_lower_south",
 					"pane_column_lower_west", "pane_column_lower_east", "pane_column_upper_north",
-					"pane_column_upper_south", "pane_column_upper_west", "pane_column_upper_east" -> true;
+					"pane_column_upper_south", "pane_column_upper_west", "pane_column_upper_east",
+					// The end faces of the band, where it runs into an upright of the next block.
+					"pane_edge_north_lower_west", "pane_edge_north_lower_east", "pane_edge_north_upper_west",
+					"pane_edge_north_upper_east", "pane_edge_south_lower_west", "pane_edge_south_lower_east",
+					"pane_edge_south_upper_west", "pane_edge_south_upper_east", "pane_edge_east_lower_north",
+					"pane_edge_east_lower_south", "pane_edge_east_upper_north", "pane_edge_east_upper_south",
+					"pane_edge_west_lower_north", "pane_edge_west_lower_south", "pane_edge_west_upper_north",
+					"pane_edge_west_upper_south",
+					// The four sides of the crossing, inside the two pixels of its own box.
+					"pane_middle_lower_north", "pane_middle_lower_south", "pane_middle_lower_west",
+					"pane_middle_lower_east", "pane_middle_upper_north", "pane_middle_upper_south",
+					"pane_middle_upper_west", "pane_middle_upper_east" -> true;
 			default -> false;
 		};
 	}
