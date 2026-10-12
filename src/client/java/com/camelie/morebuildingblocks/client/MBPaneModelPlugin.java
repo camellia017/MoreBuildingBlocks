@@ -324,7 +324,7 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 		}
 
 		for (SharedBox box : SHARED_BOXES) {
-			if (bars && acrossMiddle(box.template())) {
+			if (bars && (acrossMiddle(box.template()) || columnEnd(box.template()))) {
 				continue;
 			}
 
@@ -352,6 +352,15 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 	private static boolean acrossMiddle(String template) {
 		return (template.startsWith("pane_column_") || template.startsWith("pane_middle_"))
 				&& !template.endsWith("_down") && !template.endsWith("_up");
+	}
+
+	/**
+	 * Whether one of the shared boxes is an end of the column. The bars draw those two pixels
+	 * of the floor and of the ceiling themselves, from vanilla's {@code post_ends}, which their
+	 * every state shows; the copies are left to the panes, which have no such model.
+	 */
+	private static boolean columnEnd(String template) {
+		return template.equals("pane_column_lower_down") || template.equals("pane_column_upper_up");
 	}
 
 	/**
