@@ -60,7 +60,11 @@ import com.camelie.morebuildingblocks.block.MBPaneProperties;
  * <p>Once any box is shown, the pane's own post is not: the boxes are the outline and
  * the collision shape of the pane, and this mod draws the post only while the pane is
  * connected to nothing - which is the state vanilla's own files draw their post in
- * too, so a lone pane looks the same either way.
+ * too, so a lone pane looks the same either way. The ends of the bars, which vanilla
+ * shows at every one of their states, close that post: they belong to the column, and
+ * are drawn where a column reaches the floor or the ceiling of the block, so a pane
+ * laid out of the corners of the middle height alone keeps them away, having no post
+ * for them to close.
  *
  * <p>Only vanilla's panes are taken over. A pane from another mod carries the same
  * switches - the mixin adds them to every {@code IronBarsBlock} - but nothing ever
@@ -264,15 +268,15 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 			new StickPart("_noside", Quadrant.R270));
 
 	/**
-	 * What a lone bars block shows: vanilla draws the ends of its bars at every state and
-	 * their post only while they are connected to nothing.
+	 * What a lone bars block shows: the post vanilla draws only while the bars are connected
+	 * to nothing, which is the one state the mod's own column leaves to it.
 	 */
 	private static final List<StickPart> BARS_STICK = List.of(
 			new StickPart("_post", Quadrant.R0));
 
 	/**
-	 * The ends of the bars, which vanilla draws at every state: their two pixels at the floor
-	 * and the ceiling of the block, in the middle of it.
+	 * The ends of the bars: their two pixels at the floor and the ceiling of the block, in the
+	 * middle of it, which vanilla draws at every state and the mod draws while a column stands.
 	 */
 	private static final StickPart BARS_POST_ENDS = new StickPart("_post_ends", Quadrant.R0);
 
@@ -337,7 +341,8 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 		}
 
 		if (bars) {
-			selectors.add(new MultiPartModel.Selector<>(state -> true, stickPart(bare, BARS_POST_ENDS)));
+			selectors.add(new MultiPartModel.Selector<>(MBPaneModelPlugin::columnEnds,
+					stickPart(bare, BARS_POST_ENDS)));
 		}
 
 		return selectors;
@@ -355,12 +360,22 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 	}
 
 	/**
-	 * Whether one of the shared boxes is an end of the column. The bars draw those two pixels
-	 * of the floor and of the ceiling themselves, from vanilla's {@code post_ends}, which their
-	 * every state shows; the copies are left to the panes, which have no such model.
+	 * Whether one of the shared boxes is an end of the column. The bars close their column with
+	 * vanilla's own {@code post_ends} instead, which their models reach while the column stands
+	 * (see {@link #columnEnds}); the copies are left to the panes, which have no such model.
 	 */
 	private static boolean columnEnd(String template) {
 		return template.equals("pane_column_lower_down") || template.equals("pane_column_upper_up");
+	}
+
+	/**
+	 * Whether a state shows the ends of the bars. They close the column at the floor and at the
+	 * ceiling of the block, so they are drawn exactly while a column reaches one of those two:
+	 * while an upright corner of either half stands, or while the stick of an untouched pane
+	 * stands for the whole post.
+	 */
+	private static boolean columnEnds(BlockState state) {
+		return bare(state) || column(state, false) || column(state, true);
 	}
 
 	/**
