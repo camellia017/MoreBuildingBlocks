@@ -46,6 +46,7 @@
     {
       "faces": {
         "south": {
+          "cullface": "north",
           "rotation": 270,
           "texture": "#edge",
           "uv": [
@@ -59,17 +60,18 @@
       "from": [
         9,
         7,
-        0
+        0.001
       ],
       "to": [
         16,
         9,
-        0
+        0.001
       ]
     },
     {
       "faces": {
         "west": {
+          "cullface": "east",
           "rotation": 90,
           "texture": "#edge",
           "uv": [
@@ -81,12 +83,12 @@
         }
       },
       "from": [
-        16,
+        15.999,
         7,
         0
       ],
       "to": [
-        16,
+        15.999,
         9,
         7
       ]

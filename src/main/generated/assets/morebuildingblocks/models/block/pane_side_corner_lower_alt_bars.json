@@ -32,23 +32,25 @@
     {
       "faces": {
         "north": {
+          "cullface": "south",
           "texture": "#edge"
         }
       },
       "from": [
         7,
         0,
-        16
+        15.999
       ],
       "to": [
         9,
         7,
-        16
+        15.999
       ]
     },
     {
       "faces": {
         "up": {
+          "cullface": "down",
           "texture": "#edge",
           "uv": [
             7,
@@ -60,12 +62,12 @@
       },
       "from": [
         7,
-        0,
+        0.001,
         9
       ],
       "to": [
         9,
-        0,
+        0.001,
         16
       ]
     },

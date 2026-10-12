@@ -1028,6 +1028,73 @@ public class MBModelProvider implements DataProvider {
 		return root;
 	}
 
+	/**
+	 * One box of a piece: the same element, with the plane of a face that has to stand clear of the
+	 * box moved a thousandth of a pixel the way that face looks.
+	 */
+	private static JsonObject pieceElement(PaneBox piece) {
+		Box box = piece.box();
+		double gap = piece.gap();
+
+		if (gap == 0 || piece.faces().isEmpty()) {
+			return boxElement(box);
+		}
+
+		String direction = piece.faces().get(0).direction();
+		double x1 = box.x1();
+		double y1 = box.y1();
+		double z1 = box.z1();
+		double x2 = box.x2();
+		double y2 = box.y2();
+		double z2 = box.z2();
+
+		switch (direction) {
+			case "north" -> {
+				z1 -= gap;
+				z2 -= gap;
+			}
+			case "south" -> {
+				z1 += gap;
+				z2 += gap;
+			}
+			case "west" -> {
+				x1 -= gap;
+				x2 -= gap;
+			}
+			case "east" -> {
+				x1 += gap;
+				x2 += gap;
+			}
+			case "down" -> {
+				y1 -= gap;
+				y2 -= gap;
+			}
+			case "up" -> {
+				y1 += gap;
+				y2 += gap;
+			}
+		}
+
+		JsonObject element = new JsonObject();
+		element.add("from", point(x1, y1, z1));
+		element.add("to", point(x2, y2, z2));
+		return element;
+	}
+
+	/** A corner of an element: whole pixels stay whole, a plane that has been moved falls where it falls. */
+	private static JsonArray point(double x, double y, double z) {
+		JsonArray point = new JsonArray();
+		point.add(whole(x) ? (Number) (int) x : (Number) x);
+		point.add(whole(y) ? (Number) (int) y : (Number) y);
+		point.add(whole(z) ? (Number) (int) z : (Number) z);
+		return point;
+	}
+
+	/** Whether a coordinate has come out as a whole number of pixels. */
+	private static boolean whole(double value) {
+		return value == (int) value;
+	}
+
 	private static JsonObject boxElement(Box box) {
 		JsonObject element = new JsonObject();
 		element.add("from", vector(box.x1(), box.y1(), box.z1()));
@@ -1432,23 +1499,35 @@ public class MBModelProvider implements DataProvider {
 	private record PaneTemplate(String name, List<PaneBox> boxes) {
 	}
 
-	/** One box of a template, with the faces it shows. */
-	private record PaneBox(Box box, List<PaneFace> faces) {
+	/** How far the far side of a border face stands off the box it was worked out from, in pixels. */
+	private static final double FACE_GAP = 0.001;
+
+	/** One box of a template, the faces it shows and how far they stand off it. */
+	private record PaneBox(Box box, List<PaneFace> faces, double gap) {
+		private PaneBox(Box box, List<PaneFace> faces) {
+			this(box, faces, 0);
+		}
 	}
 
 	/**
 	 * One face of a piece: the slot it reads its sprite from and, when it covers only part of that
 	 * sprite, the rectangle it has to name and the quarter turn it is read through.
+	 *
+	 * <p>{@code cull} names the neighbour a face is culled against when that cannot be read off the
+	 * box it is written under. A face of the bars is culled against the neighbour it touches, which
+	 * is the side of the block it lies on; the far side of such a face is written a thousandth of a
+	 * pixel inside the block, where the box no longer reaches the side, but it is buried in the same
+	 * neighbour and is culled with the near side.
 	 */
-	private record PaneFace(String direction, String texture, int[] uv, int rotation) {
+	private record PaneFace(String direction, String texture, int[] uv, int rotation, String cull) {
 		/** A face that names no rectangle, so the client crops its sprite the way vanilla does. */
 		private static PaneFace full(String direction, String texture) {
-			return new PaneFace(direction, texture, null, 0);
+			return new PaneFace(direction, texture, null, 0, null);
 		}
 
 		/** A face that covers part of its sprite and names that part. */
 		private static PaneFace cut(String direction, String texture, int minU, int minV, int maxU, int maxV) {
-			return new PaneFace(direction, texture, new int[] { minU, minV, maxU, maxV }, 0);
+			return new PaneFace(direction, texture, new int[] { minU, minV, maxU, maxV }, 0, null);
 		}
 
 		/**
@@ -1461,7 +1540,7 @@ public class MBModelProvider implements DataProvider {
 		 */
 		private static PaneFace turned(String direction, String texture, int minU, int minV, int maxU, int maxV,
 				int rotation) {
-			return new PaneFace(direction, texture, new int[] { minU, minV, maxU, maxV }, rotation);
+			return new PaneFace(direction, texture, new int[] { minU, minV, maxU, maxV }, rotation, null);
 		}
 	}
 
@@ -1571,13 +1650,14 @@ public class MBModelProvider implements DataProvider {
 	/**
 	 * One box of a piece, with the faces it keeps and its border drawn on both sides.
 	 *
-	 * <p>Every border face is written where the pane puts it and again the other way round in the
-	 * same place, reading the same pixels mirrored, so that the frame is drawn whichever side of it
-	 * is looked at. A piece with no thickness along a face reads its plane twice out of the one box;
-	 * where the piece is thick the far side of a face is written on a plate of its own, spread over
-	 * that face and of no thickness, so that the frame of a plate lies in the plane of the plate
-	 * rather than on its back. The faces the piece keeps are written on its own box, ahead of the
-	 * border; a box left with nothing to draw is not written at all.
+	 * <p>Every border face is written where the pane puts it and again the other way round, reading
+	 * the same pixels mirrored, so that the frame is drawn whichever side of it is looked at. The far
+	 * side is written on a plate of its own, spread over that face, of no thickness and moved a
+	 * thousandth of a pixel into the block, so that the two sides stand clear of each other and of
+	 * whatever block is set against them. It is culled against the same neighbour the near side is,
+	 * so a frame buried in a wall is not drawn either way round, while one that faces open air is
+	 * drawn both ways. The faces the piece keeps are written on its own box, ahead of the border; a
+	 * box left with nothing to draw is not written at all.
 	 */
 	private static List<PaneBox> bothWays(Box box, List<PaneFace> kept, List<PaneFace> border) {
 		List<PaneBox> pieces = new ArrayList<>();
@@ -1586,13 +1666,9 @@ public class MBModelProvider implements DataProvider {
 		for (PaneFace face : border) {
 			faces.add(face);
 
-			PaneFace back = otherWay(face);
+			String cull = isOnBoundary(box, face.direction()) ? face.direction() : face.cull();
 
-			if (noThickness(box, face.direction())) {
-				faces.add(back);
-			} else {
-				pieces.add(new PaneBox(facePlane(box, face.direction()), List.of(back)));
-			}
+			pieces.add(new PaneBox(facePlane(box, face.direction()), List.of(otherWay(face, cull)), FACE_GAP));
 		}
 
 		if (!faces.isEmpty()) {
@@ -1602,12 +1678,15 @@ public class MBModelProvider implements DataProvider {
 		return pieces;
 	}
 
-	/** The same face looking the other way, over the same pixels read left to right the other way. */
-	private static PaneFace otherWay(PaneFace face) {
+	/**
+	 * The same face looking the other way, over the same pixels read left to right the other way and
+	 * culled against the neighbour given.
+	 */
+	private static PaneFace otherWay(PaneFace face, String cull) {
 		int[] uv = face.uv();
 
 		return new PaneFace(oppositeDirection(face.direction()), face.texture(),
-				uv == null ? null : new int[] { uv[2], uv[1], uv[0], uv[3] }, face.rotation());
+				uv == null ? null : new int[] { uv[2], uv[1], uv[0], uv[3] }, face.rotation(), cull);
 	}
 
 	/** The direction that looks back at this one. */
@@ -1623,17 +1702,7 @@ public class MBModelProvider implements DataProvider {
 		};
 	}
 
-	/** Whether the box has no thickness along the axis this face looks along. */
-	private static boolean noThickness(Box box, String direction) {
-		return switch (direction) {
-			case "north", "south" -> box.z1() == box.z2();
-			case "west", "east" -> box.x1() == box.x2();
-			case "down", "up" -> box.y1() == box.y2();
-			default -> false;
-		};
-	}
-
-	/** The box of a piece flattened on to the plane one of its faces looks along. */
+	/** The box of a piece flattened on to the plane one of its faces lies in. */
 	private static Box facePlane(Box box, String direction) {
 		return switch (direction) {
 			case "north" -> new Box(box.x1(), box.y1(), box.z1(), box.x2(), box.y2(), box.z1());
@@ -1723,7 +1792,7 @@ public class MBModelProvider implements DataProvider {
 				: new Box(below ? plane.x1() : 8, plane.y1(), plane.z1(), below ? 8 : plane.x2(),
 						plane.y2(), plane.z2());
 
-		PaneFace widened = new PaneFace(face.direction(), face.texture(), wider, face.rotation());
+		PaneFace widened = new PaneFace(face.direction(), face.texture(), wider, face.rotation(), face.cull());
 
 		return new PaneBox(reached, List.of(widened));
 	}
@@ -1767,7 +1836,7 @@ public class MBModelProvider implements DataProvider {
 		JsonArray elements = new JsonArray();
 
 		for (PaneBox box : boxes) {
-			JsonObject element = boxElement(box.box());
+			JsonObject element = pieceElement(box);
 			JsonObject faces = new JsonObject();
 
 			for (PaneFace face : box.faces()) {
@@ -1783,8 +1852,11 @@ public class MBModelProvider implements DataProvider {
 
 				json.addProperty("texture", face.texture());
 
-				if (isOnBoundary(box.box(), face.direction())) {
-					json.addProperty("cullface", face.direction());
+				String cull = face.cull() != null ? face.cull()
+						: isOnBoundary(box.box(), face.direction()) ? face.direction() : null;
+
+				if (cull != null) {
+					json.addProperty("cullface", cull);
 				}
 
 				faces.add(face.direction(), json);
