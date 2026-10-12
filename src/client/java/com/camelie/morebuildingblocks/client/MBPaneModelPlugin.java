@@ -319,6 +319,10 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 		}
 
 		for (SharedBox box : SHARED_BOXES) {
+			if (bars && acrossMiddle(box.template())) {
+				continue;
+			}
+
 			selectors.add(new MultiPartModel.Selector<>(box.shows(), sharedPart(paneId, box)));
 		}
 
@@ -328,6 +332,17 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 		}
 
 		return selectors;
+	}
+
+	/**
+	 * Whether one of the shared boxes lies across the middle of the block: the sides of the column
+	 * and of the crossing, which carry the two pixels on the far side of the plane an arm stands in.
+	 * The bars draw those two pixels from the arms, which reach the middle of the block, so the
+	 * copies of these boxes are left to the panes, which keep them in the glass they belong to.
+	 */
+	private static boolean acrossMiddle(String template) {
+		return (template.startsWith("pane_column_") || template.startsWith("pane_middle_"))
+				&& !template.endsWith("_down") && !template.endsWith("_up");
 	}
 
 	/**

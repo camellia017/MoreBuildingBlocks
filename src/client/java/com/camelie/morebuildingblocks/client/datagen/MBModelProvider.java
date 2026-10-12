@@ -1478,9 +1478,9 @@ public class MBModelProvider implements DataProvider {
 	 * <p>The copies are what the client asks for by name - {@code <template>_<pane>} - so the
 	 * geometry is written once per template and only the two sprites differ from pane to pane. A
 	 * bars copy reads the template's {@code _bars} twin instead, which draws the pieces that stand in
-	 * a plane through the block's centre - the uprights, the band's end faces and the crossing's
-	 * sides - in that plane, the way vanilla draws its own bars, so the bars may be read on their own
-	 * while the panes stay put.
+	 * a plane through the block's centre - the uprights and the band's end faces - in that plane, out
+	 * to the middle of the block, the way vanilla draws its own bars, so the bars may be read on
+	 * their own while the panes stay put.
 	 */
 	private void generatePanes() {
 		for (PaneTemplate template : PANE_TEMPLATES) {
@@ -1533,6 +1533,9 @@ public class MBModelProvider implements DataProvider {
 	 * carries at the edge of the block stays on the box it was written on. Every piece that lies
 	 * level in the band - its box, the plates under and over it, the crossing's own plates, the four
 	 * corner plates and the two end plates of the post - keeps the geometry the pane draws it from.
+	 * The faces of a wall and of the band are carried on to the middle of the block, where the two
+	 * planes of a corner meet; the sides of the post and of the crossing, which lie across it, are
+	 * left where the pane put them and are drawn by the panes alone.
 	 */
 	private static List<PaneBox> barsBoxes(PaneTemplate template) {
 		if (!onCentrePlane(template.name())) {
@@ -1563,7 +1566,7 @@ public class MBModelProvider implements DataProvider {
 			}
 
 			for (PaneFace face : sprites) {
-				boxes.add(new PaneBox(centrePlane(piece.box(), face.direction()), List.of(barsFace(face, piece.box()))));
+				boxes.add(centrePlanePiece(piece.box(), face));
 			}
 		}
 
@@ -1603,6 +1606,50 @@ public class MBModelProvider implements DataProvider {
 			case "north", "south" -> new Box(box.x1(), box.y1(), 8, box.x2(), box.y2(), 8);
 			default -> box;
 		};
+	}
+
+	/**
+	 * One face of a piece the bars draw on a centre plane, carried on to the middle of the block.
+	 *
+	 * <p>The pieces of a wall and of the band run along one arm of the bars, so the plane they stand
+	 * in runs into the middle of the block: the pane stops each of their faces one pixel short of it,
+	 * inside its own quarter, and keeps the two pixels across the middle - the sides of the post and
+	 * of the crossing - for the pieces that pass it by. The bars draw those two pixels from the arms
+	 * themselves, which reach the middle, so the face is carried on by the one pixel and reads its
+	 * sprite one column further along, the column the middle of the block already stands on. The two
+	 * planes of a corner then meet at the line through the middle instead of crossing over it.
+	 */
+	private static PaneBox centrePlanePiece(Box piece, PaneFace face) {
+		Box plane = centrePlane(piece, face.direction());
+		PaneFace read = barsFace(face, piece);
+		int[] uv = read.uv();
+		boolean alongZ = "west".equals(face.direction()) || "east".equals(face.direction());
+		int low = alongZ ? plane.z1() : plane.x1();
+		int high = alongZ ? plane.z2() : plane.x2();
+		boolean below = high <= 7;
+		boolean above = low >= 9;
+
+		if (uv == null || (!below && !above)) {
+			return new PaneBox(plane, List.of(read));
+		}
+
+		// The end that meets the middle is the far one on either side of it, and the column of the
+		// sprite it takes is the one the middle stands on whichever of the two faces is read.
+		int slot = switch (face.direction()) {
+			case "west", "north" -> below ? 2 : 0;
+			default -> below ? 0 : 2;
+		};
+
+		int[] wider = uv.clone();
+		wider[slot] = 8;
+
+		Box reached = alongZ
+				? new Box(plane.x1(), plane.y1(), below ? plane.z1() : 8, plane.x2(), plane.y2(),
+						below ? 8 : plane.z2())
+				: new Box(below ? plane.x1() : 8, plane.y1(), plane.z1(), below ? 8 : plane.x2(),
+						plane.y2(), plane.z2());
+
+		return new PaneBox(reached, List.of(new PaneFace(read.direction(), read.texture(), wider, read.rotation())));
 	}
 
 	/**
