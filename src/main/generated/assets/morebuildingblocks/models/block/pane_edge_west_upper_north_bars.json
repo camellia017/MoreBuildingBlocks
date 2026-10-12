@@ -6,7 +6,7 @@
         "north": {
           "texture": "#pane",
           "uv": [
-            0,
+            16,
             7,
             8,
             8

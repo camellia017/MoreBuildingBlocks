@@ -1535,7 +1535,9 @@ public class MBModelProvider implements DataProvider {
 	 * corner plates and the two end plates of the post - keeps the geometry the pane draws it from.
 	 * The faces of a wall and of the band are carried on to the middle of the block, where the two
 	 * planes of a corner meet; the sides of the post and of the crossing, which lie across it, are
-	 * left where the pane put them and are drawn by the panes alone.
+	 * left where the pane put them and are drawn by the panes alone. The end faces of the band run
+	 * into the middle head on and are read the other way round along u for it, so that the two
+	 * planes of a corner mirror one another there the way the two walls of a corner do.
 	 */
 	private static List<PaneBox> barsBoxes(PaneTemplate template) {
 		if (!onCentrePlane(template.name())) {
@@ -1543,6 +1545,7 @@ public class MBModelProvider implements DataProvider {
 		}
 
 		List<PaneBox> boxes = new ArrayList<>();
+		boolean mirrored = bandEndFace(template.name());
 
 		for (PaneBox piece : template.boxes()) {
 			List<PaneFace> sprites = new ArrayList<>();
@@ -1566,7 +1569,7 @@ public class MBModelProvider implements DataProvider {
 			}
 
 			for (PaneFace face : sprites) {
-				boxes.add(centrePlanePiece(piece.box(), face));
+				boxes.add(centrePlanePiece(piece.box(), face, mirrored));
 			}
 		}
 
@@ -1618,8 +1621,12 @@ public class MBModelProvider implements DataProvider {
 	 * themselves, which reach the middle, so the face is carried on by the one pixel and reads its
 	 * sprite one column further along, the column the middle of the block already stands on. The two
 	 * planes of a corner then meet at the line through the middle instead of crossing over it.
+	 *
+	 * <p>The end faces of the band are read the other way round along u, which {@code mirrored}
+	 * asks for: their sprite runs the way the arm beside them runs rather than the way the wall
+	 * they belong to runs.
 	 */
-	private static PaneBox centrePlanePiece(Box piece, PaneFace face) {
+	private static PaneBox centrePlanePiece(Box piece, PaneFace face, boolean mirrored) {
 		Box plane = centrePlane(piece, face.direction());
 		PaneFace read = barsFace(face, piece);
 		int[] uv = read.uv();
@@ -1630,7 +1637,7 @@ public class MBModelProvider implements DataProvider {
 		boolean above = low >= 9;
 
 		if (uv == null || (!below && !above)) {
-			return new PaneBox(plane, List.of(read));
+			return new PaneBox(plane, List.of(mirrored ? mirroredFace(read) : read));
 		}
 
 		// The end that meets the middle is the far one on either side of it, and the column of the
@@ -1649,7 +1656,43 @@ public class MBModelProvider implements DataProvider {
 				: new Box(below ? plane.x1() : 8, plane.y1(), plane.z1(), below ? 8 : plane.x2(),
 						plane.y2(), plane.z2());
 
-		return new PaneBox(reached, List.of(new PaneFace(read.direction(), read.texture(), wider, read.rotation())));
+		PaneFace widened = new PaneFace(read.direction(), read.texture(), wider, read.rotation());
+
+		return new PaneBox(reached, List.of(mirrored ? mirroredFace(widened) : widened));
+	}
+
+	/**
+	 * Whether the piece is one of the band's end faces: the ones that carry a wall into the post and
+	 * the crossing at the middle of the block, and are read the other way round for it.
+	 */
+	private static boolean bandEndFace(String name) {
+		return switch (name) {
+			case "pane_edge_north_lower_west", "pane_edge_north_lower_east", "pane_edge_north_upper_west",
+					"pane_edge_north_upper_east", "pane_edge_south_lower_west", "pane_edge_south_lower_east",
+					"pane_edge_south_upper_west", "pane_edge_south_upper_east", "pane_edge_east_lower_north",
+					"pane_edge_east_lower_south", "pane_edge_east_upper_north", "pane_edge_east_upper_south",
+					"pane_edge_west_lower_north", "pane_edge_west_lower_south", "pane_edge_west_upper_north",
+					"pane_edge_west_upper_south" -> true;
+			default -> false;
+		};
+	}
+
+	/**
+	 * The same face with its window read the other way round along u.
+	 *
+	 * <p>The band's end faces are read the other way round from the wall they belong to: their sprite
+	 * runs the way the arm beside them runs, so the two planes of a corner are mirror images of one
+	 * another across the middle of the block, as the two walls of a corner are.
+	 */
+	private static PaneFace mirroredFace(PaneFace face) {
+		int[] uv = face.uv();
+
+		if (uv == null) {
+			return face;
+		}
+
+		return new PaneFace(face.direction(), face.texture(),
+				new int[] {16 - uv[0], uv[1], 16 - uv[2], uv[3]}, face.rotation());
 	}
 
 	/**
