@@ -1348,12 +1348,12 @@ public class MBModelProvider implements DataProvider {
 					paneBox(9, 8, 9, 9, 9, 16, PaneFace.cut("east", "#pane", 0, 7, 7, 8)))),
 			new PaneTemplate("pane_edge_east_lower", List.of(
 					paneBox(9, 7, 7, 16, 8, 9,
-							PaneFace.cut("east", "#edge", 9, 8, 7, 9)))),
+							PaneFace.cut("east", "#edge", 7, 8, 9, 9)))),
 			new PaneTemplate("pane_edge_east_lower_down", List.of(
 					paneBox(9, 7, 7, 16, 7, 9, PaneFace.full("down", "#pane")))),
 			new PaneTemplate("pane_edge_east_upper", List.of(
 					paneBox(9, 8, 7, 16, 9, 9,
-							PaneFace.cut("east", "#edge", 9, 7, 7, 8)))),
+							PaneFace.cut("east", "#edge", 7, 7, 9, 8)))),
 			new PaneTemplate("pane_edge_east_upper_up", List.of(
 					paneBox(9, 9, 7, 16, 9, 9, PaneFace.full("up", "#pane")))),
 			new PaneTemplate("pane_edge_east_lower_north", List.of(
@@ -1366,12 +1366,12 @@ public class MBModelProvider implements DataProvider {
 					paneBox(9, 8, 9, 16, 9, 9, PaneFace.cut("south", "#pane", 9, 7, 16, 8)))),
 			new PaneTemplate("pane_edge_west_lower", List.of(
 					paneBox(0, 7, 7, 7, 8, 9,
-							PaneFace.cut("west", "#edge", 9, 8, 7, 9)))),
+							PaneFace.cut("west", "#edge", 7, 8, 9, 9)))),
 			new PaneTemplate("pane_edge_west_lower_down", List.of(
 					paneBox(0, 7, 7, 7, 7, 9, PaneFace.full("down", "#pane")))),
 			new PaneTemplate("pane_edge_west_upper", List.of(
 					paneBox(0, 8, 7, 7, 9, 9,
-							PaneFace.cut("west", "#edge", 9, 7, 7, 8)))),
+							PaneFace.cut("west", "#edge", 7, 7, 9, 8)))),
 			new PaneTemplate("pane_edge_west_upper_up", List.of(
 					paneBox(0, 9, 7, 7, 9, 9, PaneFace.full("up", "#pane")))),
 			new PaneTemplate("pane_edge_west_lower_north", List.of(
@@ -1621,8 +1621,7 @@ public class MBModelProvider implements DataProvider {
 	 */
 	private static PaneBox centrePlanePiece(Box piece, PaneFace face) {
 		Box plane = centrePlane(piece, face.direction());
-		PaneFace read = barsFace(face, piece);
-		int[] uv = read.uv();
+		int[] uv = face.uv();
 		boolean alongZ = "west".equals(face.direction()) || "east".equals(face.direction());
 		int low = alongZ ? plane.z1() : plane.x1();
 		int high = alongZ ? plane.z2() : plane.x2();
@@ -1630,13 +1629,15 @@ public class MBModelProvider implements DataProvider {
 		boolean above = low >= 9;
 
 		if (uv == null || (!below && !above)) {
-			return new PaneBox(plane, List.of(read));
+			return new PaneBox(plane, List.of(face));
 		}
 
 		// The end that meets the middle is the far one on either side of it, and the column of the
-		// sprite it takes is the one the middle stands on whichever of the two faces is read.
+		// sprite it takes is the one the middle stands on. Which end of the window that column is
+		// follows the way the sprite runs along the face: along z on the sides of a wall, and along
+		// x on the face of a band's end, where the window runs into the arm that meets it.
 		int slot = switch (face.direction()) {
-			case "west", "north" -> below ? 2 : 0;
+			case "west", "south" -> below ? 2 : 0;
 			default -> below ? 0 : 2;
 		};
 
@@ -1649,7 +1650,7 @@ public class MBModelProvider implements DataProvider {
 				: new Box(below ? plane.x1() : 8, plane.y1(), plane.z1(), below ? 8 : plane.x2(),
 						plane.y2(), plane.z2());
 
-		PaneFace widened = new PaneFace(read.direction(), read.texture(), wider, read.rotation());
+		PaneFace widened = new PaneFace(face.direction(), face.texture(), wider, face.rotation());
 
 		return new PaneBox(reached, List.of(widened));
 	}
@@ -1677,33 +1678,6 @@ public class MBModelProvider implements DataProvider {
 		}
 
 		return edges;
-	}
-
-	/**
-	 * The face the bars read on a centre plane, turned round if that is what it takes to run with the
-	 * arm it meets.
-	 *
-	 * <p>A piece that runs east or west is turned a quarter when the bars draw it, so the sprite of
-	 * that arm runs along x. A piece that is not turned - the post, the crossing and the end faces of
-	 * the band - has its window named round the box the pane wrote it from instead, which runs the
-	 * other way along that plane, so such a face is read backwards to keep the border of the bars
-	 * going the same way as the arm beside it. The windows that run along z are already written that
-	 * way and are left alone.
-	 */
-	private static PaneFace barsFace(PaneFace face, Box box) {
-		int[] uv = face.uv();
-
-		if (uv == null) {
-			return face;
-		}
-
-		boolean backwards = switch (face.direction()) {
-			case "north" -> uv[0] != box.x1();
-			case "south" -> uv[0] != box.x2();
-			default -> false;
-		};
-
-		return backwards ? PaneFace.cut(face.direction(), face.texture(), uv[2], uv[1], uv[0], uv[3]) : face;
 	}
 
 	/** The geometry of one set of boxes: an element per box, the faces it shows and the two slots. */
