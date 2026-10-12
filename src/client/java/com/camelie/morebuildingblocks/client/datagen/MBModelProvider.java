@@ -1563,7 +1563,7 @@ public class MBModelProvider implements DataProvider {
 			}
 
 			for (PaneFace face : sprites) {
-				boxes.add(new PaneBox(centrePlane(piece.box(), face.direction()), List.of(face)));
+				boxes.add(new PaneBox(centrePlane(piece.box(), face.direction()), List.of(barsFace(face, piece.box()))));
 			}
 		}
 
@@ -1603,6 +1603,33 @@ public class MBModelProvider implements DataProvider {
 			case "north", "south" -> new Box(box.x1(), box.y1(), 8, box.x2(), box.y2(), 8);
 			default -> box;
 		};
+	}
+
+	/**
+	 * The face the bars read on a centre plane, turned round if that is what it takes to run with the
+	 * arm it meets.
+	 *
+	 * <p>A piece that runs east or west is turned a quarter when the bars draw it, so the sprite of
+	 * that arm runs along x. A piece that is not turned - the post, the crossing and the end faces of
+	 * the band - has its window named round the box the pane wrote it from instead, which runs the
+	 * other way along that plane, so such a face is read backwards to keep the border of the bars
+	 * going the same way as the arm beside it. The windows that run along z are already written that
+	 * way and are left alone.
+	 */
+	private static PaneFace barsFace(PaneFace face, Box box) {
+		int[] uv = face.uv();
+
+		if (uv == null) {
+			return face;
+		}
+
+		boolean backwards = switch (face.direction()) {
+			case "north" -> uv[0] != box.x1();
+			case "south" -> uv[0] != box.x2();
+			default -> false;
+		};
+
+		return backwards ? PaneFace.cut(face.direction(), face.texture(), uv[2], uv[1], uv[0], uv[3]) : face;
 	}
 
 	/** The geometry of one set of boxes: an element per box, the faces it shows and the two slots. */
