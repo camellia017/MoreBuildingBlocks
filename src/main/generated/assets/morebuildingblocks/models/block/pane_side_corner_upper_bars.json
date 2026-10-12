@@ -8,7 +8,6 @@
           "texture": "#edge"
         },
         "up": {
-          "cullface": "up",
           "texture": "#edge",
           "uv": [
             7,
@@ -50,7 +49,6 @@
     {
       "faces": {
         "down": {
-          "cullface": "up",
           "texture": "#edge",
           "uv": [
             9,

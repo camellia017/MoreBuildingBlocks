@@ -1563,8 +1563,8 @@ public class MBModelProvider implements DataProvider {
 	 */
 	private void generatePanes() {
 		for (PaneTemplate template : PANE_TEMPLATES) {
-			this.models.put(paneModelId(template.name()), modelInstance(paneGeometry(template.boxes())));
-			this.models.put(paneModelId(barsTwin(template)), modelInstance(paneGeometry(barsBoxes(template))));
+			this.models.put(paneModelId(template.name()), modelInstance(paneGeometry(template.boxes(), false)));
+			this.models.put(paneModelId(barsTwin(template)), modelInstance(paneGeometry(barsBoxes(template), true)));
 		}
 
 		for (Block block : BuiltInRegistries.BLOCK) {
@@ -1822,8 +1822,14 @@ public class MBModelProvider implements DataProvider {
 		return edges;
 	}
 
-	/** The geometry of one set of boxes: an element per box, the faces it shows and the two slots. */
-	private static JsonObject paneGeometry(List<PaneBox> boxes) {
+	/**
+	 * The geometry of one set of boxes: an element per box, the faces it shows and the two slots.
+	 *
+	 * <p>A face of the bars that lies flat in the block, across its top or its bottom, is never
+	 * culled; the upright faces of the bars are culled the way the pane culls them, against the side
+	 * of the block they lie on. Glass is culled the pane's way on every face.
+	 */
+	private static JsonObject paneGeometry(List<PaneBox> boxes, boolean bars) {
 		JsonObject root = new JsonObject();
 		root.addProperty("ambientocclusion", false);
 
@@ -1852,8 +1858,7 @@ public class MBModelProvider implements DataProvider {
 
 				json.addProperty("texture", face.texture());
 
-				String cull = face.cull() != null ? face.cull()
-						: isOnBoundary(box.box(), face.direction()) ? face.direction() : null;
+				String cull = cullface(face, box.box(), bars);
 
 				if (cull != null) {
 					json.addProperty("cullface", cull);
@@ -1868,6 +1873,23 @@ public class MBModelProvider implements DataProvider {
 
 		root.add("elements", elements);
 		return root;
+	}
+
+	/**
+	 * The neighbour a face is culled against: the one it names, or the side of the block it lies on
+	 * when it names none. A face of the bars that lies flat across the block, on an xz plane, is never
+	 * culled, so that it is drawn whether or not a block stands against it.
+	 */
+	private static String cullface(PaneFace face, Box box, boolean bars) {
+		if (bars && ("up".equals(face.direction()) || "down".equals(face.direction()))) {
+			return null;
+		}
+
+		if (face.cull() != null) {
+			return face.cull();
+		}
+
+		return isOnBoundary(box, face.direction()) ? face.direction() : null;
 	}
 
 	/**
