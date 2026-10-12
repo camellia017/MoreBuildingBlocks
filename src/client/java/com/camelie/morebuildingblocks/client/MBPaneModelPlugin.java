@@ -61,10 +61,11 @@ import com.camelie.morebuildingblocks.block.MBPaneProperties;
  * the collision shape of the pane, and this mod draws the post only while the pane is
  * connected to nothing - which is the state vanilla's own files draw their post in
  * too, so a lone pane looks the same either way. The ends of the bars, which vanilla
- * shows at every one of their states, close that post: they belong to the column, and
- * are drawn where a column reaches the floor or the ceiling of the block, so a pane
- * laid out of the corners of the middle height alone keeps them away, having no post
- * for them to close.
+ * shows at every one of their states, close that post: they belong to a column that
+ * runs the whole height of the block, and they are drawn while both halves of that
+ * column stand or while a lone pane keeps vanilla's own post. A pane this mod lays out
+ * with uprights in one half only, or with the corners of the middle height alone, has
+ * no such column and keeps both plates away.
  *
  * <p>Only vanilla's panes are taken over. A pane from another mod carries the same
  * switches - the mixin adds them to every {@code IronBarsBlock} - but nothing ever
@@ -369,13 +370,16 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 	}
 
 	/**
-	 * Whether a state shows the ends of the bars. They close the column at the floor and at the
-	 * ceiling of the block, so they are drawn exactly while a column reaches one of those two:
-	 * while an upright corner of either half stands, or while the stick of an untouched pane
-	 * stands for the whole post.
+	 * Whether a state shows the ends of the bars. Vanilla draws them at every one of its own
+	 * states, because every one of them carries a post or a full height arm. This mod draws its
+	 * bars out of the corners a state holds, so the plates belong to a column that runs the whole
+	 * height of the block: they are drawn while an upright corner of both halves stands, or while
+	 * an untouched pane keeps vanilla's own post. A state the mod writes with uprights in one half
+	 * only, or with the corners of the middle height and nothing else, has no such column and
+	 * keeps both plates away.
 	 */
 	private static boolean columnEnds(BlockState state) {
-		return bare(state) || column(state, false) || column(state, true);
+		return bare(state) || (column(state, false) && column(state, true));
 	}
 
 	/**
