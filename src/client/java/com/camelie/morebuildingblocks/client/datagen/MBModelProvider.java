@@ -1602,12 +1602,21 @@ public class MBModelProvider implements DataProvider {
 	 * a plane through the block's centre - the uprights and the band's end faces - in that plane, out
 	 * to the middle of the block, and the band's plates on the level where the band's two halves
 	 * meet, the way vanilla draws its own bars, so the bars may be read on their own while the panes
-	 * stay put.
+	 * stay put. Where the band turns into an upright, the bars read it down the bar itself; where it
+	 * runs on beside nothing, they keep the reading the pane gives it. A template the turn touches is
+	 * therefore written twice - {@code _bars} for the turn and {@code _bars_plain} for the band that
+	 * runs on - and a bars block takes a copy of each.
 	 */
 	private void generatePanes() {
 		for (PaneTemplate template : PANE_TEMPLATES) {
 			this.models.put(paneModelId(template.name()), modelInstance(paneGeometry(template.boxes(), false)));
-			this.models.put(paneModelId(barsTwin(template)), modelInstance(paneGeometry(barsBoxes(template), true)));
+			this.models.put(paneModelId(barsTwin(template)),
+					modelInstance(paneGeometry(barsBoxes(template, true), true)));
+
+			if (readsBand(template)) {
+				this.models.put(paneModelId(plainTwin(template)),
+						modelInstance(paneGeometry(barsBoxes(template, false), true)));
+			}
 		}
 
 		for (Block block : BuiltInRegistries.BLOCK) {
@@ -1628,6 +1637,11 @@ public class MBModelProvider implements DataProvider {
 			for (PaneTemplate template : PANE_TEMPLATES) {
 				this.models.put(paneModelId(template.name() + "_" + path),
 						modelInstance(paneCopy(template, base, glass)));
+
+				if (!glass && readsBand(template)) {
+					this.models.put(paneModelId(plainTwin(template) + "_" + path),
+							modelInstance(paneCopy(paneModelId(plainTwin(template)), base, false)));
+				}
 			}
 		}
 	}
@@ -1647,7 +1661,42 @@ public class MBModelProvider implements DataProvider {
 	}
 
 	/**
-	 * The boxes of one piece as the bars draw it.
+	 * The twin of one template that the bars read where no upright carries the band: {@code
+	 * <template>_bars_plain}. It is written from the same boxes with the turn left out, so it draws
+	 * the reading the pane gives the band, the one the bars keep where the band runs on beside
+	 * nothing.
+	 */
+	private static String plainTwin(PaneTemplate template) {
+		return barsTwin(template) + "_plain";
+	}
+
+	/**
+	 * The templates whose band the bars read down the upright, and so the ones that are written
+	 * twice. Worked out by writing the two apart, so that a template the turn leaves alone keeps one
+	 * model only.
+	 */
+	private static final List<String> BAND_TEMPLATES = bandTemplates();
+
+	private static List<String> bandTemplates() {
+		List<String> names = new ArrayList<>();
+
+		for (PaneTemplate template : PANE_TEMPLATES) {
+			if (!paneGeometry(barsBoxes(template, true), true).equals(paneGeometry(barsBoxes(template, false), true))) {
+				names.add(template.name());
+			}
+		}
+
+		return names;
+	}
+
+	/** Whether the bars read the band of this template down the upright at a turn. */
+	private static boolean readsBand(PaneTemplate template) {
+		return BAND_TEMPLATES.contains(template.name());
+	}
+
+	/**
+	 * The boxes of one piece as the bars draw it, read down the upright where {@code turns} asks for
+	 * it and the way the pane reads it where it does not.
 	 *
 	 * <p>A piece of the bars that belongs in the plane running through the block's centre is drawn
 	 * there the way vanilla draws its own bars: the faces that read the bars' sprite leave the box
@@ -1657,17 +1706,22 @@ public class MBModelProvider implements DataProvider {
 	 * level corner - leave the floor and the ceiling of the block the same way and are drawn on the
 	 * level the two halves of a band meet on, so that the bars read as one band; the plates of the
 	 * band are cut in two across the bar and read a column of the upright each, the way the walls
-	 * of the band read theirs at a turn. Every other piece
-	 * keeps the geometry the pane draws it from, the two end plates of the post among them, which
-	 * lie outside the band.
-	 * The faces of a wall and of the band are carried on to the middle of the block, where the two
-	 * planes of a corner meet; the sides of the post and of the crossing, which lie across it, are
-	 * left where the pane put them and are drawn by the panes alone.
+	 * of the band read theirs at a turn, and are drawn on both sides of the plane they lie in, as
+	 * the walls are. Every other piece keeps the geometry the pane draws it from, the two end plates
+	 * of the post among them, which lie outside the band. The faces of a wall and of the band are
+	 * carried on to the middle of the block, where the two planes of a corner meet; the sides of the
+	 * post and of the crossing, which lie across it, are left where the pane put them and are drawn
+	 * by the panes alone.
+	 *
+	 * <p>With {@code turns} left out the band keeps the reading the pane gives it: a plate is one
+	 * whole piece on the level of the band, and a wall is carried on to the middle of the block with
+	 * the rectangle the pane wrote on it, so that the bars read as the panes do wherever the band
+	 * runs on beside nothing and no upright carries it.
 	 *
 	 * <p>Every border face of the bars is drawn on both sides, whether its piece belongs on a centre
 	 * plane or not, so that the frame shows whichever side of it is looked at.
 	 */
-	private static List<PaneBox> barsBoxes(PaneTemplate template) {
+	private static List<PaneBox> barsBoxes(PaneTemplate template, boolean turns) {
 		boolean centre = onCentrePlane(template.name());
 		List<PaneBox> boxes = new ArrayList<>();
 
@@ -1687,14 +1741,17 @@ public class MBModelProvider implements DataProvider {
 			}
 
 			for (PaneFace face : level) {
-				boxes.addAll(bandPlates(piece.box(), face));
+				boxes.addAll(turns ? bandPlates(piece.box(), face)
+						: List.of(new PaneBox(bandLevel(piece.box()), List.of(face))));
 			}
 
 			boxes.addAll(bothWays(piece.box(), centre ? List.of() : sprites, barsEdge(template.name(), border)));
 
 			if (centre) {
 				for (PaneFace face : sprites) {
-					boxes.add(bandWall(template.name(), centrePlanePiece(piece.box(), face)));
+					PaneBox carried = centrePlanePiece(piece.box(), face);
+
+					boxes.addAll(turns ? bandWall(template.name(), carried) : List.of(carried));
 				}
 			}
 		}
@@ -1730,7 +1787,8 @@ public class MBModelProvider implements DataProvider {
 	 * runs north or south is cut across x and one of an arm that runs east or west across z, where
 	 * the rows of the sprite are read a quarter turn round to run along the arm. A plate of a level
 	 * corner is the corner's own breadth, seven pixels either way and no part of the band's two, and
-	 * is left whole.
+	 * is left whole. The two halves are drawn on both sides of the level they lie on, so that the
+	 * band reads the same from above and from below, where the two halves of a corner meet.
 	 */
 	private static List<PaneBox> bandPlates(Box box, PaneFace face) {
 		boolean acrossX = box.x2() - box.x1() == 2;
@@ -1762,7 +1820,7 @@ public class MBModelProvider implements DataProvider {
 					List.of(PaneFace.turned(face.direction(), face.texture(), 8, minV, 9, maxV, 90))));
 		}
 
-		return plates;
+		return bothSides(plates);
 	}
 
 	/**
@@ -1774,12 +1832,12 @@ public class MBModelProvider implements DataProvider {
 	 * pane gives it, so each face names the column of its own side of the bar - the one the middle
 	 * of the block stands on, or the far one - and the rows of its own half of the band, read a
 	 * quarter turn round so that they run along the wall rather than across it. The face is left on
-	 * the box the wall was carried on to, and any other piece is given back as it came.
+	 * the box the wall was carried on to and is drawn on both sides of it, as the plates of the band
+	 * are; any other piece is given back as it came.
 	 */
-	private static PaneBox bandWall(String template, PaneBox piece) {
+	private static List<PaneBox> bandWall(String template, PaneBox piece) {
 		PaneFace face = piece.faces().get(0);
-
-		return new PaneBox(piece.box(), List.of(switch (template) {
+		PaneFace carried = switch (template) {
 			case "pane_edge_north_lower_west", "pane_edge_south_lower_west" ->
 					PaneFace.turned("west", face.texture(), 7, 8, 8, 16, 90);
 			case "pane_edge_north_lower_east", "pane_edge_south_lower_east" ->
@@ -1796,8 +1854,14 @@ public class MBModelProvider implements DataProvider {
 					PaneFace.turned("north", face.texture(), 7, 0, 8, 8, 270);
 			case "pane_edge_east_upper_south", "pane_edge_west_upper_south" ->
 					PaneFace.turned("south", face.texture(), 8, 0, 9, 8, 270);
-			default -> face;
-		}));
+			default -> null;
+		};
+
+		if (carried == null) {
+			return List.of(piece);
+		}
+
+		return bothSides(List.of(new PaneBox(piece.box(), List.of(carried))));
 	}
 
 	/**
@@ -1829,6 +1893,31 @@ public class MBModelProvider implements DataProvider {
 		}
 
 		return pieces;
+	}
+
+	/**
+	 * Pieces that read a column of the upright, drawn on both sides of the plane they lie in.
+	 *
+	 * <p>A wall of the band stands in the middle of the block and the two halves of a plate lie on
+	 * the middle level of a band, so either of them may be looked at from either side. Every piece is
+	 * kept as it is and given again the other way round over the same rectangle, reading the same
+	 * pixels mirrored and moved a thousandth of a pixel into the block, as the border of a piece is
+	 * drawn on both sides. The far side is culled against the same neighbour the near one is.
+	 */
+	private static List<PaneBox> bothSides(List<PaneBox> pieces) {
+		List<PaneBox> both = new ArrayList<>();
+
+		for (PaneBox piece : pieces) {
+			both.add(piece);
+
+			for (PaneFace face : piece.faces()) {
+				String cull = isOnBoundary(piece.box(), face.direction()) ? face.direction() : face.cull();
+
+				both.add(new PaneBox(facePlane(piece.box(), face.direction()), List.of(otherWay(face, cull)), FACE_GAP));
+			}
+		}
+
+		return both;
 	}
 
 	/**
@@ -2059,12 +2148,18 @@ public class MBModelProvider implements DataProvider {
 	 * translucent texture - {@code {"force_translucent": true, "sprite": ...}} - which a bare
 	 * sprite string cannot say. The bars are cut out instead, so theirs stay bare strings.
 	 *
-	 * <p>A pane reads the template itself; the bars read its {@code _bars} twin, which draws the
-	 * same geometry today and may draw their own later.
+	 * <p>A pane reads the template itself and the bars read its {@code _bars} twin; where no upright
+	 * carries the band the bars fall back on the same twin with the turn left out, and take a copy of
+	 * that as well.
 	 */
 	private static JsonObject paneCopy(PaneTemplate template, String base, boolean glass) {
+		return paneCopy(paneModelId(glass ? template.name() : barsTwin(template)), base, glass);
+	}
+
+	/** One pane's copy of one of the models a template is written as. */
+	private static JsonObject paneCopy(Identifier parent, String base, boolean glass) {
 		JsonObject root = new JsonObject();
-		root.addProperty("parent", paneModelId(glass ? template.name() : barsTwin(template)).toString());
+		root.addProperty("parent", parent.toString());
 
 		JsonObject textures = new JsonObject();
 		paneSprite(textures, "pane", "block/" + base, glass);

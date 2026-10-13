@@ -168,8 +168,19 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 	 */
 	private static final List<SharedBox> SHARED_BOXES = sharedBoxes();
 
-	/** One box the corners share, and the states that show it. */
-	private record SharedBox(String template, Predicate<BlockState> shows) {
+	/**
+	 * One box the corners share, the states that show it, and - for a box the bars read the band
+	 * down the upright on - the states in which they read it that way.
+	 *
+	 * <p>A wall of the band turned into an upright, and the plate that turns it, are written twice:
+	 * the {@code _bars} model reads the band down the bar and the {@code _bars_plain} one the way
+	 * the pane reads it, and {@code turns} says which of the two is shown. A box the bars draw the
+	 * same either way is left with none.
+	 */
+	private record SharedBox(String template, Predicate<BlockState> shows, Predicate<BlockState> turns) {
+		SharedBox(String template, Predicate<BlockState> shows) {
+			this(template, shows, null);
+		}
 	}
 
 	private static List<SharedBox> sharedBoxes() {
@@ -180,22 +191,32 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 			for (boolean half : halves) {
 				String edge = "pane_edge_" + side.name() + (half ? "_upper" : "_lower");
 
+				// The plate of this side and half, and the walls of it that stand at the
+				// middle of the block - one for each of the two level corners the side
+				// leads to, each away while its own corner is on.
+				Predicate<BlockState> plate = state -> side.cornered(state) && !side.plated(state, half);
+				Predicate<BlockState> walls = state -> side.cornered(state)
+						&& (!shows(state, side.first()) || !shows(state, side.second()));
+
 				// The two pixels of band that lead to every corner of this side. The
 				// corner of this half covers their end, so that end is a model of its
-				// own and waits for the corner to be away.
+				// own and waits for the corner to be away. The plate reads the band down
+				// the upright while one of the walls of this side and half stands at the
+				// middle of the block to turn it into one.
 				boxes.add(new SharedBox(edge, side::cornered));
-				boxes.add(new SharedBox(edge + (half ? "_up" : "_down"),
-						state -> side.cornered(state) && !side.plated(state, half)));
+				boxes.add(new SharedBox(edge + (half ? "_up" : "_down"), plate, walls));
 
 				// The wide face that leads to one of the two level corners. A corner
 				// that is on closes the seam with its own plate, so the face is shown
 				// while that corner is away, whichever corner the other face answers
 				// to - and only while the band itself is there, or a pane with no
 				// corner on this side shows two pixels of glass beside its collision.
+				// The wall reads the band down the upright while the plate of this side
+				// and half lies under or over it to turn the band into one.
 				boxes.add(new SharedBox(edge + "_" + side.firstFace(),
-						state -> side.cornered(state) && !shows(state, side.first())));
+						state -> side.cornered(state) && !shows(state, side.first()), plate));
 				boxes.add(new SharedBox(edge + "_" + side.secondFace(),
-						state -> side.cornered(state) && !shows(state, side.second())));
+						state -> side.cornered(state) && !shows(state, side.second()), plate));
 			}
 		}
 
@@ -216,9 +237,15 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 
 			// The floor or the ceiling of the crossing, shown while the column of this
 			// half leaves a gap there at all, and its four sides, which the band of the
-			// side that covers them turns away with the corners it answers to.
+			// side that covers them turns away with the corners it answers to. The
+			// crossing's own two walls run east and west out of the middle of the block,
+			// and the floor or the ceiling reads the band down the upright while one of
+			// them stands beside it to turn the band into one.
+			Predicate<BlockState> walls = state -> !bare(state)
+					&& (!EAST.cornered(state) || !WEST.cornered(state));
+
 			boxes.add(new SharedBox(middle + (half ? "_up" : "_down"),
-					state -> !bare(state) && !column(state, half)));
+					state -> !bare(state) && !column(state, half), walls));
 
 			for (SharedSide side : SHARED_SIDES) {
 				boxes.add(new SharedBox(middle + "_" + side.name(),
@@ -320,6 +347,19 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 				continue;
 			}
 
+			if (bars && box.turns() != null) {
+				// The boxes the band turns into an upright on are written twice. The turn is
+				// shown while an upright of this side and half stands beside the band, and the
+				// reading the pane gives the band wherever none does.
+				Predicate<BlockState> turns = box.turns();
+
+				selectors.add(new MultiPartModel.Selector<>(
+						state -> box.shows().test(state) && turns.test(state), sharedPart(paneId, box)));
+				selectors.add(new MultiPartModel.Selector<>(
+						state -> box.shows().test(state) && !turns.test(state), plainPart(paneId, box)));
+				continue;
+			}
+
 			selectors.add(new MultiPartModel.Selector<>(box.shows(), sharedPart(paneId, box)));
 		}
 
@@ -376,6 +416,22 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 				"block/" + box.template() + "_" + paneId.getPath());
 
 		return new SingleVariant.Unbaked(new Variant(model));
+	}
+
+	/**
+	 * The fallback of one shared box of the bars: the same box read the way the pane reads it, which
+	 * datagen writes beside the {@code _bars} model.
+	 */
+	private static BlockStateModel.Unbaked plainPart(Identifier paneId, SharedBox box) {
+		Identifier model = Identifier.fromNamespaceAndPath(MoreBuildingBlocks.MOD_ID,
+				"block/" + plainTwin(box.template()) + "_" + paneId.getPath());
+
+		return new SingleVariant.Unbaked(new Variant(model));
+	}
+
+	/** The model the bars fall back on where no upright carries the band. */
+	private static String plainTwin(String template) {
+		return template + "_bars_plain";
 	}
 
 	/** One model a pane connected to nothing is drawn from, under vanilla's namespace. */
