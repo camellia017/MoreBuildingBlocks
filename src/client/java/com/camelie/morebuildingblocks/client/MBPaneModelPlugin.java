@@ -169,6 +169,11 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 		List.of(NORTH.first(), SOUTH.first(), SOUTH.second(), NORTH.second()),
 		List.of(EAST.lower(), EAST.upper(), WEST.lower(), WEST.upper()));
 
+	/** The bits {@link #planeMask} reads: the two upright planes and the level one between them. */
+	private static final int NORTH_SOUTH = 0b001;
+	private static final int LEVEL = 0b010;
+	private static final int EAST_WEST = 0b100;
+
 	/**
 	 * The boxes the corners share: the two pixels of band on each of the four sides,
 	 * the two pixels of column at the end of each of those, and the two pixels where
@@ -202,17 +207,22 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 	}
 
 	/**
-	 * The shared boxes of one family. The two lists differ in one place: the plate of a side and
-	 * half.
+	 * The shared boxes of one family. The two lists differ in two places: the plate of a side and
+	 * half, and the plate of the crossing.
 	 *
-	 * <p>A pane draws that plate on the level of the band's own floor or ceiling, inside the
+	 * <p>A pane draws that side plate on the level of the band's own floor or ceiling, inside the
 	 * volume of the upright corner of that half, which covers its end - so it is shown only while
 	 * that corner is away, or the same face would be drawn twice, one inside the other.
 	 *
 	 * <p>The bars draw the same plate on the level the two halves of a band meet on, above and
 	 * below the volume of that corner, where nothing covers it. So it is shown for every corner
 	 * that asks for it - even while the corner of its own half is on, the two faces standing
-	 * clear of each other there - and never where the side carries no corner of its own.
+	 * clear of each other there - never where the side carries no corner of its own, and never
+	 * while the corners of the pane lie in one upright plane alone, or in that plane together
+	 * with the level one.
+	 *
+	 * <p>The bars also draw the plate of the crossing while the pane turns in the level plane,
+	 * where the band runs on through it, whether or not the column of that half is on.
 	 */
 	private static List<SharedBox> sharedBoxes(boolean bars) {
 		List<SharedBox> boxes = new ArrayList<>();
@@ -226,7 +236,7 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 				// middle of the block - one for each of the two level corners the side
 				// leads to, each away while its own corner is on.
 				Predicate<BlockState> plate = bars
-						? state -> side.cornered(state)
+						? state -> side.cornered(state) && !noPlate(state)
 						: state -> side.cornered(state) && !side.plated(state, half);
 
 				// Every piece of this side reads the band down the upright, which is what the
@@ -270,10 +280,15 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 			}
 
 			// The floor or the ceiling of the crossing, shown while the column of this
-			// half leaves a gap there at all, and its four sides, which the band of the
-			// side that covers them turns away with the corners it answers to.
+			// half leaves a gap there at all - and, for the bars, also while the pane
+			// turns in the level plane, where the crossing carries the band on. Its four
+			// sides, which the band of the side that covers them turns away with the
+			// corners it answers to.
+			Predicate<BlockState> crossing = state -> !bare(state) && !column(state, half);
+
 			boxes.add(new SharedBox(middle + (half ? "_up" : "_down"),
-					state -> !bare(state) && !column(state, half), state -> !onePlane(state)));
+					bars ? crossing.or(state -> (planeMask(state) & LEVEL) != 0) : crossing,
+					state -> !onePlane(state)));
 
 			for (SharedSide side : SHARED_SIDES) {
 				boxes.add(new SharedBox(middle + "_" + side.name(),
@@ -302,15 +317,34 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 	 * that turns in two of its planes or in all three reads the band down the upright.
 	 */
 	private static boolean onePlane(BlockState state) {
+		return Integer.bitCount(planeMask(state)) == 1;
+	}
+
+	/**
+	 * The planes the pane's corners lie in, as the bits {@link #NORTH_SOUTH},
+	 * {@link #LEVEL} and {@link #EAST_WEST}.
+	 */
+	private static int planeMask(BlockState state) {
 		int planes = 0;
 
-		for (List<Property<Boolean>> plane : PLANE_CORNERS) {
-			if (carries(state, plane)) {
-				planes++;
+		for (int i = 0; i < PLANE_CORNERS.size(); i++) {
+			if (carries(state, PLANE_CORNERS.get(i))) {
+				planes |= 1 << i;
 			}
 		}
 
-		return planes == 1;
+		return planes;
+	}
+
+	/**
+	 * Whether the pane's corners lie in a plane that leaves the bars without their plate:
+	 * in one upright plane alone, where the band runs on level and never turns out of it,
+	 * or in that plane together with the level one.
+	 */
+	private static boolean noPlate(BlockState state) {
+		int planes = planeMask(state);
+
+		return planes == NORTH_SOUTH || planes == EAST_WEST || planes == (NORTH_SOUTH | LEVEL);
 	}
 
 	/** Whether any corner of one plane is on. */
