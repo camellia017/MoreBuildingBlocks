@@ -212,7 +212,9 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 	 * <p>The bars draw the same plate on the level the two halves of a band meet on, above and
 	 * below the volume of that corner, where nothing covers it. So it is shown for every corner
 	 * that asks for it - even while the corner of its own half is on, the two faces standing
-	 * clear of each other there - and never where the side carries no corner of its own.
+	 * clear of each other there - never where the side carries no corner of
+	 * its own, and never while every corner of the pane lies in a single plane, where the
+	 * band runs on level and keeps the pane's own reading of it.
 	 */
 	private static List<SharedBox> sharedBoxes(boolean bars) {
 		List<SharedBox> boxes = new ArrayList<>();
@@ -226,7 +228,7 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 				// middle of the block - one for each of the two level corners the side
 				// leads to, each away while its own corner is on.
 				Predicate<BlockState> plate = bars
-						? state -> side.cornered(state)
+						? state -> side.cornered(state) && !onePlane(state)
 						: state -> side.cornered(state) && !side.plated(state, half);
 
 				// Every piece of this side reads the band down the upright, which is what the
