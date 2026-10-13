@@ -1,7 +1,6 @@
 package com.camelie.morebuildingblocks.block;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReferenceArray;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.level.block.Block;
@@ -82,10 +81,27 @@ public final class MBPaneShapes {
 	private static final VoxelShape MIDDLE = Block.box(7.0, 7.0, 7.0, 9.0, 9.0, 9.0);
 
 	/**
-	 * The piece shapes depend on the state alone, so they are cached. An empty shape means the
-	 * state has no piece turned on and keeps the shape it already had.
+	 * The twelve flags of a pane in one number, and one shape per combination of them, built on
+	 * first use.
+	 *
+	 * <p>A shape depends on the flags alone: which boxes make it up are static, and the block, the
+	 * position and the waterlogged flag never reach them. Vanilla also gives every pane the same
+	 * post and arm sizes, so panes and iron bars alike read the same boxes. Caching by state built
+	 * a shape for each of a pane's 8192 states, half of them waterlogged twins of the other half,
+	 * while the flags have 4096 combinations in all — and one table of those serves every pane.
+	 *
+	 * <p>The bits are the lower plates in 0..3, the upper plates in 4..7 and the corners in 8..11,
+	 * each group named north, east, south, west, the corners in the order of {@link #CORNERS}.
+	 * Shapes are immutable, so two threads racing to build the same one only waste a shape, and
+	 * either answer is the same.
 	 */
-	private static final Map<BlockState, VoxelShape> PIECE_SHAPES = new ConcurrentHashMap<>();
+	private static final int ARMS = 4;
+	private static final int UPPER_BIT = ARMS;
+	private static final int CORNER_BIT = 2 * ARMS;
+
+	/** One slot per combination of the flags: the lower plates, the upper plates and the corners. */
+	private static final AtomicReferenceArray<VoxelShape> PIECE_SHAPES =
+		new AtomicReferenceArray<>(1 << (CORNER_BIT + 4));
 
 	private MBPaneShapes() {
 	}
@@ -131,10 +147,23 @@ public final class MBPaneShapes {
 	 */
 	public static VoxelShape adjustShape(final VoxelShape currentShape, final VoxelShape vanillaShape,
 			final BlockState state) {
-		VoxelShape pieces = PIECE_SHAPES.computeIfAbsent(state, MBPaneShapes::build);
-
-		if (pieces.isEmpty()) {
+		if (!isPane(state)) {
+			// Another mod's pane, or a fence: nothing of this mod's is in play
 			return currentShape;
+		}
+
+		final int mask = mask(state);
+
+		if (mask == 0) {
+			// Every flag is off, so the pane is the one vanilla drew and keeps the shape it had
+			return currentShape;
+		}
+
+		VoxelShape pieces = PIECE_SHAPES.get(mask);
+
+		if (pieces == null) {
+			pieces = build(mask);
+			PIECE_SHAPES.set(mask, pieces);
 		}
 
 		if (currentShape != vanillaShape) {
@@ -237,45 +266,84 @@ public final class MBPaneShapes {
 		{Direction.NORTH, Direction.WEST}
 	};
 
-	/** Every piece the state turns on, or an empty shape when it turns on none. */
-	private static VoxelShape build(final BlockState state) {
-		if (!isPane(state)) {
-			return Shapes.empty();
-		}
+	/** The corner box of each quadrant, in the order {@link #CORNERS} names them. */
+	private static final VoxelShape[] CORNER_SHAPES = {
+		CORNER_NORTH_EAST, CORNER_SOUTH_EAST, CORNER_SOUTH_WEST, CORNER_NORTH_WEST
+	};
 
-		VoxelShape shape = Shapes.empty();
+	/** The upright plates of each arm, in the order north, east, south, west. */
+	private static final VoxelShape[] LOWER_SHAPES = {NORTH_LOWER, EAST_LOWER, SOUTH_LOWER, WEST_LOWER};
+	private static final VoxelShape[] UPPER_SHAPES = {NORTH_UPPER, EAST_UPPER, SOUTH_UPPER, WEST_UPPER};
+
+	/** The twelve flags of this state in one mask, the bits laid out as {@link #PIECE_SHAPES}. */
+	private static int mask(final BlockState state) {
+		int mask = 0;
 
 		for (Direction direction : Direction.Plane.HORIZONTAL) {
+			final int arm = arm(direction);
+
 			if (lower(state, direction)) {
-				shape = Shapes.or(shape, lowerShape(direction));
+				mask |= 1 << arm;
 			}
 
 			if (upper(state, direction)) {
-				shape = Shapes.or(shape, upperShape(direction));
+				mask |= 1 << (UPPER_BIT + arm);
 			}
 		}
 
-		boolean northEast = corner(state, Direction.NORTH, Direction.EAST);
-		boolean southEast = corner(state, Direction.SOUTH, Direction.EAST);
-		boolean southWest = corner(state, Direction.SOUTH, Direction.WEST);
-		boolean northWest = corner(state, Direction.NORTH, Direction.WEST);
+		for (int quadrant = 0; quadrant < CORNERS.length; quadrant++) {
+			if (corner(state, CORNERS[quadrant][0], CORNERS[quadrant][1])) {
+				mask |= 1 << (CORNER_BIT + quadrant);
+			}
+		}
+
+		return mask;
+	}
+
+	/** Where an arm sits among the four: north, east, south, west. */
+	private static int arm(final Direction direction) {
+		return switch (direction) {
+			case NORTH -> 0;
+			case EAST -> 1;
+			case SOUTH -> 2;
+			case WEST -> 3;
+			default -> throw new IllegalArgumentException("A pane arm points horizontally, not " + direction);
+		};
+	}
+
+	/** Every piece the mask turns on. It is never asked for a mask of zero, which draws nothing. */
+	private static VoxelShape build(final int mask) {
+		VoxelShape shape = Shapes.empty();
+
+		for (int arm = 0; arm < ARMS; arm++) {
+			if (on(mask, arm)) {
+				shape = Shapes.or(shape, LOWER_SHAPES[arm]);
+			}
+
+			if (on(mask, UPPER_BIT + arm)) {
+				shape = Shapes.or(shape, UPPER_SHAPES[arm]);
+			}
+		}
+
+		boolean northEast = on(mask, CORNER_BIT);
+		boolean southEast = on(mask, CORNER_BIT + 1);
+		boolean southWest = on(mask, CORNER_BIT + 2);
+		boolean northWest = on(mask, CORNER_BIT + 3);
 		// A band runs along its side, so every corner of that side turns it on: the two quadrants
 		// beside it in the plate, and the upright plate of the arm it leads into
-		boolean north = northEast || northWest || plated(state, Direction.NORTH);
-		boolean south = southEast || southWest || plated(state, Direction.SOUTH);
-		boolean east = northEast || southEast || plated(state, Direction.EAST);
-		boolean west = northWest || southWest || plated(state, Direction.WEST);
+		boolean north = northEast || northWest || plated(mask, 0);
+		boolean south = southEast || southWest || plated(mask, 2);
+		boolean east = northEast || southEast || plated(mask, 1);
+		boolean west = northWest || southWest || plated(mask, 3);
 		// The column is left open between the plates of the two halves, so it follows them alone
-		boolean column = lower(state, Direction.NORTH) || lower(state, Direction.EAST)
-				|| lower(state, Direction.SOUTH) || lower(state, Direction.WEST);
-		boolean cap = upper(state, Direction.NORTH) || upper(state, Direction.EAST)
-				|| upper(state, Direction.SOUTH) || upper(state, Direction.WEST);
+		boolean column = anyOn(mask, 0, ARMS);
+		boolean cap = anyOn(mask, UPPER_BIT, ARMS);
 
 		shape = Shapes.or(shape,
-				northEast ? CORNER_NORTH_EAST : Shapes.empty(),
-				southEast ? CORNER_SOUTH_EAST : Shapes.empty(),
-				southWest ? CORNER_SOUTH_WEST : Shapes.empty(),
-				northWest ? CORNER_NORTH_WEST : Shapes.empty(),
+				northEast ? CORNER_SHAPES[0] : Shapes.empty(),
+				southEast ? CORNER_SHAPES[1] : Shapes.empty(),
+				southWest ? CORNER_SHAPES[2] : Shapes.empty(),
+				northWest ? CORNER_SHAPES[3] : Shapes.empty(),
 				north ? EDGE_NORTH : Shapes.empty(),
 				south ? EDGE_SOUTH : Shapes.empty(),
 				east ? EDGE_EAST : Shapes.empty(),
@@ -288,27 +356,19 @@ public final class MBPaneShapes {
 	}
 
 	/** Whether either plate of this arm is on, the lower one or the upper one. */
-	private static boolean plated(final BlockState state, final Direction direction) {
-		return lower(state, direction) || upper(state, direction);
+	private static boolean plated(final int mask, final int arm) {
+		return on(mask, arm) || on(mask, UPPER_BIT + arm);
 	}
 
-	private static VoxelShape lowerShape(final Direction direction) {
-		return switch (direction) {
-			case NORTH -> NORTH_LOWER;
-			case EAST -> EAST_LOWER;
-			case SOUTH -> SOUTH_LOWER;
-			case WEST -> WEST_LOWER;
-			default -> throw new IllegalArgumentException("A pane arm points horizontally, not " + direction);
-		};
+	/** Whether the flag in this bit is set. */
+	private static boolean on(final int mask, final int bit) {
+		return (mask & 1 << bit) != 0;
 	}
 
-	private static VoxelShape upperShape(final Direction direction) {
-		return switch (direction) {
-			case NORTH -> NORTH_UPPER;
-			case EAST -> EAST_UPPER;
-			case SOUTH -> SOUTH_UPPER;
-			case WEST -> WEST_UPPER;
-			default -> throw new IllegalArgumentException("A pane arm points horizontally, not " + direction);
-		};
+	/** Whether any of the flags from this bit on, this many of them, is set. */
+	private static boolean anyOn(final int mask, final int from, final int count) {
+		final int bits = (1 << count) - 1;
+
+		return (mask & bits << from) != 0;
 	}
 }
