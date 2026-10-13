@@ -441,6 +441,8 @@ public class MBClientGameTest implements FabricClientGameTest {
 					"an arm hides its face against a pane carrying no arm");
 			require(MBPaneShapes.hides(armWithCorner, mirroredEastCorner, Direction.NORTH),
 					"two corners facing each other no longer hide the face between them");
+			require(MBPaneShapes.hides(armWithCorner, eastCorners, Direction.NORTH),
+					"a corner hides its face against a pane carrying that corner and no arm");
 			require(!MBPaneShapes.hides(armWithCorner, mirroredWestCorner, Direction.NORTH),
 					"a corner hides its face against a corner across the block");
 		});

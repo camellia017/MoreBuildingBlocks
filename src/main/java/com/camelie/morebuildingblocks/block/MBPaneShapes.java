@@ -153,9 +153,15 @@ public final class MBPaneShapes {
 	 * with full height arms. They blank pieces that stand alone - the upper half of one pane faces
 	 * the air when the pane above carries no arm there - and they blank the up and down faces of a
 	 * corner, which sits at mid height and stays visible between stacked panes. This asks instead
-	 * whether every piece this state draws on the shared plane meets its own piece on the other
+	 * whether the pieces this state draws on the shared plane meet their own piece on the other
 	 * side, and hides the face only then, so a piece the neighbour carries nothing behind stays
 	 * visible however much the neighbour adds beside it.
+	 *
+	 * <p>Across an upright plane a corner answers on its own, against the corner of the neighbour
+	 * that stands behind it: the middle pane of a slab leans on the block below and carries its four
+	 * corners with no arm at all, and the panes beside it still line up with it, corner piece for
+	 * corner piece. Where this state draws no corner on the plane, the arms answer as they always
+	 * did.
 	 */
 	public static boolean hides(final BlockState state, final BlockState neighbour, final Direction direction) {
 		if (direction.getAxis().isVertical()) {
@@ -181,14 +187,22 @@ public final class MBPaneShapes {
 		Direction opposite = direction.getOpposite();
 		Direction left = direction.getCounterClockWise();
 		Direction right = direction.getClockWise();
+		boolean nearCorner = corner(state, left, direction);
+		boolean farCorner = corner(state, right, direction);
 
-		// Every piece this state draws on the shared plane has to meet its own piece on the other
-		// side. A piece the neighbour carries nothing behind keeps its face, whichever pieces the
-		// neighbour adds beside it.
+		// A corner of this state decides on its own across an upright plane, against the corner of
+		// the neighbour that stands behind it. The middle pane of a slab leans on the block below
+		// and keeps its four corners with no arm at all, and the panes beside it still line up with
+		// it, corner piece for corner piece; an arm that meets nothing on the other side does not
+		// keep those faces. Only where this state draws no corner on the plane do the arms answer,
+		// as they always did, so a piece the neighbour carries nothing behind keeps its face.
+		if (nearCorner || farCorner) {
+			return (!nearCorner || corner(neighbour, left, opposite))
+				&& (!farCorner || corner(neighbour, right, opposite));
+		}
+
 		return (!lower(state, direction) || lower(neighbour, opposite))
-			&& (!upper(state, direction) || upper(neighbour, opposite))
-			&& (!corner(state, left, direction) || corner(neighbour, left, opposite))
-			&& (!corner(state, right, direction) || corner(neighbour, right, opposite));
+			&& (!upper(state, direction) || upper(neighbour, opposite));
 	}
 
 	/** The vanilla connection boolean of this arm, which is also its lower plate. */
