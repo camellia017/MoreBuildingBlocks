@@ -1511,6 +1511,47 @@ public class MBModelProvider implements DataProvider {
 					paneBox(7, 8, 7, 7, 9, 9, PaneFace.cut("west", "#pane", 9, 7, 7, 8)))),
 			new PaneTemplate("pane_middle_upper_east", List.of(
 					paneBox(9, 8, 7, 9, 9, 9, PaneFace.cut("east", "#pane", 7, 7, 9, 8)))),
+			// The two pixels each side of the crossing is made of, drawn apart for the bars: a
+			// wall of an arm comes to stand over one of them, and the pixel it reaches is left
+			// to that arm while the one it does not reach is the crossing's own to show - see
+			// the crossing's boxes in MBPaneModelPlugin. Each is named after the side it lies
+			// in and the arm that stands over it, and reads the half of the side's window that
+			// pixel takes. No pane reads these, so only the bars' models are written for them.
+			//
+			// The west side reads its window the other way round, as the whole side does, so
+			// its pixels take the halves in that order too.
+			new PaneTemplate("pane_middle_lower_north_west", List.of(
+					paneBox(7, 7, 7, 8, 8, 7, PaneFace.cut("north", "#pane", 7, 8, 8, 9)))),
+			new PaneTemplate("pane_middle_lower_north_east", List.of(
+					paneBox(8, 7, 7, 9, 8, 7, PaneFace.cut("north", "#pane", 8, 8, 9, 9)))),
+			new PaneTemplate("pane_middle_upper_north_west", List.of(
+					paneBox(7, 8, 7, 8, 9, 7, PaneFace.cut("north", "#pane", 7, 7, 8, 8)))),
+			new PaneTemplate("pane_middle_upper_north_east", List.of(
+					paneBox(8, 8, 7, 9, 9, 7, PaneFace.cut("north", "#pane", 8, 7, 9, 8)))),
+			new PaneTemplate("pane_middle_lower_south_west", List.of(
+					paneBox(7, 7, 9, 8, 8, 9, PaneFace.cut("south", "#pane", 7, 8, 8, 9)))),
+			new PaneTemplate("pane_middle_lower_south_east", List.of(
+					paneBox(8, 7, 9, 9, 8, 9, PaneFace.cut("south", "#pane", 8, 8, 9, 9)))),
+			new PaneTemplate("pane_middle_upper_south_west", List.of(
+					paneBox(7, 8, 9, 8, 9, 9, PaneFace.cut("south", "#pane", 7, 7, 8, 8)))),
+			new PaneTemplate("pane_middle_upper_south_east", List.of(
+					paneBox(8, 8, 9, 9, 9, 9, PaneFace.cut("south", "#pane", 8, 7, 9, 8)))),
+			new PaneTemplate("pane_middle_lower_west_north", List.of(
+					paneBox(7, 7, 7, 7, 8, 8, PaneFace.cut("west", "#pane", 9, 8, 8, 9)))),
+			new PaneTemplate("pane_middle_lower_west_south", List.of(
+					paneBox(7, 7, 8, 7, 8, 9, PaneFace.cut("west", "#pane", 8, 8, 7, 9)))),
+			new PaneTemplate("pane_middle_upper_west_north", List.of(
+					paneBox(7, 8, 7, 7, 9, 8, PaneFace.cut("west", "#pane", 9, 7, 8, 8)))),
+			new PaneTemplate("pane_middle_upper_west_south", List.of(
+					paneBox(7, 8, 8, 7, 9, 9, PaneFace.cut("west", "#pane", 8, 7, 7, 8)))),
+			new PaneTemplate("pane_middle_lower_east_north", List.of(
+					paneBox(9, 7, 7, 9, 8, 8, PaneFace.cut("east", "#pane", 7, 8, 8, 9)))),
+			new PaneTemplate("pane_middle_lower_east_south", List.of(
+					paneBox(9, 7, 8, 9, 8, 9, PaneFace.cut("east", "#pane", 8, 8, 9, 9)))),
+			new PaneTemplate("pane_middle_upper_east_north", List.of(
+					paneBox(9, 8, 7, 9, 9, 8, PaneFace.cut("east", "#pane", 7, 7, 8, 8)))),
+			new PaneTemplate("pane_middle_upper_east_south", List.of(
+					paneBox(9, 8, 8, 9, 9, 9, PaneFace.cut("east", "#pane", 8, 7, 9, 8)))),
 			new PaneTemplate("pane_column_lower_north", List.of(
 					paneBox(7, 0, 7, 9, 7, 7, PaneFace.cut("north", "#pane", 7, 9, 9, 16)))),
 			new PaneTemplate("pane_column_lower_south", List.of(
@@ -1605,11 +1646,16 @@ public class MBModelProvider implements DataProvider {
 	 * stay put. Where the band turns into an upright, the bars read it down the bar itself; where it
 	 * runs on beside nothing, they keep the reading the pane gives it. A template the turn touches is
 	 * therefore written twice - {@code _bars} for the turn and {@code _bars_plain} for the band that
-	 * runs on - and a bars block takes a copy of each.
+	 * runs on - and a bars block takes a copy of each. A template the panes never read is written for
+	 * the bars alone - see {@link #barsOnly} - so that the pixels the crossing is drawn as for them
+	 * bring no glass along with them.
 	 */
 	private void generatePanes() {
 		for (PaneTemplate template : PANE_TEMPLATES) {
-			this.models.put(paneModelId(template.name()), modelInstance(paneGeometry(template.boxes(), false)));
+			if (!barsOnly(template)) {
+				this.models.put(paneModelId(template.name()), modelInstance(paneGeometry(template.boxes(), false)));
+			}
+
 			this.models.put(paneModelId(barsTwin(template)),
 					modelInstance(paneGeometry(barsBoxes(template, true), true)));
 
@@ -1635,6 +1681,10 @@ public class MBModelProvider implements DataProvider {
 			String base = glass ? path.substring(0, path.length() - "_pane".length()) : path.replaceFirst("^waxed_", "");
 
 			for (PaneTemplate template : PANE_TEMPLATES) {
+				if (glass && barsOnly(template)) {
+					continue;
+				}
+
 				this.models.put(paneModelId(template.name() + "_" + path),
 						modelInstance(paneCopy(template, base, glass)));
 
@@ -1668,6 +1718,28 @@ public class MBModelProvider implements DataProvider {
 	 */
 	private static String plainTwin(PaneTemplate template) {
 		return barsTwin(template) + "_plain";
+	}
+
+	/**
+	 * The two pixels each side of the crossing is drawn as for the bars, named after the side they
+	 * lie in and the arm whose wall comes to stand over them. They are held here as well as among
+	 * the templates because the bars are the only ones that read them and because the crossing's own
+	 * treatment - see {@link #barsBoxes} - has to know them before the band templates are worked out.
+	 */
+	private static final List<String> CROSSING_PIXELS = List.of(
+			"pane_middle_lower_north_west", "pane_middle_lower_north_east", "pane_middle_upper_north_west",
+			"pane_middle_upper_north_east", "pane_middle_lower_south_west", "pane_middle_lower_south_east",
+			"pane_middle_upper_south_west", "pane_middle_upper_south_east", "pane_middle_lower_west_north",
+			"pane_middle_lower_west_south", "pane_middle_upper_west_north", "pane_middle_upper_west_south",
+			"pane_middle_lower_east_north", "pane_middle_lower_east_south", "pane_middle_upper_east_north",
+			"pane_middle_upper_east_south");
+
+	/**
+	 * Whether a template is one the bars alone read: the panes keep the crossing's sides whole, so
+	 * neither their own model nor a copy of it for a pane is written.
+	 */
+	private static boolean barsOnly(PaneTemplate template) {
+		return CROSSING_PIXELS.contains(template.name());
 	}
 
 	/**
@@ -1721,6 +1793,11 @@ public class MBModelProvider implements DataProvider {
 	 * <p>Every border face of the bars is drawn on both sides, whether its piece belongs on a centre
 	 * plane or not, and the walls of the crossing are drawn that way too, each of them standing for
 	 * both sides of the plane it lies in, so that the frame shows whichever side of it is looked at.
+	 * Each of those walls is written as the two pixels it is made of - see {@link #CROSSING_PIXELS} -
+	 * rather than as the whole side, since a wall of an arm comes to stand over one of the two: the
+	 * pixel an arm's wall reaches is left to that arm and the other stays the crossing's own to show,
+	 * and the drawing leaves out the one exactly while the arm's wall is drawn - see {@code
+	 * MBPaneModelPlugin}.
 	 */
 	private static List<PaneBox> barsBoxes(PaneTemplate template, boolean turns) {
 		boolean centre = onCentrePlane(template.name());
@@ -1978,9 +2055,14 @@ public class MBModelProvider implements DataProvider {
 
 	/**
 	 * Whether the bars draw a piece in the plane that runs through the block's centre: the uprights,
-	 * the end faces of the level band and the four sides of the crossing.
+	 * the end faces of the level band and the four sides of the crossing, the last of them drawn as
+	 * the two pixels they are made of.
 	 */
 	private static boolean onCentrePlane(String name) {
+		if (CROSSING_PIXELS.contains(name)) {
+			return true;
+		}
+
 		return switch (name) {
 			// The uprights: the two sides of a wall and one rod for every direction it runs to.
 			case "pane_side_corner_lower", "pane_side_corner_lower_alt", "pane_side_corner_upper",
@@ -2008,10 +2090,12 @@ public class MBModelProvider implements DataProvider {
 	 * Whether a template is the crossing's own box, whose four sides stand on the centre planes. The
 	 * wall across from each of them reads the bars from the other side of the same plane, so a level
 	 * corner that turns one of the pair away leaves the other to show the bars from the side it has
-	 * left: both are drawn on both sides of themselves rather than one to each side.
+	 * left: both are drawn on both sides of themselves rather than one to each side. The pixels the
+	 * sides are drawn as for the bars lie in the same planes, one to each end of the side, and are
+	 * drawn the same way.
 	 */
 	private static boolean isCrossingWall(String name) {
-		return switch (name) {
+		return CROSSING_PIXELS.contains(name) || switch (name) {
 			case "pane_middle_lower_north", "pane_middle_lower_south", "pane_middle_lower_west",
 					"pane_middle_lower_east", "pane_middle_upper_north", "pane_middle_upper_south",
 					"pane_middle_upper_west", "pane_middle_upper_east" -> true;

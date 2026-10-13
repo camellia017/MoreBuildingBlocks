@@ -299,13 +299,63 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 					bars ? crossing.or(state -> (planeMask(state) & LEVEL) != 0) : crossing,
 					state -> !onePlane(state)));
 
+			// The two pixels each side of the crossing is made of. A pane keeps the
+			// side whole; the bars draw it as its two pixels, since a wall of an arm
+			// comes to stand over one of them: the pixel an arm's wide face reaches
+			// is left to that arm, which carries the band on over it, and the pixel
+			// it does not reach is the crossing's own to show. Which of the two an
+			// arm reaches is the corner the two of them share - see coverings.
 			for (SharedSide side : SHARED_SIDES) {
-				boxes.add(new SharedBox(middle + "_" + side.name(),
-						state -> !bare(state) && !side.cornered(state)));
+				if (!bars) {
+					boxes.add(new SharedBox(middle + "_" + side.name(),
+							state -> !bare(state) && !side.cornered(state)));
+
+					continue;
+				}
+
+				for (Covering covering : coverings(side)) {
+					boxes.add(new SharedBox(middle + "_" + side.name() + "_" + covering.arm().name(),
+							state -> !bare(state) && !side.cornered(state)
+									&& !wideFace(state, covering.arm(), covering.corner())));
+				}
 			}
 		}
 
 		return boxes;
+	}
+
+	/**
+	 * One arm whose wall comes to stand over a pixel of a side of the crossing, and the
+	 * corner of that side the pixel lies beside.
+	 */
+	private record Covering(SharedSide arm, Property<Boolean> corner) {
+	}
+
+	/**
+	 * The two arms that stand over the pixels of one side of the crossing, each with the
+	 * corner that names the pixel it reaches. The band of an arm turns into the side it
+	 * meets, so the pixel it reaches is the one beside the corner the two share: the
+	 * corner of the side itself, which is the arm's first or its second one depending on
+	 * which of the two the side meets.
+	 */
+	private static List<Covering> coverings(SharedSide side) {
+		return switch (side.direction()) {
+			case NORTH -> List.of(new Covering(EAST, NORTH.first()), new Covering(WEST, NORTH.second()));
+			case SOUTH -> List.of(new Covering(EAST, SOUTH.first()), new Covering(WEST, SOUTH.second()));
+			case EAST -> List.of(new Covering(NORTH, EAST.first()), new Covering(SOUTH, EAST.second()));
+			case WEST -> List.of(new Covering(NORTH, WEST.first()), new Covering(SOUTH, WEST.second()));
+			default -> List.of();
+		};
+	}
+
+	/**
+	 * Whether the wide face of an arm's wall stands over the pixel of the crossing that the
+	 * arm reaches. The wall is drawn exactly while the arm is cornered there and the corner
+	 * is away - see {@link #sharedBoxes(boolean)} - so the pixel it covers is left out
+	 * exactly while the arm carries the band over it.
+	 */
+	private static boolean wideFace(BlockState state, SharedSide arm, Property<Boolean> corner) {
+		return arm.cornered(state) && !shows(state, corner);
 	}
 
 	/** Whether a state shows the column of one half, which any upright corner asks for. */
