@@ -1353,6 +1353,44 @@ public class MBModelProvider implements DataProvider {
 							PaneFace.cut("up", "#edge", 7, 0, 9, 7),
 							PaneFace.cut("west", "#pane", 7, 0, 0, 7),
 							PaneFace.cut("east", "#pane", 0, 0, 7, 7)))),
+			/*
+			 * The four uprights again, standing along the walls that run east and west: the same
+			 * boxes turned a quarter about the middle of the block and read the way the post reads
+			 * its own sides.
+			 *
+			 * <p>A piece the client turns itself keeps its sprites through the turn, so the two
+			 * pixels of an arm's face that reach the middle of the block read the sprite the other
+			 * way round from the face of the post they meet there: one shows the column of the bar
+			 * the post stands on and the other the column beside it, two pixels of the bars with a
+			 * light and a dark bar between them, and the two faces fight for the depth buffer while
+			 * both are drawn. Written out here, the windows of the turned pieces name the columns of
+			 * the post's own reading, so the pixels the two pieces share at the middle of the block
+			 * are the same pixel of the sprite and there is nothing left to fight over.
+			 */
+			new PaneTemplate("pane_side_corner_lower_turned", List.of(
+					paneBox(9, 0, 7, 16, 7, 9,
+							PaneFace.full("east", "#edge"),
+							PaneFace.turned("down", "#edge", 7, 0, 9, 7, 90),
+							PaneFace.cut("north", "#pane", 0, 9, 7, 16),
+							PaneFace.cut("south", "#pane", 9, 9, 16, 16)))),
+			new PaneTemplate("pane_side_corner_lower_alt_turned", List.of(
+					paneBox(0, 0, 7, 7, 7, 9,
+							PaneFace.full("west", "#edge"),
+							PaneFace.turned("down", "#edge", 7, 0, 9, 7, 90),
+							PaneFace.cut("north", "#pane", 9, 9, 16, 16),
+							PaneFace.cut("south", "#pane", 0, 9, 7, 16)))),
+			new PaneTemplate("pane_side_corner_upper_turned", List.of(
+					paneBox(9, 9, 7, 16, 16, 9,
+							PaneFace.full("east", "#edge"),
+							PaneFace.turned("up", "#edge", 7, 0, 9, 7, 270),
+							PaneFace.cut("north", "#pane", 0, 0, 7, 7),
+							PaneFace.cut("south", "#pane", 9, 0, 16, 7)))),
+			new PaneTemplate("pane_side_corner_upper_alt_turned", List.of(
+					paneBox(0, 9, 7, 7, 16, 9,
+							PaneFace.full("west", "#edge"),
+							PaneFace.turned("up", "#edge", 7, 0, 9, 7, 270),
+							PaneFace.cut("north", "#pane", 9, 0, 16, 7),
+							PaneFace.cut("south", "#pane", 0, 0, 7, 7)))),
 			new PaneTemplate("pane_corner", List.of(
 					paneBox(9, 7, 0, 16, 9, 7,
 							PaneFace.full("up", "#pane"),
@@ -1545,7 +1583,7 @@ public class MBModelProvider implements DataProvider {
 	}
 
 	/**
-	 * The sixty template models, the bars' twin of each, and one textured copy of each for
+	 * The sixty-four template models, the bars' twin of each, and one textured copy of each for
 	 * every vanilla pane.
 	 *
 	 * <p>26 vanilla blocks draw panes: the seventeen glass panes - plain and dyed - the iron bars
@@ -1723,7 +1761,9 @@ public class MBModelProvider implements DataProvider {
 		return switch (name) {
 			// The uprights: the two sides of a wall and one rod for every direction it runs to.
 			case "pane_side_corner_lower", "pane_side_corner_lower_alt", "pane_side_corner_upper",
-					"pane_side_corner_upper_alt", "pane_column_lower_north", "pane_column_lower_south",
+					"pane_side_corner_upper_alt", "pane_side_corner_lower_turned",
+					"pane_side_corner_lower_alt_turned", "pane_side_corner_upper_turned",
+					"pane_side_corner_upper_alt_turned", "pane_column_lower_north", "pane_column_lower_south",
 					"pane_column_lower_west", "pane_column_lower_east", "pane_column_upper_north",
 					"pane_column_upper_south", "pane_column_upper_west", "pane_column_upper_east",
 					// The end faces of the band, where it runs into an upright of the next block.
@@ -1815,6 +1855,11 @@ public class MBModelProvider implements DataProvider {
 				case "pane_side_corner_lower/down" -> PaneFace.cut("down", "#edge", 9, 0, 7, 7);
 				case "pane_side_corner_lower_alt/down" -> PaneFace.cut("down", "#edge", 9, 9, 7, 16);
 				case "pane_side_corner_upper_alt/up" -> PaneFace.cut("up", "#edge", 7, 9, 9, 16);
+				// The turned pieces run the other way, so the same rows run along the other side of
+				// their floors and ceilings and are read a quarter turn round.
+				case "pane_side_corner_lower_turned/down" -> PaneFace.turned("down", "#edge", 9, 0, 7, 7, 90);
+				case "pane_side_corner_lower_alt_turned/down" -> PaneFace.turned("down", "#edge", 9, 9, 7, 16, 90);
+				case "pane_side_corner_upper_alt_turned/up" -> PaneFace.turned("up", "#edge", 7, 9, 9, 16, 270);
 				default -> face;
 			});
 		}

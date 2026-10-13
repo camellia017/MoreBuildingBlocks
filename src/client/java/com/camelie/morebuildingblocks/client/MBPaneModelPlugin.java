@@ -54,7 +54,7 @@ import com.camelie.morebuildingblocks.block.MBPaneProperties;
  *
  * <p>The models are handed to vanilla's own {@link MultiPartModel}, one condition per
  * model. It bakes each model once for the block and remembers the set a state selected,
- * so the 4096 states of a pane cost what sixty models cost and not what 4096 of them
+ * so the 4096 states of a pane cost what sixty-four models cost and not what 4096 of them
  * would.
  *
  * <p>Once any box is shown, the pane's own post is not: the boxes are the outline and
@@ -82,40 +82,23 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 	 * <p>Every switch is a corner of the pane, and the eight upright ones are seven
 	 * pixels of a half by seven of a quadrant. The names are the models
 	 * {@code MBModelProvider} writes. A corner exists as a northern and a southern box
-	 * only, so the eastern and western corners name the northern and southern box again
-	 * and are turned a quarter in {@link #piece}.
+	 * only, so the eastern and western corners name the copies of those boxes that
+	 * {@code MBModelProvider} laid along the walls that run east and west, whose windows
+	 * read the sprite the way the post reads its own sides.
 	 */
 	private static final List<String> PIECE_TEMPLATES = List.of(
 			"pane_side_corner_lower",
 			"pane_side_corner_upper",
-			"pane_side_corner_lower",
-			"pane_side_corner_upper",
+			"pane_side_corner_lower_turned",
+			"pane_side_corner_upper_turned",
 			"pane_side_corner_lower_alt",
 			"pane_side_corner_upper_alt",
-			"pane_side_corner_lower_alt",
-			"pane_side_corner_upper_alt",
+			"pane_side_corner_lower_alt_turned",
+			"pane_side_corner_upper_alt_turned",
 			"pane_corner",
 			"pane_corner_se",
 			"pane_corner_sw",
 			"pane_corner_nw");
-
-	/**
-	 * Whether the box of a piece is one of the northern or southern pair, which has to
-	 * be turned a quarter to show an eastern or western corner.
-	 */
-	private static final List<Boolean> PIECE_TURNED = List.of(
-			false,
-			false,
-			true,
-			true,
-			false,
-			false,
-			true,
-			true,
-			false,
-			false,
-			false,
-			false);
 
 	/**
 	 * The switch each box answers to: the lower and upper corner of north, east, south
@@ -376,19 +359,15 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 	}
 
 	/**
-	 * One box of one pane: the copy datagen wrote for that pane, turned a quarter when
-	 * the box it names faces north or south but the piece faces east or west.
+	 * One box of one pane: the copy datagen wrote for that pane. The eastern and western
+	 * corners name the copies already laid along the walls that run east and west, so
+	 * nothing is turned here.
 	 */
 	private static BlockStateModel.Unbaked piece(Identifier paneId, int index) {
 		Identifier model = Identifier.fromNamespaceAndPath(MoreBuildingBlocks.MOD_ID,
 				"block/" + PIECE_TEMPLATES.get(index) + "_" + paneId.getPath());
-		Variant variant = new Variant(model);
 
-		if (PIECE_TURNED.get(index)) {
-			variant = variant.withYRot(Quadrant.R90);
-		}
-
-		return new SingleVariant.Unbaked(variant);
+		return new SingleVariant.Unbaked(new Variant(model));
 	}
 
 	/** One shared box of one pane: the copy datagen wrote for that pane. */

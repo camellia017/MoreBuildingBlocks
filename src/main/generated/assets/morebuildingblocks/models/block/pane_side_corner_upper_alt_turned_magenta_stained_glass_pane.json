@@ -1,0 +1,13 @@
+{
+  "parent": "morebuildingblocks:block/pane_side_corner_upper_alt_turned",
+  "textures": {
+    "edge": {
+      "force_translucent": true,
+      "sprite": "minecraft:block/magenta_stained_glass_pane_top"
+    },
+    "pane": {
+      "force_translucent": true,
+      "sprite": "minecraft:block/magenta_stained_glass"
+    }
+  }
+}
