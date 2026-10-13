@@ -198,6 +198,12 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 				Predicate<BlockState> walls = state -> side.cornered(state)
 						&& (!shows(state, side.first()) || !shows(state, side.second()));
 
+				// A wall reads the band down the upright while a plate lies at the level of the
+				// band to turn it into one: the plate of this side and half, the plate of a level
+				// corner of this side, or one of the two plates the crossing draws for itself.
+				Predicate<BlockState> turned = state -> plate.test(state) || shows(state, side.first())
+						|| shows(state, side.second()) || (!bare(state) && !column(state, half));
+
 				// The two pixels of band that lead to every corner of this side. The
 				// corner of this half covers their end, so that end is a model of its
 				// own and waits for the corner to be away. The plate reads the band down
@@ -211,12 +217,13 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 				// while that corner is away, whichever corner the other face answers
 				// to - and only while the band itself is there, or a pane with no
 				// corner on this side shows two pixels of glass beside its collision.
-				// The wall reads the band down the upright while the plate of this side
-				// and half lies under or over it to turn the band into one.
+				// The wall reads the band down the upright while a plate lies under or over
+				// it to turn the band into one, whether that plate belongs to this side and
+				// half, to a level corner of this side or to the crossing.
 				boxes.add(new SharedBox(edge + "_" + side.firstFace(),
-						state -> side.cornered(state) && !shows(state, side.first()), plate));
+						state -> side.cornered(state) && !shows(state, side.first()), turned));
 				boxes.add(new SharedBox(edge + "_" + side.secondFace(),
-						state -> side.cornered(state) && !shows(state, side.second()), plate));
+						state -> side.cornered(state) && !shows(state, side.second()), turned));
 			}
 		}
 
