@@ -1746,7 +1746,7 @@ public class MBModelProvider implements DataProvider {
 						: List.of(new PaneBox(bandLevel(piece.box()), List.of(face))));
 			}
 
-			boxes.addAll(bothWays(piece.box(), centre ? List.of() : sprites, barsEdge(template.name(), border)));
+			boxes.addAll(bothWays(piece.box(), centre ? List.of() : sprites, barsEdge(template.name(), border, turns)));
 
 			if (centre) {
 				for (PaneFace face : sprites) {
@@ -2084,8 +2084,15 @@ public class MBModelProvider implements DataProvider {
 	 * of it, and the window of a plate follows the wall it stands in. Our pieces stop at the level
 	 * band, so each half names the rows of its own half and the arms vanilla turns out of these
 	 * pieces follow from the two readings.
+	 *
+	 * <p>The border of a corner is read the same way, but a corner carries two readings of its own.
+	 * Where the pane turns out of the plane its corners lie in, the band turns with it and the edge
+	 * is read down the upright, a quarter turn round the seven by two it spans. Where the pane turns
+	 * within one plane, the band runs on and the edge keeps the reading the pane gives it: seven
+	 * pixels of the band along the rim, its gap beside the post, which is what {@code turns} asks
+	 * for.
 	 */
-	private static List<PaneFace> barsEdge(String template, List<PaneFace> faces) {
+	private static List<PaneFace> barsEdge(String template, List<PaneFace> faces, boolean turns) {
 		List<PaneFace> edges = new ArrayList<>();
 
 		for (PaneFace face : faces) {
@@ -2095,9 +2102,45 @@ public class MBModelProvider implements DataProvider {
 				case "pane_side_corner_upper_alt/up" -> PaneFace.cut("up", "#edge", 7, 9, 9, 16);
 				// The turned pieces run the other way, so the same rows run along the other side of
 				// their floors and ceilings and are read a quarter turn round.
-				case "pane_side_corner_lower_turned/down" -> PaneFace.turned("down", "#edge", 9, 0, 7, 7, 90);
-				case "pane_side_corner_lower_alt_turned/down" -> PaneFace.turned("down", "#edge", 9, 9, 7, 16, 90);
-				case "pane_side_corner_upper_alt_turned/up" -> PaneFace.turned("up", "#edge", 7, 9, 9, 16, 270);
+				case "pane_side_corner_lower_turned/down" -> turns
+						? PaneFace.turned("down", "#edge", 9, 0, 7, 7, 90)
+						: PaneFace.cut("down", "#edge", 7, 7, 0, 9);
+				case "pane_side_corner_lower_alt_turned/down" -> turns
+						? PaneFace.turned("down", "#edge", 9, 9, 7, 16, 90)
+						: PaneFace.cut("down", "#edge", 16, 7, 9, 9);
+				case "pane_side_corner_upper_turned/up" -> turns
+						? PaneFace.turned("up", "#edge", 7, 0, 9, 7, 270)
+						: PaneFace.cut("up", "#edge", 0, 7, 7, 9);
+				case "pane_side_corner_upper_alt_turned/up" -> turns
+						? PaneFace.turned("up", "#edge", 7, 9, 9, 16, 270)
+						: PaneFace.cut("up", "#edge", 9, 7, 16, 9);
+				// The plate of a level corner runs the band along the rim of the pane, so its edge
+				// reads the seven pixels of band that reach that rim, the gap of the sprite beside
+				// the post the plate meets.
+				case "pane_corner/north" -> turns
+						? PaneFace.turned("north", "#edge", 7, 0, 9, 7, 270)
+						: PaneFace.cut("north", "#edge", 7, 7, 0, 9);
+				case "pane_corner/east" -> turns
+						? PaneFace.turned("east", "#edge", 7, 0, 9, 7, 90)
+						: PaneFace.cut("east", "#edge", 9, 7, 16, 9);
+				case "pane_corner_se/south" -> turns
+						? PaneFace.turned("south", "#edge", 7, 0, 9, 7, 270)
+						: PaneFace.cut("south", "#edge", 0, 7, 7, 9);
+				case "pane_corner_se/east" -> turns
+						? PaneFace.turned("east", "#edge", 7, 0, 9, 7, 90)
+						: PaneFace.cut("east", "#edge", 0, 7, 7, 9);
+				case "pane_corner_sw/south" -> turns
+						? PaneFace.turned("south", "#edge", 7, 0, 9, 7, 270)
+						: PaneFace.cut("south", "#edge", 9, 7, 16, 9);
+				case "pane_corner_sw/west" -> turns
+						? PaneFace.turned("west", "#edge", 7, 0, 9, 7, 90)
+						: PaneFace.cut("west", "#edge", 7, 7, 0, 9);
+				case "pane_corner_nw/north" -> turns
+						? PaneFace.turned("north", "#edge", 7, 0, 9, 7, 270)
+						: PaneFace.cut("north", "#edge", 16, 7, 9, 9);
+				case "pane_corner_nw/west" -> turns
+						? PaneFace.turned("west", "#edge", 7, 0, 9, 7, 90)
+						: PaneFace.cut("west", "#edge", 16, 7, 9, 9);
 				default -> face;
 			});
 		}

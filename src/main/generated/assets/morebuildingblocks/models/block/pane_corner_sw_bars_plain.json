@@ -1,0 +1,126 @@
+{
+  "ambientocclusion": false,
+  "elements": [
+    {
+      "faces": {
+        "up": {
+          "texture": "#pane"
+        }
+      },
+      "from": [
+        0,
+        8,
+        9
+      ],
+      "to": [
+        7,
+        8,
+        16
+      ]
+    },
+    {
+      "faces": {
+        "down": {
+          "texture": "#pane"
+        }
+      },
+      "from": [
+        0,
+        8,
+        9
+      ],
+      "to": [
+        7,
+        8,
+        16
+      ]
+    },
+    {
+      "faces": {
+        "south": {
+          "cullface": "south",
+          "texture": "#edge",
+          "uv": [
+            9,
+            7,
+            16,
+            9
+          ]
+        },
+        "west": {
+          "cullface": "west",
+          "texture": "#edge",
+          "uv": [
+            7,
+            7,
+            0,
+            9
+          ]
+        }
+      },
+      "from": [
+        0,
+        7,
+        9
+      ],
+      "to": [
+        7,
+        9,
+        16
+      ]
+    },
+    {
+      "faces": {
+        "north": {
+          "cullface": "south",
+          "texture": "#edge",
+          "uv": [
+            16,
+            7,
+            9,
+            9
+          ]
+        }
+      },
+      "from": [
+        0,
+        7,
+        15.999
+      ],
+      "to": [
+        7,
+        9,
+        15.999
+      ]
+    },
+    {
+      "faces": {
+        "east": {
+          "cullface": "west",
+          "texture": "#edge",
+          "uv": [
+            0,
+            7,
+            7,
+            9
+          ]
+        }
+      },
+      "from": [
+        0.001,
+        7,
+        9
+      ],
+      "to": [
+        0.001,
+        9,
+        16
+      ]
+    }
+  ],
+  "textures": {
+    "edge": "minecraft:block/glass_pane_top",
+    "pane": "minecraft:block/glass",
+    "particle": "#pane"
+  }
+}

@@ -2,6 +2,7 @@ package com.camelie.morebuildingblocks.client;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Predicate;
 
 import com.mojang.math.Quadrant;
@@ -121,6 +122,24 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 			MBPaneProperties.CORNER_SOUTH_EAST,
 			MBPaneProperties.CORNER_SOUTH_WEST,
 			MBPaneProperties.CORNER_NORTH_WEST);
+
+	/**
+	 * The corners whose seven by two edge the band turns on: the four plates that lie in
+	 * the middle of the pane and the four uprights that stand along the walls running
+	 * east and west. Their edge is written twice the way a wall of the band is, once read
+	 * down the upright for the turn and once the way the pane reads the band, and a bars
+	 * block shows the second while the pane turns in a single plane, where the band runs
+	 * on and never turns out of it.
+	 */
+	private static final Set<String> TURNED_PIECES = Set.of(
+			"pane_side_corner_lower_turned",
+			"pane_side_corner_upper_turned",
+			"pane_side_corner_lower_alt_turned",
+			"pane_side_corner_upper_alt_turned",
+			"pane_corner",
+			"pane_corner_se",
+			"pane_corner_sw",
+			"pane_corner_nw");
 
 	/**
 	 * The two pixels of band one side of a pane owns, and the corners that share them.
@@ -368,8 +387,20 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 
 		for (int index = 0; index < PIECE_PROPERTIES.size(); index++) {
 			Property<Boolean> property = PIECE_PROPERTIES.get(index);
-			BlockStateModel.Unbaked piece = piece(paneId, index);
-			selectors.add(new MultiPartModel.Selector<>(state -> shows(state, property), piece));
+			Predicate<BlockState> shown = state -> shows(state, property);
+
+			if (bars && TURNED_PIECES.contains(PIECE_TEMPLATES.get(index))) {
+				// The edge of this corner is written twice as well, once read down the upright and
+				// once the way the pane reads the band. The two agree while the pane turns in a
+				// single plane and part where it turns out of it, so the bars ask for the turn.
+				selectors.add(new MultiPartModel.Selector<>(
+						state -> shown.test(state) && !onePlane(state), piece(paneId, index)));
+				selectors.add(new MultiPartModel.Selector<>(
+						state -> shown.test(state) && onePlane(state), piecePlain(paneId, index)));
+				continue;
+			}
+
+			selectors.add(new MultiPartModel.Selector<>(shown, piece(paneId, index)));
 		}
 
 		for (SharedBox box : SHARED_BOXES) {
@@ -440,6 +471,17 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 	private static BlockStateModel.Unbaked piece(Identifier paneId, int index) {
 		Identifier model = Identifier.fromNamespaceAndPath(MoreBuildingBlocks.MOD_ID,
 				"block/" + PIECE_TEMPLATES.get(index) + "_" + paneId.getPath());
+
+		return new SingleVariant.Unbaked(new Variant(model));
+	}
+
+	/**
+	 * The same corner of one pane read the way the pane reads the band, which datagen writes beside
+	 * the {@code _bars} model of every corner the band turns on.
+	 */
+	private static BlockStateModel.Unbaked piecePlain(Identifier paneId, int index) {
+		Identifier model = Identifier.fromNamespaceAndPath(MoreBuildingBlocks.MOD_ID,
+				"block/" + plainTwin(PIECE_TEMPLATES.get(index)) + "_" + paneId.getPath());
 
 		return new SingleVariant.Unbaked(new Variant(model));
 	}
