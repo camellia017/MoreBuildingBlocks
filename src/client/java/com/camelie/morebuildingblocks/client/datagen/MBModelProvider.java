@@ -1653,15 +1653,16 @@ public class MBModelProvider implements DataProvider {
 	private void generatePanes() {
 		for (PaneTemplate template : PANE_TEMPLATES) {
 			if (!barsOnly(template)) {
-				this.models.put(paneModelId(template.name()), modelInstance(paneGeometry(template.boxes(), false)));
+				this.models.put(paneModelId(template.name()),
+						modelInstance(paneGeometry(template.boxes(), false, cornerPiece(template))));
 			}
 
 			this.models.put(paneModelId(barsTwin(template)),
-					modelInstance(paneGeometry(barsBoxes(template, true), true)));
+					modelInstance(paneGeometry(barsBoxes(template, true), true, cornerPiece(template))));
 
 			if (readsBand(template)) {
 				this.models.put(paneModelId(plainTwin(template)),
-						modelInstance(paneGeometry(barsBoxes(template, false), true)));
+						modelInstance(paneGeometry(barsBoxes(template, false), true, cornerPiece(template))));
 			}
 		}
 
@@ -1743,6 +1744,24 @@ public class MBModelProvider implements DataProvider {
 	}
 
 	/**
+	 * The twelve corner pieces: the four plates of the middle height and the eight uprights that
+	 * stand along the walls running north and south. The bars keep the north and south faces of
+	 * these whatever the pane beside them carries, because the piece such a face belongs to stands
+	 * alone as soon as the neighbour carries less, while a glass pane keeps the reading the whole
+	 * family has always had.
+	 */
+	private static final List<String> CORNER_PIECES = List.of(
+			"pane_side_corner_lower", "pane_side_corner_upper", "pane_side_corner_lower_alt",
+			"pane_side_corner_upper_alt", "pane_side_corner_lower_turned", "pane_side_corner_upper_turned",
+			"pane_side_corner_lower_alt_turned", "pane_side_corner_upper_alt_turned",
+			"pane_corner", "pane_corner_se", "pane_corner_sw", "pane_corner_nw");
+
+	/** Whether a template is one of the corner pieces. */
+	private static boolean cornerPiece(PaneTemplate template) {
+		return CORNER_PIECES.contains(template.name());
+	}
+
+	/**
 	 * The templates whose band the bars read down the upright, and so the ones that are written
 	 * twice. Worked out by writing the two apart, so that a template the turn leaves alone keeps one
 	 * model only.
@@ -1753,7 +1772,8 @@ public class MBModelProvider implements DataProvider {
 		List<String> names = new ArrayList<>();
 
 		for (PaneTemplate template : PANE_TEMPLATES) {
-			if (!paneGeometry(barsBoxes(template, true), true).equals(paneGeometry(barsBoxes(template, false), true))) {
+			if (!paneGeometry(barsBoxes(template, true), true, cornerPiece(template))
+					.equals(paneGeometry(barsBoxes(template, false), true, cornerPiece(template)))) {
 				names.add(template.name());
 			}
 		}
@@ -2194,9 +2214,10 @@ public class MBModelProvider implements DataProvider {
 	 *
 	 * <p>A face of the bars that lies flat in the block, across its top or its bottom, is never
 	 * culled; the upright faces of the bars are culled the way the pane culls them, against the side
-	 * of the block they lie on. Glass is culled the pane's way on every face.
+	 * of the block they lie on, and the north and south faces of a corner piece among them are not
+	 * culled at all. Glass is culled the pane's way on every face.
 	 */
-	private static JsonObject paneGeometry(List<PaneBox> boxes, boolean bars) {
+	private static JsonObject paneGeometry(List<PaneBox> boxes, boolean bars, boolean corners) {
 		JsonObject root = new JsonObject();
 		root.addProperty("ambientocclusion", false);
 
@@ -2225,7 +2246,7 @@ public class MBModelProvider implements DataProvider {
 
 				json.addProperty("texture", face.texture());
 
-				String cull = cullface(face, box.box(), bars);
+				String cull = cullface(face, box.box(), bars, corners);
 
 				if (cull != null) {
 					json.addProperty("cullface", cull);
@@ -2245,10 +2266,16 @@ public class MBModelProvider implements DataProvider {
 	/**
 	 * The neighbour a face is culled against: the one it names, or the side of the block it lies on
 	 * when it names none. A face of the bars that lies flat across the block, on an xz plane, is never
-	 * culled, so that it is drawn whether or not a block stands against it.
+	 * culled, so that it is drawn whether or not a block stands against it, and neither are the north
+	 * and south faces of a corner piece of the bars, whose piece stands alone as soon as the pane
+	 * beside it carries less than this one does.
 	 */
-	private static String cullface(PaneFace face, Box box, boolean bars) {
+	private static String cullface(PaneFace face, Box box, boolean bars, boolean corners) {
 		if (bars && ("up".equals(face.direction()) || "down".equals(face.direction()))) {
+			return null;
+		}
+
+		if (bars && corners && ("north".equals(face.direction()) || "south".equals(face.direction()))) {
 			return null;
 		}
 

@@ -49,7 +49,6 @@
           ]
         },
         "south": {
-          "cullface": "south",
           "rotation": 270,
           "texture": "#edge",
           "uv": [
@@ -74,7 +73,6 @@
     {
       "faces": {
         "north": {
-          "cullface": "south",
           "rotation": 270,
           "texture": "#edge",
           "uv": [

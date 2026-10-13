@@ -153,7 +153,9 @@ public final class MBPaneShapes {
 	 * with full height arms. They blank pieces that stand alone - the upper half of one pane faces
 	 * the air when the pane above carries no arm there - and they blank the up and down faces of a
 	 * corner, which sits at mid height and stays visible between stacked panes. This asks instead
-	 * whether the pieces on either side of the shared plane line up, and only then hides the face.
+	 * whether every piece this state draws on the shared plane meets its own piece on the other
+	 * side, and hides the face only then, so a piece the neighbour carries nothing behind stays
+	 * visible however much the neighbour adds beside it.
 	 */
 	public static boolean hides(final BlockState state, final BlockState neighbour, final Direction direction) {
 		if (direction.getAxis().isVertical()) {
@@ -180,10 +182,13 @@ public final class MBPaneShapes {
 		Direction left = direction.getCounterClockWise();
 		Direction right = direction.getClockWise();
 
-		return lower(state, direction) == lower(neighbour, opposite)
-			&& upper(state, direction) == upper(neighbour, opposite)
-			&& corner(state, left, direction) == corner(neighbour, left, opposite)
-			&& corner(state, right, direction) == corner(neighbour, right, opposite);
+		// Every piece this state draws on the shared plane has to meet its own piece on the other
+		// side. A piece the neighbour carries nothing behind keeps its face, whichever pieces the
+		// neighbour adds beside it.
+		return (!lower(state, direction) || lower(neighbour, opposite))
+			&& (!upper(state, direction) || upper(neighbour, opposite))
+			&& (!corner(state, left, direction) || corner(neighbour, left, opposite))
+			&& (!corner(state, right, direction) || corner(neighbour, right, opposite));
 	}
 
 	/** The vanilla connection boolean of this arm, which is also its lower plate. */

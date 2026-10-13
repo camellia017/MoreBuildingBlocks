@@ -13,7 +13,6 @@
           ]
         },
         "north": {
-          "cullface": "north",
           "texture": "#edge"
         }
       },
@@ -31,7 +30,6 @@
     {
       "faces": {
         "south": {
-          "cullface": "north",
           "texture": "#edge"
         }
       },
