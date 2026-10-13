@@ -159,6 +159,17 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 	private static final List<SharedSide> SHARED_SIDES = List.of(NORTH, SOUTH, EAST, WEST);
 
 	/**
+	 * The corners of each of the three planes a pane turns in: the one that runs up and
+	 * north, the one that runs east and north, and the one that runs east and up. A plane
+	 * is true while any corner of it is on, which is to say while one of the pane's
+	 * connections lies in that plane.
+	 */
+	private static final List<List<Property<Boolean>>> PLANE_CORNERS = List.of(
+		List.of(NORTH.lower(), NORTH.upper(), SOUTH.lower(), SOUTH.upper()),
+		List.of(NORTH.first(), SOUTH.first(), SOUTH.second(), NORTH.second()),
+		List.of(EAST.lower(), EAST.upper(), WEST.lower(), WEST.upper()));
+
+	/**
 	 * The boxes the corners share: the two pixels of band on each of the four sides,
 	 * the two pixels of column at the end of each of those, and the two pixels where
 	 * the band and the column cross - one box per half and one model per face of it.
@@ -196,11 +207,11 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 				// leads to, each away while its own corner is on.
 				Predicate<BlockState> plate = state -> side.cornered(state) && !side.plated(state, half);
 
-				// Every piece of this side reads the band down the upright, which is what
-				// the bars show where a band turns into one. The pane's own reading of
-				// the band - the one that runs on level - is kept for the single state
-				// that stands on one face only.
-				Predicate<BlockState> turns = state -> !oneFace(state);
+				// Every piece of this side reads the band down the upright, which is what the
+				// bars show where a band turns out of a plane. The pane's own reading of the
+				// band - the one that runs on level - is kept for the states whose corners all
+				// lie in one plane, where the band runs on and never turns.
+				Predicate<BlockState> turns = state -> !onePlane(state);
 
 				// The two pixels of band that lead to every corner of this side. The
 				// corner of this half covers their end, so that end is a model of its
@@ -239,7 +250,7 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 			// half leaves a gap there at all, and its four sides, which the band of the
 			// side that covers them turns away with the corners it answers to.
 			boxes.add(new SharedBox(middle + (half ? "_up" : "_down"),
-					state -> !bare(state) && !column(state, half), state -> !oneFace(state)));
+					state -> !bare(state) && !column(state, half), state -> !onePlane(state)));
 
 			for (SharedSide side : SHARED_SIDES) {
 				boxes.add(new SharedBox(middle + "_" + side.name(),
@@ -262,20 +273,32 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 	}
 
 	/**
-	 * Whether the pane stands on a single face of the block and nothing else. That is the
-	 * one state whose pieces keep the pane's own reading of the band, the one that runs on
-	 * level; every other state reads the band down the upright.
+	 * Whether every corner of the pane lies in a single one of the three planes it turns
+	 * in. Such a pane runs the band on inside that plane and never turns out of it, so its
+	 * pieces keep the pane's own reading of the band, the one that runs on level; a pane
+	 * that turns in two of its planes or in all three reads the band down the upright.
 	 */
-	private static boolean oneFace(BlockState state) {
-		int faces = 0;
+	private static boolean onePlane(BlockState state) {
+		int planes = 0;
 
-		for (SharedSide side : SHARED_SIDES) {
-			if (side.cornered(state)) {
-				faces++;
+		for (List<Property<Boolean>> plane : PLANE_CORNERS) {
+			if (carries(state, plane)) {
+				planes++;
 			}
 		}
 
-		return faces == 1;
+		return planes == 1;
+	}
+
+	/** Whether any corner of one plane is on. */
+	private static boolean carries(BlockState state, List<Property<Boolean>> plane) {
+		for (Property<Boolean> corner : plane) {
+			if (shows(state, corner)) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	/**
