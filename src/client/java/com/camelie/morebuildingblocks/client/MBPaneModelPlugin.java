@@ -176,8 +176,15 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 	 *
 	 * <p>The names are the models {@code MBModelProvider} writes. None of them is
 	 * turned: each already runs along the axis it belongs to.
+	 *
+	 * <p>Each family keeps a list of its own, written apart so that a rule the bars need is
+	 * never a rule a pane is drawn by: the two differ only in the plate of a side and half -
+	 * see {@link #sharedBoxes(boolean)} - and a change made for one of them leaves the models
+	 * and the drawing of the other as they were.
 	 */
-	private static final List<SharedBox> SHARED_BOXES = sharedBoxes();
+	private static final List<SharedBox> GLASS_BOXES = sharedBoxes(false);
+
+	private static final List<SharedBox> BARS_BOXES = sharedBoxes(true);
 
 	/**
 	 * One box the corners share, the states that show it, and - for a box the bars read the band
@@ -194,7 +201,20 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 		}
 	}
 
-	private static List<SharedBox> sharedBoxes() {
+	/**
+	 * The shared boxes of one family. The two lists differ in one place: the plate of a side and
+	 * half.
+	 *
+	 * <p>A pane draws that plate on the level of the band's own floor or ceiling, inside the
+	 * volume of the upright corner of that half, which covers its end - so it is shown only while
+	 * that corner is away, or the same face would be drawn twice, one inside the other.
+	 *
+	 * <p>The bars draw the same plate on the level the two halves of a band meet on, above and
+	 * below the volume of that corner, where nothing covers it. It is therefore shown wherever
+	 * the band runs through the block: on the side a corner asks for its band, and on the far
+	 * side of the same axis, where the band runs on towards a rim no corner reaches.
+	 */
+	private static List<SharedBox> sharedBoxes(boolean bars) {
 		List<SharedBox> boxes = new ArrayList<>();
 		boolean[] halves = { false, true };
 
@@ -205,7 +225,9 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 				// The plate of this side and half, and the walls of it that stand at the
 				// middle of the block - one for each of the two level corners the side
 				// leads to, each away while its own corner is on.
-				Predicate<BlockState> plate = state -> side.cornered(state) && !side.plated(state, half);
+				Predicate<BlockState> plate = bars
+						? state -> side.cornered(state) || column(state, half)
+						: state -> side.cornered(state) && !side.plated(state, half);
 
 				// Every piece of this side reads the band down the upright, which is what the
 				// bars show where a band turns out of a plane. The pane's own reading of the
@@ -215,7 +237,8 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 
 				// The two pixels of band that lead to every corner of this side. The
 				// corner of this half covers their end, so that end is a model of its
-				// own and waits for the corner to be away. The plate reads the band down
+				// own and waits for the corner to be away, while the plate of the whole
+				// side keeps the reading this family gives the band - see sharedBoxes.
 				boxes.add(new SharedBox(edge, side::cornered));
 				boxes.add(new SharedBox(edge + (half ? "_up" : "_down"), plate, turns));
 
@@ -372,7 +395,7 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 			selectors.add(new MultiPartModel.Selector<>(state -> shows(state, property), piece));
 		}
 
-		for (SharedBox box : SHARED_BOXES) {
+		for (SharedBox box : bars ? BARS_BOXES : GLASS_BOXES) {
 			// Both families draw the faces of the middle: the bars reach the middle of the block
 			// with their arms as well, and the two pixels they show at the end of those arms are
 			// the same two pixels a pane shows there. Only the ends of the column are left to the
