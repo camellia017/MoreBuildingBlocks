@@ -195,35 +195,28 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 				// middle of the block - one for each of the two level corners the side
 				// leads to, each away while its own corner is on.
 				Predicate<BlockState> plate = state -> side.cornered(state) && !side.plated(state, half);
-				Predicate<BlockState> walls = state -> side.cornered(state)
-						&& (!shows(state, side.first()) || !shows(state, side.second()));
 
-				// A wall reads the band down the upright while a plate lies at the level of the
-				// band to turn it into one: the plate of this side and half, the plate of a level
-				// corner of this side, or one of the two plates the crossing draws for itself.
-				Predicate<BlockState> turned = state -> plate.test(state) || shows(state, side.first())
-						|| shows(state, side.second()) || (!bare(state) && !column(state, half));
+				// Every piece of this side reads the band down the upright, which is what
+				// the bars show where a band turns into one. The pane's own reading of
+				// the band - the one that runs on level - is kept for the single state
+				// that stands on one face only.
+				Predicate<BlockState> turns = state -> !oneFace(state);
 
 				// The two pixels of band that lead to every corner of this side. The
 				// corner of this half covers their end, so that end is a model of its
 				// own and waits for the corner to be away. The plate reads the band down
-				// the upright while one of the walls of this side and half stands at the
-				// middle of the block to turn it into one.
 				boxes.add(new SharedBox(edge, side::cornered));
-				boxes.add(new SharedBox(edge + (half ? "_up" : "_down"), plate, walls));
+				boxes.add(new SharedBox(edge + (half ? "_up" : "_down"), plate, turns));
 
 				// The wide face that leads to one of the two level corners. A corner
 				// that is on closes the seam with its own plate, so the face is shown
 				// while that corner is away, whichever corner the other face answers
 				// to - and only while the band itself is there, or a pane with no
 				// corner on this side shows two pixels of glass beside its collision.
-				// The wall reads the band down the upright while a plate lies under or over
-				// it to turn the band into one, whether that plate belongs to this side and
-				// half, to a level corner of this side or to the crossing.
 				boxes.add(new SharedBox(edge + "_" + side.firstFace(),
-						state -> side.cornered(state) && !shows(state, side.first()), turned));
+						state -> side.cornered(state) && !shows(state, side.first()), turns));
 				boxes.add(new SharedBox(edge + "_" + side.secondFace(),
-						state -> side.cornered(state) && !shows(state, side.second()), turned));
+						state -> side.cornered(state) && !shows(state, side.second()), turns));
 			}
 		}
 
@@ -244,15 +237,9 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 
 			// The floor or the ceiling of the crossing, shown while the column of this
 			// half leaves a gap there at all, and its four sides, which the band of the
-			// side that covers them turns away with the corners it answers to. The
-			// crossing's own two walls run east and west out of the middle of the block,
-			// and the floor or the ceiling reads the band down the upright while one of
-			// them stands beside it to turn the band into one.
-			Predicate<BlockState> walls = state -> !bare(state)
-					&& (!EAST.cornered(state) || !WEST.cornered(state));
-
+			// side that covers them turns away with the corners it answers to.
 			boxes.add(new SharedBox(middle + (half ? "_up" : "_down"),
-					state -> !bare(state) && !column(state, half), walls));
+					state -> !bare(state) && !column(state, half), state -> !oneFace(state)));
 
 			for (SharedSide side : SHARED_SIDES) {
 				boxes.add(new SharedBox(middle + "_" + side.name(),
@@ -272,6 +259,23 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 		}
 
 		return false;
+	}
+
+	/**
+	 * Whether the pane stands on a single face of the block and nothing else. That is the
+	 * one state whose pieces keep the pane's own reading of the band, the one that runs on
+	 * level; every other state reads the band down the upright.
+	 */
+	private static boolean oneFace(BlockState state) {
+		int faces = 0;
+
+		for (SharedSide side : SHARED_SIDES) {
+			if (side.cornered(state)) {
+				faces++;
+			}
+		}
+
+		return faces == 1;
 	}
 
 	/**
