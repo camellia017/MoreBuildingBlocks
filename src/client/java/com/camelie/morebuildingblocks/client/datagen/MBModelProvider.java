@@ -1789,13 +1789,15 @@ public class MBModelProvider implements DataProvider {
 	 * the upright a bar turns into is drawn on the two columns of the bars' sprite that run its
 	 * whole height, the rectangle vanilla names on the sides of its own arms and on its posts. Each
 	 * half names one of those columns - the near half the one on its own side of the bar and the far
-	 * half the other - and the rows of its own half of the band, so that the two halves together
-	 * read the upright. The halves lie across the breadth of the bar, so the plate of an arm that
-	 * runs north or south is cut across x and one of an arm that runs east or west across z, where
-	 * the rows of the sprite are read a quarter turn round to run along the arm. A plate of a level
-	 * corner is the corner's own breadth, seven pixels either way and no part of the band's two, and
-	 * is left whole. The two halves are drawn on both sides of the level they lie on, so that the
-	 * band reads the same from above and from below, where the two halves of a corner meet.
+	 * half the other - and as many rows of the sprite as the half itself is long, so that every face
+	 * reads a rectangle the size of itself and nothing is stretched or cut away. The halves lie
+	 * across the breadth of the bar, so the plate of an arm that runs north or south is cut across x
+	 * and one of an arm that runs east or west across z, where the rows of the sprite are read a
+	 * quarter turn round to run along the arm. A plate of a level corner is the corner's own
+	 * breadth, seven pixels either way and no part of the band's two, and is left whole. Both sides
+	 * of a plate are written on its own box, the far one reading the same pixels mirrored, so that
+	 * the band reads the same from above and from below, where the two halves of a corner meet,
+	 * without a plate of its own.
 	 */
 	private static List<PaneBox> bandPlates(Box box, PaneFace face) {
 		boolean acrossX = box.x2() - box.x1() == 2;
@@ -1806,7 +1808,7 @@ public class MBModelProvider implements DataProvider {
 		}
 
 		int minV = box.y1() < 8 ? 8 : 0;
-		int maxV = box.y1() < 8 ? 16 : 8;
+		int maxV = minV + (acrossX ? box.z2() - box.z1() : box.x2() - box.x1());
 		List<PaneBox> plates = new ArrayList<>();
 
 		if (acrossX) {
@@ -1814,20 +1816,30 @@ public class MBModelProvider implements DataProvider {
 			Box far = new Box(box.x2() - 1, box.y1(), box.z1(), box.x2(), box.y2(), box.z2());
 
 			plates.add(new PaneBox(bandLevel(near),
-					List.of(PaneFace.cut(face.direction(), face.texture(), 7, minV, 8, maxV))));
+					bothFaces(PaneFace.cut(face.direction(), face.texture(), 7, minV, 8, maxV))));
 			plates.add(new PaneBox(bandLevel(far),
-					List.of(PaneFace.cut(face.direction(), face.texture(), 8, minV, 9, maxV))));
+					bothFaces(PaneFace.cut(face.direction(), face.texture(), 8, minV, 9, maxV))));
 		} else {
 			Box near = new Box(box.x1(), box.y1(), box.z1(), box.x2(), box.y2(), box.z1() + 1);
 			Box far = new Box(box.x1(), box.y1(), box.z2() - 1, box.x2(), box.y2(), box.z2());
 
 			plates.add(new PaneBox(bandLevel(near),
-					List.of(PaneFace.turned(face.direction(), face.texture(), 7, minV, 8, maxV, 90))));
+					bothFaces(PaneFace.turned(face.direction(), face.texture(), 7, minV, 8, maxV, 90))));
 			plates.add(new PaneBox(bandLevel(far),
-					List.of(PaneFace.turned(face.direction(), face.texture(), 8, minV, 9, maxV, 90))));
+					bothFaces(PaneFace.turned(face.direction(), face.texture(), 8, minV, 9, maxV, 90))));
 		}
 
-		return bothSides(plates);
+		return plates;
+	}
+
+	/**
+	 * One face of a plate and the same pixels read the other way round.
+	 *
+	 * <p>Both are written on the box the plate was carried on to, so that a plate of the band
+	 * carries the two sides of the level it lies on without a plate of its own standing clear of it.
+	 */
+	private static List<PaneFace> bothFaces(PaneFace face) {
+		return List.of(face, otherWay(face, face.cull()));
 	}
 
 	/**
