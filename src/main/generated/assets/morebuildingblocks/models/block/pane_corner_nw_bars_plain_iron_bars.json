@@ -1,7 +1,0 @@
-{
-  "parent": "morebuildingblocks:block/pane_corner_nw_bars_plain",
-  "textures": {
-    "edge": "minecraft:block/iron_bars",
-    "pane": "minecraft:block/iron_bars"
-  }
-}
