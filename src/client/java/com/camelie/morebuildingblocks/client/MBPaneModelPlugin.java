@@ -218,8 +218,8 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 	 * below the volume of that corner, where nothing covers it. So it is shown for every corner
 	 * that asks for it - even while the corner of its own half is on, the two faces standing
 	 * clear of each other there - never where the side carries no corner of its own, and never
-	 * while the corners of the pane lie in one upright plane alone, or in that plane together
-	 * with the level one.
+	 * while the pane turns nowhere in the level plane, in one upright plane alone or in both of
+	 * them together.
 	 *
 	 * <p>The bars also draw the plate of the crossing while the pane turns in the level plane,
 	 * where the band runs on through it, whether or not the column of that half is on.
@@ -337,14 +337,11 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 	}
 
 	/**
-	 * Whether the pane's corners lie in a plane that leaves the bars without their plate:
-	 * in one upright plane alone, where the band runs on level and never turns out of it,
-	 * or in that plane together with the level one.
+	 * Whether the pane turns nowhere in the level plane: in one upright plane alone, or in
+	 * both of them together. Those are the states the bars leave without their plate.
 	 */
 	private static boolean noPlate(BlockState state) {
-		int planes = planeMask(state);
-
-		return planes == NORTH_SOUTH || planes == EAST_WEST || planes == (NORTH_SOUTH | LEVEL);
+		return (planeMask(state) & LEVEL) == 0;
 	}
 
 	/** Whether any corner of one plane is on. */
