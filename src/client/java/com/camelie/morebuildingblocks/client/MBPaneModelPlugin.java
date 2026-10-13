@@ -207,8 +207,8 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 	}
 
 	/**
-	 * The shared boxes of one family. The two lists differ in two places: the plate of a side and
-	 * half, and the plate of the crossing.
+	 * The shared boxes of one family. The two lists differ in three places: the plate of a side and
+	 * half, the wide faces of that side, and the plate of the crossing.
 	 *
 	 * <p>A pane draws that side plate on the level of the band's own floor or ceiling, inside the
 	 * volume of the upright corner of that half, which covers its end - so it is shown only while
@@ -220,6 +220,12 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 	 * clear of each other there - never where the side carries no corner of its own, and never
 	 * while the pane turns nowhere in the level plane, in one upright plane alone or in both of
 	 * them together.
+	 *
+	 * <p>The wide faces of a side are left away by the bars where the pane turns in both upright
+	 * planes and in no level plane, the one state where they would stand as a wall of their own;
+	 * elsewhere they follow the pane. They read the band down the upright only where the pane
+	 * turns in the level plane together with another, and keep the pane's own reading, gap and
+	 * all, wherever the band runs on level through the corner.
 	 *
 	 * <p>The bars also draw the plate of the crossing while the pane turns in the level plane,
 	 * where the band runs on through it, whether or not the column of that half is on.
@@ -245,6 +251,11 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 				// lie in one plane, where the band runs on and never turns.
 				Predicate<BlockState> turns = state -> !onePlane(state);
 
+				// The wide faces of a side keep the pane's own reading of the band while the
+				// band runs on level through the corner, and read it down the upright only
+				// while the pane turns in the level plane together with another.
+				Predicate<BlockState> walls = bars ? state -> levelTurn(state) : turns;
+
 				// The two pixels of band that lead to every corner of this side. The
 				// corner of this half covers their end, so that end is a model of its
 				// own and waits for the corner to be away, while the plate of the whole
@@ -256,11 +267,12 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 				// that is on closes the seam with its own plate, so the face is shown
 				// while that corner is away, whichever corner the other face answers
 				// to - and only while the band itself is there, or a pane with no
-				// corner on this side shows two pixels of glass beside its collision.
-				boxes.add(new SharedBox(edge + "_" + side.firstFace(),
-						state -> side.cornered(state) && !shows(state, side.first()), turns));
-				boxes.add(new SharedBox(edge + "_" + side.secondFace(),
-						state -> side.cornered(state) && !shows(state, side.second()), turns));
+				// corner on this side shows two pixels of glass beside its collision. The bars
+				// leave the face away where the pane turns in both upright planes alone.
+				boxes.add(new SharedBox(edge + "_" + side.firstFace(), wall(side, side.first(), bars),
+						walls));
+				boxes.add(new SharedBox(edge + "_" + side.secondFace(), wall(side, side.second(), bars),
+						walls));
 			}
 		}
 
@@ -308,6 +320,35 @@ public class MBPaneModelPlugin implements ClientModInitializer {
 		}
 
 		return false;
+	}
+
+	/**
+	 * One of the two wide faces of a side, the one that leads to the level corner given. It is
+	 * shown while the side carries a corner of its own and that corner is away; the bars leave it
+	 * away as well where the pane turns in both upright planes and in no level plane, since the
+	 * face would stand there as a wall along the end of an upright arm.
+	 */
+	private static Predicate<BlockState> wall(SharedSide side, Property<Boolean> corner, boolean bars) {
+		Predicate<BlockState> away = state -> side.cornered(state) && !shows(state, corner);
+
+		return bars ? away.and(state -> !bothUprights(state)) : away;
+	}
+
+	/**
+	 * Whether the pane turns in both upright planes and in no level plane: the two arms of one
+	 * corner, one running north to south and one east to west, with the band level nowhere.
+	 */
+	private static boolean bothUprights(BlockState state) {
+		return planeMask(state) == (NORTH_SOUTH | EAST_WEST);
+	}
+
+	/**
+	 * Whether the pane turns in the level plane together with another: two planes or all three,
+	 * the level one among them. That is where the bars read the wide faces of a side down the
+	 * upright; a band that runs on through the corner on level keeps the pane's own reading.
+	 */
+	private static boolean levelTurn(BlockState state) {
+		return (planeMask(state) & LEVEL) != 0 && !onePlane(state);
 	}
 
 	/**
