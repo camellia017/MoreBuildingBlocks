@@ -4,12 +4,13 @@
     {
       "faces": {
         "south": {
+          "rotation": 270,
           "texture": "#pane",
           "uv": [
-            0,
             8,
             8,
-            9
+            9,
+            16
           ]
         }
       },

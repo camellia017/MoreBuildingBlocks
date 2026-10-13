@@ -4,13 +4,44 @@
     {
       "faces": {
         "down": {
-          "texture": "#pane"
+          "rotation": 90,
+          "texture": "#pane",
+          "uv": [
+            7,
+            8,
+            8,
+            16
+          ]
         }
       },
       "from": [
         0,
         8,
         7
+      ],
+      "to": [
+        7,
+        8,
+        8
+      ]
+    },
+    {
+      "faces": {
+        "down": {
+          "rotation": 90,
+          "texture": "#pane",
+          "uv": [
+            8,
+            8,
+            9,
+            16
+          ]
+        }
+      },
+      "from": [
+        0,
+        8,
+        8
       ],
       "to": [
         7,

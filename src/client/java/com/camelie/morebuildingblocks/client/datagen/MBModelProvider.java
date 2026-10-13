@@ -1655,7 +1655,9 @@ public class MBModelProvider implements DataProvider {
 	 * carries at the edge of the block stays on the box it was written on. The plates that lie level
 	 * in the band - the two under and over each arm, the crossing's own two and the two of every
 	 * level corner - leave the floor and the ceiling of the block the same way and are drawn on the
-	 * level the two halves of a band meet on, so that the bars read as one band. Every other piece
+	 * level the two halves of a band meet on, so that the bars read as one band; the plates of the
+	 * band are cut in two across the bar and read a column of the upright each, the way the walls
+	 * of the band read theirs at a turn. Every other piece
 	 * keeps the geometry the pane draws it from, the two end plates of the post among them, which
 	 * lie outside the band.
 	 * The faces of a wall and of the band are carried on to the middle of the block, where the two
@@ -1685,14 +1687,14 @@ public class MBModelProvider implements DataProvider {
 			}
 
 			for (PaneFace face : level) {
-				boxes.add(new PaneBox(bandLevel(piece.box()), List.of(face)));
+				boxes.addAll(bandPlates(piece.box(), face));
 			}
 
 			boxes.addAll(bothWays(piece.box(), centre ? List.of() : sprites, barsEdge(template.name(), border)));
 
 			if (centre) {
 				for (PaneFace face : sprites) {
-					boxes.add(centrePlanePiece(piece.box(), face));
+					boxes.add(bandWall(template.name(), centrePlanePiece(piece.box(), face)));
 				}
 			}
 		}
@@ -1714,6 +1716,88 @@ public class MBModelProvider implements DataProvider {
 	/** The same box laid level on the middle of the block. */
 	private static Box bandLevel(Box box) {
 		return new Box(box.x1(), 8, box.z1(), box.x2(), 8, box.z2());
+	}
+
+	/**
+	 * The plates of the band, read one column of the upright each.
+	 *
+	 * <p>A plate of the band is two pixels across, one for either side of the bar it carries, and
+	 * the upright a bar turns into is drawn on the two columns of the bars' sprite that run its
+	 * whole height, the rectangle vanilla names on the sides of its own arms and on its posts. Each
+	 * half names one of those columns - the near half the one on its own side of the bar and the far
+	 * half the other - and the rows of its own half of the band, so that the two halves together
+	 * read the upright. The halves lie across the breadth of the bar, so the plate of an arm that
+	 * runs north or south is cut across x and one of an arm that runs east or west across z, where
+	 * the rows of the sprite are read a quarter turn round to run along the arm. A plate of a level
+	 * corner is the corner's own breadth, seven pixels either way and no part of the band's two, and
+	 * is left whole.
+	 */
+	private static List<PaneBox> bandPlates(Box box, PaneFace face) {
+		boolean acrossX = box.x2() - box.x1() == 2;
+		boolean acrossZ = box.z2() - box.z1() == 2;
+
+		if (!acrossX && !acrossZ) {
+			return List.of(new PaneBox(bandLevel(box), List.of(face)));
+		}
+
+		int minV = box.y1() < 8 ? 8 : 0;
+		int maxV = box.y1() < 8 ? 16 : 8;
+		List<PaneBox> plates = new ArrayList<>();
+
+		if (acrossX) {
+			Box near = new Box(box.x1(), box.y1(), box.z1(), box.x1() + 1, box.y2(), box.z2());
+			Box far = new Box(box.x2() - 1, box.y1(), box.z1(), box.x2(), box.y2(), box.z2());
+
+			plates.add(new PaneBox(bandLevel(near),
+					List.of(PaneFace.cut(face.direction(), face.texture(), 7, minV, 8, maxV))));
+			plates.add(new PaneBox(bandLevel(far),
+					List.of(PaneFace.cut(face.direction(), face.texture(), 8, minV, 9, maxV))));
+		} else {
+			Box near = new Box(box.x1(), box.y1(), box.z1(), box.x2(), box.y2(), box.z1() + 1);
+			Box far = new Box(box.x1(), box.y1(), box.z2() - 1, box.x2(), box.y2(), box.z2());
+
+			plates.add(new PaneBox(bandLevel(near),
+					List.of(PaneFace.turned(face.direction(), face.texture(), 7, minV, 8, maxV, 90))));
+			plates.add(new PaneBox(bandLevel(far),
+					List.of(PaneFace.turned(face.direction(), face.texture(), 8, minV, 9, maxV, 90))));
+		}
+
+		return plates;
+	}
+
+	/**
+	 * One wall of the band, read down the bar at a turn.
+	 *
+	 * <p>The band turns into the upright at the middle of the block, and the upright is drawn on the
+	 * two columns of the bars' sprite that run its whole height, the rectangle vanilla names on the
+	 * sides of its own arms and on its posts. A wall of the band carries the rows of the band the
+	 * pane gives it, so each face names the column of its own side of the bar - the one the middle
+	 * of the block stands on, or the far one - and the rows of its own half of the band, read a
+	 * quarter turn round so that they run along the wall rather than across it. The face is left on
+	 * the box the wall was carried on to, and any other piece is given back as it came.
+	 */
+	private static PaneBox bandWall(String template, PaneBox piece) {
+		PaneFace face = piece.faces().get(0);
+
+		return new PaneBox(piece.box(), List.of(switch (template) {
+			case "pane_edge_north_lower_west", "pane_edge_south_lower_west" ->
+					PaneFace.turned("west", face.texture(), 7, 8, 8, 16, 90);
+			case "pane_edge_north_lower_east", "pane_edge_south_lower_east" ->
+					PaneFace.turned("east", face.texture(), 8, 8, 9, 16, 90);
+			case "pane_edge_north_upper_west", "pane_edge_south_upper_west" ->
+					PaneFace.turned("west", face.texture(), 7, 0, 8, 8, 90);
+			case "pane_edge_north_upper_east", "pane_edge_south_upper_east" ->
+					PaneFace.turned("east", face.texture(), 8, 0, 9, 8, 90);
+			case "pane_edge_east_lower_north", "pane_edge_west_lower_north" ->
+					PaneFace.turned("north", face.texture(), 7, 8, 8, 16, 270);
+			case "pane_edge_east_lower_south", "pane_edge_west_lower_south" ->
+					PaneFace.turned("south", face.texture(), 8, 8, 9, 16, 270);
+			case "pane_edge_east_upper_north", "pane_edge_west_upper_north" ->
+					PaneFace.turned("north", face.texture(), 7, 0, 8, 8, 270);
+			case "pane_edge_east_upper_south", "pane_edge_west_upper_south" ->
+					PaneFace.turned("south", face.texture(), 8, 0, 9, 8, 270);
+			default -> face;
+		}));
 	}
 
 	/**
