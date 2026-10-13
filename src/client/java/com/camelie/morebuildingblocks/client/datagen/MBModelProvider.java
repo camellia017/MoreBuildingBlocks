@@ -1719,7 +1719,8 @@ public class MBModelProvider implements DataProvider {
 	 * runs on beside nothing and no upright carries it.
 	 *
 	 * <p>Every border face of the bars is drawn on both sides, whether its piece belongs on a centre
-	 * plane or not, so that the frame shows whichever side of it is looked at.
+	 * plane or not, and the walls of the crossing are drawn that way too, each of them standing for
+	 * both sides of the plane it lies in, so that the frame shows whichever side of it is looked at.
 	 */
 	private static List<PaneBox> barsBoxes(PaneTemplate template, boolean turns) {
 		boolean centre = onCentrePlane(template.name());
@@ -1750,6 +1751,12 @@ public class MBModelProvider implements DataProvider {
 			if (centre) {
 				for (PaneFace face : sprites) {
 					PaneBox carried = centrePlanePiece(piece.box(), face);
+
+					if (isCrossingWall(template.name())) {
+						boxes.addAll(bothSides(List.of(carried)));
+
+						continue;
+					}
 
 					boxes.addAll(turns ? bandWall(template.name(), carried) : List.of(carried));
 				}
@@ -1979,6 +1986,21 @@ public class MBModelProvider implements DataProvider {
 					"pane_edge_west_upper_south",
 					// The four sides of the crossing, inside the two pixels of its own box.
 					"pane_middle_lower_north", "pane_middle_lower_south", "pane_middle_lower_west",
+					"pane_middle_lower_east", "pane_middle_upper_north", "pane_middle_upper_south",
+					"pane_middle_upper_west", "pane_middle_upper_east" -> true;
+			default -> false;
+		};
+	}
+
+	/**
+	 * Whether a template is the crossing's own box, whose four sides stand on the centre planes. The
+	 * wall across from each of them reads the bars from the other side of the same plane, so a level
+	 * corner that turns one of the pair away leaves the other to show the bars from the side it has
+	 * left: both are drawn on both sides of themselves rather than one to each side.
+	 */
+	private static boolean isCrossingWall(String name) {
+		return switch (name) {
+			case "pane_middle_lower_north", "pane_middle_lower_south", "pane_middle_lower_west",
 					"pane_middle_lower_east", "pane_middle_upper_north", "pane_middle_upper_south",
 					"pane_middle_upper_west", "pane_middle_upper_east" -> true;
 			default -> false;
