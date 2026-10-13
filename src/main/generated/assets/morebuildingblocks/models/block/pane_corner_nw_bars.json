@@ -3,9 +3,40 @@
   "elements": [
     {
       "faces": {
+        "up": {
+          "texture": "#pane"
+        }
+      },
+      "from": [
+        0,
+        8,
+        0
+      ],
+      "to": [
+        7,
+        8,
+        7
+      ]
+    },
+    {
+      "faces": {
         "down": {
           "texture": "#pane"
-        },
+        }
+      },
+      "from": [
+        0,
+        8,
+        0
+      ],
+      "to": [
+        7,
+        8,
+        7
+      ]
+    },
+    {
+      "faces": {
         "north": {
           "cullface": "north",
           "rotation": 270,
@@ -16,9 +47,6 @@
             9,
             7
           ]
-        },
-        "up": {
-          "texture": "#pane"
         },
         "west": {
           "cullface": "west",

@@ -1600,8 +1600,9 @@ public class MBModelProvider implements DataProvider {
 	 * geometry is written once per template and only the two sprites differ from pane to pane. A
 	 * bars copy reads the template's {@code _bars} twin instead, which draws the pieces that stand in
 	 * a plane through the block's centre - the uprights and the band's end faces - in that plane, out
-	 * to the middle of the block, the way vanilla draws its own bars, so the bars may be read on
-	 * their own while the panes stay put.
+	 * to the middle of the block, and the band's plates on the level where the band's two halves
+	 * meet, the way vanilla draws its own bars, so the bars may be read on their own while the panes
+	 * stay put.
 	 */
 	private void generatePanes() {
 		for (PaneTemplate template : PANE_TEMPLATES) {
@@ -1651,9 +1652,12 @@ public class MBModelProvider implements DataProvider {
 	 * <p>A piece of the bars that belongs in the plane running through the block's centre is drawn
 	 * there the way vanilla draws its own bars: the faces that read the bars' sprite leave the box
 	 * they are drawn round and are written as a plane of no thickness, while the border the piece
-	 * carries at the edge of the block stays on the box it was written on. Every piece that lies
-	 * level in the band - its box, the plates under and over it, the crossing's own plates, the four
-	 * corner plates and the two end plates of the post - keeps the geometry the pane draws it from.
+	 * carries at the edge of the block stays on the box it was written on. The plates that lie level
+	 * in the band - the two under and over each arm, the crossing's own two and the two of every
+	 * level corner - leave the floor and the ceiling of the block the same way and are drawn on the
+	 * level the two halves of a band meet on, so that the bars read as one band. Every other piece
+	 * keeps the geometry the pane draws it from, the two end plates of the post among them, which
+	 * lie outside the band.
 	 * The faces of a wall and of the band are carried on to the middle of the block, where the two
 	 * planes of a corner meet; the sides of the post and of the crossing, which lie across it, are
 	 * left where the pane put them and are drawn by the panes alone.
@@ -1667,14 +1671,21 @@ public class MBModelProvider implements DataProvider {
 
 		for (PaneBox piece : template.boxes()) {
 			List<PaneFace> sprites = new ArrayList<>();
+			List<PaneFace> level = new ArrayList<>();
 			List<PaneFace> border = new ArrayList<>();
 
 			for (PaneFace face : piece.faces()) {
-				if ("#pane".equals(face.texture())) {
-					sprites.add(face);
-				} else {
+				if (!"#pane".equals(face.texture())) {
 					border.add(face);
+				} else if (liesLevel(face, piece.box())) {
+					level.add(face);
+				} else {
+					sprites.add(face);
 				}
+			}
+
+			for (PaneFace face : level) {
+				boxes.add(new PaneBox(bandLevel(piece.box()), List.of(face)));
 			}
 
 			boxes.addAll(bothWays(piece.box(), centre ? List.of() : sprites, barsEdge(template.name(), border)));
@@ -1687,6 +1698,22 @@ public class MBModelProvider implements DataProvider {
 		}
 
 		return boxes;
+	}
+
+	/**
+	 * Whether a face of one piece lies level in the band: the plate under or over an arm, one of the
+	 * crossing's own two plates or one of the plates of a level corner. They read the bars' sprite
+	 * and the bars draw them on the level the two halves of a band meet on, rather than on the floor
+	 * and the ceiling of the block the pane draws them on.
+	 */
+	private static boolean liesLevel(PaneFace face, Box box) {
+		return ("up".equals(face.direction()) || "down".equals(face.direction())) && box.y1() >= 7
+				&& box.y2() <= 9;
+	}
+
+	/** The same box laid level on the middle of the block. */
+	private static Box bandLevel(Box box) {
+		return new Box(box.x1(), 8, box.z1(), box.x2(), 8, box.z2());
 	}
 
 	/**
